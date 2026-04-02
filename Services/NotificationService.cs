@@ -91,10 +91,9 @@ namespace NotiFlow.Services
         private async Task<NotificationMessage> ParseNotificationAsync(UserNotification notification)
         {
             var msg = new NotificationMessage();
-            msg.AppName = notification.AppInfo.DisplayInfo.DisplayName ?? "未知系统通知";
-            msg.Aumid = notification.AppInfo.AppUserModelId ?? "";
+            msg.AppName = notification.AppInfo?.DisplayInfo?.DisplayName ?? "System";
+            msg.Aumid = notification.AppInfo?.AppUserModelId ?? string.Empty;
 
-            // 解析标题和正文
             var binding = notification.Notification.Visual.Bindings.FirstOrDefault();
             if (binding != null)
             {
@@ -108,34 +107,120 @@ namespace NotiFlow.Services
                 }
             }
 
-            // 安全获取系统管线中的图片流转换为 WPF 的内存位图
-            try
+            // 1. 如果是原生 UWP 或注册的现代应用，则通过注册系统管线索要高质量原图
+            if (msg.AppIcon == null)
             {
-                var displayInfo = notification.AppInfo.DisplayInfo;
-                if (displayInfo != null)
+                try
                 {
-                    var streamRef = displayInfo.GetLogo(new Windows.Foundation.Size(32, 32));
-                    if (streamRef != null)
+                    var displayInfo = notification.AppInfo.DisplayInfo;
+                    if (displayInfo != null)
                     {
-                        using var ras = await streamRef.OpenReadAsync();
-                        using var stream = ras.AsStream();
-                        
-                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                        // [破局修复]：将 32x32 索取改为极高精度的 256x256
+                        // UWP 的图标库内部由于微软官方 UI 规范通常包含了“极其骇人”的透明垫层。如果请求 32x32，实体肉眼通常只有 8 像素。
+                        var streamRef = displayInfo.GetLogo(new Windows.Foundation.Size(256, 256));
+                        if (streamRef != null)
                         {
-                            var bitmap = new BitmapImage();
-                            bitmap.BeginInit();
-                            bitmap.CacheOption = BitmapCacheOption.OnLoad;
-                            bitmap.StreamSource = stream;
-                            bitmap.EndInit();
-                            bitmap.Freeze(); // 冻结内存以允许 WPF 的跨线程高效传递
-                            msg.AppIcon = bitmap;
-                        });
+                            using var ras = await streamRef.OpenReadAsync();
+                            using var stream = ras.AsStream();
+                            
+                            await Application.Current.Dispatcher.InvokeAsync(() =>
+                            {
+                                var bitmap = new BitmapImage();
+                                bitmap.BeginInit();
+                                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                                bitmap.StreamSource = stream;
+                                bitmap.EndInit();
+                                bitmap.Freeze();
+                                msg.AppIcon = bitmap;
+                                msg.IsUwpIcon = true;
+                            });
+                        }
                     }
                 }
+                catch { }
             }
-            catch
+
+            // 2. 特殊系统级 AUMID 硬编码回落（微软未提供防御中心等原生组件的图标流）
+            if (msg.AppIcon == null && !string.IsNullOrEmpty(msg.Aumid))
             {
-                // Win32 程序图层回落暂无，等待最终设置页面建立后做提取系统快捷方式的逻辑
+                System.Drawing.Icon fallbackIcon = null;
+                
+                if (msg.Aumid.Contains("Defender") || msg.Aumid.Contains("Security"))
+                {
+                    // [审美优化] 放弃使用丑陋古老的 SystemIcons.Shield，直接去 System32 扒防御中心的系统托盘原生 EXE 高清图标！
+                    try
+                    {
+                        string secHealthPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "SecurityHealthSystray.exe");
+                        if (File.Exists(secHealthPath))
+                        {
+                            fallbackIcon = System.Drawing.Icon.ExtractAssociatedIcon(secHealthPath);
+                        }
+                    }
+                    catch { }
+
+                    if (fallbackIcon == null)
+                    {
+                        fallbackIcon = System.Drawing.SystemIcons.Shield;
+                    }
+                }
+                else if (msg.Aumid.StartsWith("Windows.SystemToast"))
+                {
+                    fallbackIcon = System.Drawing.SystemIcons.Information;
+                }
+
+                if (fallbackIcon != null)
+                {
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        var bitmap = System.Windows.Interop.Imaging.CreateBitmapSourceFromHIcon(
+                            fallbackIcon.Handle,
+                            System.Windows.Int32Rect.Empty,
+                            BitmapSizeOptions.FromEmptyOptions());
+                            
+                        bitmap.Freeze();
+                        msg.AppIcon = bitmap;
+                    });
+                }
+            }
+
+            // 3. Win32 程序的进程暴力图标回落机制（针对如 QQ、Edge 等未进入 UWP 管线的老牌软件）
+            if (msg.AppIcon == null && !string.IsNullOrEmpty(msg.AppName))
+            {
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    try
+                    {
+                        // 如果在当前系统中找到了同名进程，直接抓取其中进程入口的主模块 EXE 自带的图标！
+                        var process = System.Diagnostics.Process.GetProcessesByName(msg.AppName).FirstOrDefault(p => !string.IsNullOrEmpty(p.MainWindowTitle));
+                        if (process == null) 
+                        {
+                            process = System.Diagnostics.Process.GetProcessesByName(msg.AppName).FirstOrDefault();
+                        }
+
+                        if (process != null && process.MainModule != null)
+                        {
+                            var exePath = process.MainModule.FileName;
+                            if (!string.IsNullOrEmpty(exePath))
+                            {
+                                using var sysIcon = System.Drawing.Icon.ExtractAssociatedIcon(exePath);
+                                if (sysIcon != null)
+                                {
+                                    var bitmap = System.Windows.Interop.Imaging.CreateBitmapSourceFromHIcon(
+                                        sysIcon.Handle,
+                                        System.Windows.Int32Rect.Empty,
+                                        BitmapSizeOptions.FromEmptyOptions());
+                                    
+                                    bitmap.Freeze();
+                                    msg.AppIcon = bitmap;
+                                }
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // 权限不足（如试图访问高权限进程等）时静默失败回落为无图模式
+                    }
+                });
             }
 
             return msg;

@@ -61,6 +61,12 @@ namespace NotiFlow
 
         private readonly NotificationService _notificationService = new();
 
+        // ===== 游戏引擎渲染层 =====
+        private readonly List<BarrageItem> _activeItems = new();
+        private readonly Queue<BarrageItem> _pool = new(); // 🚀 对象复用池
+        private TimeSpan _lastRenderTime = TimeSpan.Zero;
+        private double _screenWidth;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -82,6 +88,10 @@ namespace NotiFlow
                     Application.Current.Shutdown();
                 }
             };
+
+            // 【架构重构：绑定游戏绘图级回调帧】
+            _screenWidth = SystemParameters.PrimaryScreenWidth;
+            CompositionTarget.Rendering += CompositionTarget_Rendering;
 
             // 订阅通知事件
             _notificationService.OnNotificationReceived += (msg) =>
@@ -175,158 +185,96 @@ namespace NotiFlow
 
         private void LaunchBarrage(NotificationMessage message, int track)
         {
-            double screenWidth = SystemParameters.PrimaryScreenWidth;
             var color = _colors[_random.Next(_colors.Length)];
-
-            // 1. 构建最外层容器 (可能带有背景)
-            var border = new Border
+            
+            // 🚀 从对象池抓取死掉的图层，如果不空闲才 new，杜绝反复开启 GC
+            BarrageItem item;
+            if (_pool.Count > 0)
             {
-                CornerRadius = BarrageSettings.BackgroundCornerRadius,
-                Padding = new Thickness(12, 6, 12, 6)
-            };
-
-            if (BarrageSettings.ShowBackground)
-            {
-                var bgBrush = BarrageSettings.BackgroundColor.Clone();
-                bgBrush.Opacity = BarrageSettings.BackgroundOpacity;
-                border.Background = bgBrush;
+                item = _pool.Dequeue();
+                // 唤醒它
+                item.IsAlive = true;
+                item.TrackReleased = false;
+                
+                // 将重新启用的死魂灵重新挂入宿主（它之前死掉的时候被我们移除了引用）
+                EngineHost.AddVisual(item);
             }
-
-            // 2. 构建水平栈组合控件
-            var stackPanel = new StackPanel
+            else
             {
-                Orientation = Orientation.Horizontal,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-
-            // 3. 构建应用图标
-            if (BarrageSettings.ShowAppIcon && message.AppIcon != null)
-            {
-                var image = new Image
-                {
-                    Source = message.AppIcon,
-                    Width = BarrageSettings.FontSize, // 图标物理尺寸跟随字号大小以保持协调
-                    Height = BarrageSettings.FontSize,
-                    Margin = new Thickness(0, 0, 10, 0),
-                    VerticalAlignment = VerticalAlignment.Center
-                };
-                stackPanel.Children.Add(image);
+                item = new BarrageItem();
+                EngineHost.AddVisual(item);
             }
+            
+            item.TrackIndex = track;
+            
+            // 将设置的颜色解冻，这是后续使用对象池的核心技术基础，但当前先进行普通的独立绘制
+            Brush unFrozenBrush = color.Clone();
+            unFrozenBrush.Freeze();
 
-            // 4. 构建文字内容
-            var textBlock = new TextBlock
-            {
-                FontFamily = BarrageSettings.FontFamily,
-                FontSize = BarrageSettings.FontSize,
-                FontWeight = BarrageSettings.FontWeight,
-                FontStyle = BarrageSettings.FontStyle,
-                Opacity = BarrageSettings.TextOpacity,
-                Foreground = color,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-
-            // 性能终极优化：WPF 的高强度模糊发光阴影是造成 4060Ti 跑满 50% 的“罪魁祸首”！
-            // 如果用户开启了底层黑色遮罩板，就不需要文字阴影；如果没有开启底板，则使用显卡消耗极低的“硬笔划描边”阴影代替
-            if (!BarrageSettings.ShowBackground)
-            {
-                textBlock.Effect = new System.Windows.Media.Effects.DropShadowEffect
-                {
-                    Color = Colors.Black,
-                    BlurRadius = 1, // 降低模糊换取指数级性能提升
-                    ShadowDepth = 1.5,
-                    Opacity = 0.9,
-                    RenderingBias = System.Windows.Media.Effects.RenderingBias.Performance
-                };
-            }
-
-            if (BarrageSettings.IsUnderlined)
-            {
-                textBlock.TextDecorations = TextDecorations.Underline;
-            }
-
-            // 拼接可读文本文字
-            string prefix = "";
-            if (BarrageSettings.ShowAppName && !string.IsNullOrEmpty(message.AppName))
-            {
-                prefix += $"[{message.AppName}] ";
-            }
-            if (!string.IsNullOrEmpty(message.Title))
-            {
-                prefix += $"【{message.Title}】";
-            }
-
-            string bodyText = message.Body ?? "";
-            bool isTruncated = false;
-            if (bodyText.Length > BarrageSettings.MaxTextLength)
-            {
-                bodyText = bodyText.Substring(0, BarrageSettings.MaxTextLength);
-                isTruncated = true;
-            }
-
-            // 使用 Inlines 实现同一行文字不同颜色
-            textBlock.Inlines.Add(new Run(prefix + bodyText));
-            if (isTruncated)
-            {
-                var ellipsisRun = new Run("......");
-                if (BarrageSettings.HighlightEllipsis)
-                {
-                    ellipsisRun.Foreground = BarrageSettings.EllipsisColor;
-                }
-                textBlock.Inlines.Add(ellipsisRun);
-            }
-
-            stackPanel.Children.Add(textBlock);
-            border.Child = stackPanel;
-
-            // 开启位图缓存技术，将原本复杂的文字与图片矢量重绘计算，降维降级成显卡最擅长的常规 2D 贴图平移，可大幅降低 GPU 和 CPU 负载
-            border.CacheMode = new BitmapCache();
-
-            // 5. 加入 WPF 画布舞台并计算物理宽度
+            FontFamily fontFamily = BarrageSettings.FontFamily;
             double topPosition = TopMargin + track * TrackHeight;
-            Canvas.SetLeft(border, screenWidth);
-            Canvas.SetTop(border, topPosition);
-            BarrageCanvas.Children.Add(border);
+            
+            // 进行像素级的预绘制烘焙
+            item.BuildVisual(message, unFrozenBrush, BarrageSettings.FontSize, fontFamily, BarrageSettings.FontStyle, BarrageSettings.FontWeight);
 
-            // 修复由于动画执行时 UI 还在排队渲染导致计算元素宽度为 0 引起的重叠 Bug。
-            // 封杀滞后的 UpdateLayout 方法，改用最激进直接预处理的 Measure 强行要求 WPF 交出实际将要占用的像素总宽
-            border.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-            double elementWidth = border.DesiredSize.Width > 0 ? border.DesiredSize.Width : 800;
-            double targetX = -elementWidth;
-
-            // 物理移动速度：字数/秒 转换为 像素/秒 (Speed = CharsPerSec * FontSize)
-            // 使得短弹幕和长弹幕移动“横向速度”完全一致，防碰撞逻辑也因此更加完美死锁，永远不会发生追尾
+            // 物理位置注册
+            item.CurrentX = _screenWidth;
+            item.CurrentY = topPosition;
+            item.Offset = new Vector(item.CurrentX, item.CurrentY);
+            
             double speedPixelsPerSec = BarrageSettings.ScrollSpeedCharsPerSec * BarrageSettings.FontSize;
-            if (speedPixelsPerSec < 10) speedPixelsPerSec = 10; // 保底防除零或卡死
+            if (speedPixelsPerSec < 10) speedPixelsPerSec = 10;
+            item.SpeedPixelsPerSec = speedPixelsPerSec;
 
-            double totalDistance = screenWidth + elementWidth;
-            double duration = totalDistance / speedPixelsPerSec;
+            // 送入底层实体执行链
+            _activeItems.Add(item);
+        }
 
-            // ===== 计算提前释放轨道的时间 =====
-            double releaseDistance = elementWidth + screenWidth / 4.0;
-            double releaseDelay = duration * (releaseDistance / totalDistance);
-            releaseDelay = Math.Min(releaseDelay, duration);
+        // ===== 核心物理引擎（帧率节流至 ~30fps 以减少 DWM 全屏 Alpha 合成次数） =====
+        private void CompositionTarget_Rendering(object? sender, EventArgs e)
+        {
+            var renderingArgs = (RenderingEventArgs)e;
+            if (_lastRenderTime == renderingArgs.RenderingTime) return;
 
-            var releaseTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(releaseDelay) };
-            releaseTimer.Tick += (s, e) =>
+            double dt = (_lastRenderTime == TimeSpan.Zero) ? 0 : (renderingArgs.RenderingTime - _lastRenderTime).TotalSeconds;
+            _lastRenderTime = renderingArgs.RenderingTime;
+
+            if (dt == 0) return;
+
+            // 如果当前没有任何存活弹幕，直接跳过所有计算
+            if (_activeItems.Count == 0) return;
+
+            // 反向遍历以免由于 List.Remove 引发集合修改报错
+            for (int i = _activeItems.Count - 1; i >= 0; i--)
             {
-                releaseTimer.Stop();
-                ReleaseTrack(track);
-            };
-            releaseTimer.Start();
+                var item = _activeItems[i];
+                
+                // 进行平滑的匀速运动学运算
+                item.CurrentX -= item.SpeedPixelsPerSec * dt;
+                
+                // 让 GPU 指令直接移动此对象而不需要重排布局
+                item.Offset = new Vector(item.CurrentX, item.CurrentY);
 
-            var animation = new DoubleAnimation
-            {
-                From = screenWidth,
-                To = targetX,
-                Duration = TimeSpan.FromSeconds(duration),
-            };
+                // 物理碰撞测算（轨道提早释放给新弹幕）：一旦本弹幕尾部完全脱离屏幕右侧一段安全距离
+                if (!item.TrackReleased && (item.CurrentX + item.PhysicalWidth < _screenWidth - _screenWidth / 4.0))
+                {
+                    item.TrackReleased = true;
+                    ReleaseTrack(item.TrackIndex);
+                }
 
-            animation.Completed += (s, e) =>
-            {
-                BarrageCanvas.Children.Remove(border);
-            };
-
-            border.BeginAnimation(Canvas.LeftProperty, animation);
+                // 屏幕越界销毁，此时它的本体都已消失在左侧
+                if (item.CurrentX < -item.PhysicalWidth)
+                {
+                    item.IsAlive = false;
+                    
+                    // 从图形宿主剥离以断开内存引用，避免画面产生驻留错位
+                    EngineHost.RemoveVisual(item);
+                    _activeItems.RemoveAt(i);
+                    
+                    // 🚀 核心：塞入对象池复用，而不是扔给内存垃圾收集器
+                    _pool.Enqueue(item);
+                }
+            }
         }
     }
 }
