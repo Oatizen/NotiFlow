@@ -1,42 +1,86 @@
-# NotiFlow 桌面端工程 - Windows 系统通知弹幕系统
+# NotiFlow
 
-## 项目背景
-本项目是一款基于 `.NET 8` 和 `WPF` 的现代化桌面端通知增强工具。它的核心是将系统右下角枯燥死板的横幅通知，转化为全屏透明、置顶飘过的**二次元格式弹幕**。通过无焦点防夺取与鼠标穿透技术，它完全不会对用户的日常高强度工作或全屏游戏体验造成任何视觉与交互阻挡。
+基于 .NET 8 + WPF 的 Windows 系统通知弹幕工具。将系统通知中心的消息以弹幕形式叠加在屏幕最顶层滚动显示，支持鼠标穿透，不影响正常操作。
 
-## 核心技术栈
-- **核心框架**：.NET 8 SDK
-- **UI 渲染**：Windows Presentation Foundation (WPF)
-- **系统挂载 API**：`User32.dll` (P/Invoke) 实现顶层透明与点击幽灵穿透
-- **通知监听桥接**：`Windows.UI.Notifications.Management` WinRT 跨界调用 (挂载底层 TFM 目标: `net8.0-windows10.0.19041.0`)
+## 技术栈
 
-## 核心架构设计与工程防腐规范
-整个项目秉承**纯净度与后期 MVVM 演化**的设计思想，不依赖任何第三方重量级封装桥接包，以最严苛的原生调用要求编写，确保性能极致顺滑。
+| 类别 | 技术 |
+|------|------|
+| 运行时 | .NET 8 (`net8.0-windows10.0.19041.0`) |
+| UI 框架 | WPF + [WPF-UI](https://github.com/lepoco/wpfui) (Fluent Design) |
+| 通知 API | `Windows.UI.Notifications.Management` (WinRT) |
+| 窗口控制 | `User32.dll` P/Invoke (`WS_EX_TRANSPARENT` 鼠标穿透) |
+| 渲染方式 | `DrawingVisual` + `CompositionTarget.Rendering` 帧循环 |
 
-### 1. 核心控制器与 UI 渲染 (`MainWindow.xaml.cs`)
-- **轨道路由与物理匀速脱困算法**：统一管理多轨道的分配逻辑（`AllocateTrack`）。全面使用物理学“匀速推流模型”作为 X 轴位移引擎（速度仅由`字数/秒`唯一决定）。对于计算重叠安全距离，系统强行抛弃了经常存在后滞延迟的 `UpdateLayout()` 而采用生命周期最早的预渲染测算接口 `Measure()` 去强制测算 WPF 虚拟宽度，这在代码和数学层面上，彻底解决了旧版本因测距为 0 引起的残忍追尾撞车 BUG。
-- **极限图形降维打击解决掉帧问题**：针对测试中暴露的 WPF 对多轨动态发光字体的负优化导致 RTX 4060Ti 显存负载跑到 50% 的“噩梦”现象，我们在逻辑底座祭出了两套神拳：一是如果打开遮罩底板就彻底废黜极度高耗能的高斯模糊字体渲染器（`DropShadowEffect` 断舍离）；二是直接全面征用 Windows 硬件加速贴图模式 `BitmapCache()` 设置，把所有庞杂计算的复合文本树统一拍扁降维成一张张“简单的图块贴片平移运动”，让弹幕从 10 帧突变回电竞级满帧，使得几百条同屏飞舞都不会挤占游戏玩家显卡的一丝精力。
-- **黄金三分区优先法则**：采用降权惩罚策略，让用户的视觉黄金重心（屏幕顶部往下约 1/3 处）成为弹幕绝对优先飘过的区域，只在弹幕爆炸性拥堵时才向下级和顶部边缘妥协分配。
-- **内存泄漏熔断**：所有飞出屏幕最左侧的动态积木卡片（不仅是文本，还包括嵌套封装的图片流和 Border 遮罩），在 `DoubleAnimation` 生命周期结束后，都会主动从 WPF `Canvas` 的主可视树上强行移除。
+## 项目结构
 
-### 2. 跨进程稳健监听底座 (`Services/NotificationService.cs`)
-- 这是连接底层 Windows Action Center 待处理队列的生命线。
-- **神级容错修复设计（历史架构坑点规避）**：由于传统 WPF 桌面程序运行在 STA 线程套间里，在未打包形式下直接通过 `_listener.NotificationChanged +=` 订阅系统组件容易因为内部无法回传包名权限而引发严重闪退 (`COM Exception: 0x80070490 Element Not Found`)。本项目为了打造“不死之身”，彻底弃用了微软存在系统层面 BUG 的系统事件绑定！转而利用底层的原生 MTA 线程池，构建了极其优雅且资源消耗极低的**异步 ID 防抖对比轮询循环 (1.5s 周期)**，百分百规避了因为某个损坏应用推送导致的程序暴毙现象。
+```
+NotiFlow/
+├── MainWindow.xaml(.cs)           # 弹幕叠加层（全屏透明置顶窗口）
+├── SettingsWindow.xaml(.cs)       # 设置界面主窗口（NavigationView 导航）
+├── BarrageSettings.cs             # 全局配置管理（静态属性 + JSON 持久化）
+├── NativeMethods.cs               # Win32 P/Invoke 声明
+├── Models/
+│   ├── BarrageItem.cs             # 弹幕渲染单元（DrawingVisual）
+│   └── NotificationMessage.cs    # 通知消息数据模型
+├── Rendering/
+│   └── BarrageEngineHost.cs      # 视觉对象宿主（FrameworkElement）
+├── Services/
+│   └── NotificationService.cs    # 系统通知监听服务
+└── Views/Pages/
+    ├── CustomPage.xaml(.cs)       # 弹幕外观自定义页
+    ├── SettingsPage.xaml(.cs)     # 通用设置页
+    └── AboutPage.xaml(.cs)       # 关于页
+```
 
-### 3. 数据层实体结构 (`Models/NotificationMessage.cs`)
-- 这是消息体穿越线程时使用的防抖胶囊。包含 WinRT 解析完毕的、专门被强制降帧注入 UI 线程安全模式调配的 `AppIcon` (BitMapImage)。为各种 Win32 未规范的桌面老应用保留了 `AUMID`，留出了下一次进行注册表硬解图标抓取的退路。
+## 核心模块说明
 
-### 4. 样式中央控制台 (`BarrageSettings.cs`)
-- 脱离死板的硬编码数据泥潭。这里定义了一整套可以由用户深度 Customize 定制的皮肤机制。从遮罩透明度（Alpha），到斜体阴影开关，一切都以 `public static` 的总线暴露出来。未来重构全项目并做成 `CommunityToolkit.Mvvm` 及漂亮设置大厅面板时，可随时实现数据的双向绑定接管。
+### 弹幕引擎 (`MainWindow`)
 
-## 今后迭代路线图 (Roadmap)
-- [x] 构建透明防遮挡与悬挂式窗口，生成假文字飘入飘出。
-- [x] 确立多轨弹幕算法策略，防止弹幕重叠。
-- [x] 升级底层支持 `WindowsSDK Contracts` 与 `Notification`。
-- [x] 废除事件监听，设计无 BUG 稳定挂机防抖比对监听系统。
-- [x] 将读取到底层通知，按带圆角与图标渲染为独立弹幕框飞越屏幕。
-- [ ] *即将进行*：把粗犷的一把梭 `MainWindow` 分离，引入正式的 MVVM 架构。
-- [ ] *即将进行*：通过 Win32 API 拯救老古董如 NVIDIA / 网易云可能获取不到通知图片底图的问题（基于 AUMID 逆流抽取快捷方式 `ExtractAssociatedIcon`）。
-- [ ] *最终目标*：给用户一张华丽且酷炫动态的“设置操作桌面板”。
+- 使用 `CompositionTarget.Rendering` 驱动逐帧更新，实现匀速水平滚动。
+- 多轨道管理：根据屏幕高度动态计算轨道数，采用"黄金三分区"优先分配策略（优先使用屏幕上方 1/3 区域）。
+- 对象池复用：`BarrageItem` 飞出屏幕后回收至对象池，减少 GC 压力。
+- 渲染优化：使用 `DrawingVisual` 替代 WPF 控件树，避免布局计算开销。
 
----
-*注：本项目不仅是一个好用的工具，更是一份优雅的现代 C# 开发艺术展品。AI 与用户将持续迭代并维护该架构锚点文档。如在后续开发中架构方向偏离，请随时唤回此锚点重置基准。*
+### 通知监听 (`NotificationService`)
+
+- 通过 WinRT 的 `UserNotificationListener` 获取系统通知。
+- 采用异步轮询模式（1.5s 周期），通过通知 ID 去重比对检测新消息。
+- 规避了直接事件订阅在未打包桌面应用中可能触发 `COMException` 的问题。
+
+### 设置界面 (`SettingsWindow`)
+
+- 基于 WPF-UI 的 `NavigationView` 实现左侧导航 + 右侧内容的分页布局。
+- 使用 Mica 材质背景，遵循 Windows 11 Fluent Design 规范。
+- 在窗口层级重写 `OnPreviewMouseWheel`，通过 `VisualTreeHelper.HitTest` 定位真实可滚动的 `ScrollViewer`，解决 NavigationView 嵌套 ScrollViewer 导致的滚轮事件被拦截问题。
+
+### 全局配置 (`BarrageSettings`)
+
+提供弹幕外观和行为的配置接口，支持 JSON 文件导入/导出：
+
+- **字体**：FontFamily / FontSize / FontWeight / FontStyle / IsUnderlined
+- **显示**：TextOpacity / ShowAppIcon / ShowAppName
+- **背景**：ShowBackground / BackgroundColor / BackgroundOpacity / BackgroundCornerRadius
+- **行为**：MaxTextLength / ScrollSpeedCharsPerSec / HighlightEllipsis / EllipsisColor
+
+## 构建与运行
+
+```bash
+dotnet build
+dotnet run
+```
+
+需要 Windows 10 19041 及以上版本。首次运行时需在系统设置中授予通知访问权限。
+
+## 开发计划
+
+- [x] 全屏透明叠加层 + 鼠标穿透
+- [x] 多轨道弹幕调度算法
+- [x] WinRT 通知监听（异步轮询）
+- [x] DrawingVisual 渲染引擎 + 对象池
+- [x] 设置界面基础布局（NavigationView 三页面）
+- [x] 滚轮事件穿透修复
+- [ ] 设置界面数据绑定（UI ↔ BarrageSettings）
+- [ ] 弹幕预览区实时刷新
+- [ ] MVVM 架构重构（CommunityToolkit.Mvvm）
+- [ ] Win32 应用图标提取（基于 AUMID 的 ExtractAssociatedIcon 回退方案）

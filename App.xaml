@@ -1,8 +1,16 @@
 <Application x:Class="NotiFlow.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             StartupUri="MainWindow.xaml">
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             StartupUri="SettingsWindow.xaml">
     <Application.Resources>
-         
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- 注入默认的深色主题 (Dark) -->
+                <ui:ThemesDictionary Theme="Dark" />
+                <!-- 注入 WPF-UI 控制样式库 -->
+                <ui:ControlsDictionary />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>
