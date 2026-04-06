@@ -12,11 +12,7 @@
             <!-- 页面大标题 -->
             <Grid Margin="0,0,0,32">
                 <ui:TextBlock FontTypography="TitleLarge" Text="设置" FontWeight="Bold"/>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <ui:Button Appearance="Primary" Content="检查更新" Margin="0,0,12,0"/>
-                    <ui:Button Icon="{ui:SymbolIcon QuestionCircle24}" Appearance="Transparent" Margin="0,0,8,0"/>
-                    <ui:Button Icon="{ui:SymbolIcon Person24}" Appearance="Transparent"/>
-                </StackPanel>
+                <ui:Button Appearance="Primary" Content="检查更新" HorizontalAlignment="Right" VerticalAlignment="Center"/>
             </Grid>
 
             <!-- 快捷键区块 -->
@@ -52,7 +48,6 @@
                             <ui:TextBlock Text="选择您偏好的显示语言" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                         </StackPanel>
                         <ComboBox Grid.Column="2" SelectedIndex="0" VerticalAlignment="Center" Width="150" HorizontalAlignment="Right">
-                            <ComboBoxItem Content="英语 (美国)"/>
                             <ComboBoxItem Content="简体中文"/>
                         </ComboBox>
                     </Grid>
@@ -71,7 +66,7 @@
                             <ui:TextBlock Text="主题" FontTypography="BodyStrong"/>
                             <ui:TextBlock Text="个性化您的工作区外观" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                         </StackPanel>
-                        <ComboBox Grid.Column="2" SelectedIndex="0" VerticalAlignment="Center" Width="150" HorizontalAlignment="Right">
+                        <ComboBox x:Name="ThemeComboBox" Grid.Column="2" SelectedIndex="1" VerticalAlignment="Center" Width="150" HorizontalAlignment="Right" SelectionChanged="ThemeComboBox_SelectionChanged">
                             <ComboBoxItem Content="系统默认"/>
                             <ComboBoxItem Content="浅色"/>
                             <ComboBoxItem Content="深色"/>
@@ -95,6 +90,20 @@
                             <ui:SymbolIcon Symbol="Shield24" FontSize="18"/>
                         </Border>
                         <ui:TextBlock Grid.Column="1" Text="以管理员身份运行" VerticalAlignment="Center"/>
+                        <ui:ToggleSwitch Grid.Column="2" IsChecked="True" VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <!-- 应用启动时自动工作 -->
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="52"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ControlFillColorDefaultBrush}" CornerRadius="8" HorizontalAlignment="Left" VerticalAlignment="Center">
+                            <ui:SymbolIcon Symbol="Play24" FontSize="18"/>
+                        </Border>
+                        <ui:TextBlock Grid.Column="1" Text="应用启动时自动工作" VerticalAlignment="Center"/>
                         <ui:ToggleSwitch Grid.Column="2" IsChecked="True" VerticalAlignment="Center"/>
                     </Grid>
 

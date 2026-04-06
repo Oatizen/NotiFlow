@@ -33,7 +33,7 @@
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                             <ui:TextBlock Text="弹幕通知" FontTypography="Title" FontWeight="SemiBold" Margin="0,0,12,0"/>
                             <Border Background="{DynamicResource ControlFillColorSecondaryBrush}" CornerRadius="12" Padding="8,2" VerticalAlignment="Center">
-                                <ui:TextBlock Text="V1.4.2 (稳定版)" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                <ui:TextBlock Text="V1.0.0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                             </Border>
                         </StackPanel>
                         
@@ -44,6 +44,7 @@
                                       
                         <StackPanel Orientation="Horizontal">
                             <ui:Button Appearance="Primary" Content="GitHub 仓库" Icon="{ui:SymbolIcon Branch24}" Margin="0,0,12,0"/>
+                            <ui:Button Appearance="Primary" Content="检查更新" Icon="{ui:SymbolIcon ArrowSync24}" Margin="0,0,12,0"/>
                             <ui:Button Appearance="Secondary" Content="许可证" Icon="{ui:SymbolIcon Document24}"/>
                         </StackPanel>
                     </StackPanel>
@@ -53,7 +54,7 @@
             <!-- 高级选项面板 -->
             <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                 <ui:SymbolIcon Symbol="Wrench24" FontSize="20" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="0,0,8,0"/>
-                <ui:TextBlock Text="高级维护选项" FontTypography="BodyStrong"/>
+                <ui:TextBlock Text="高级设置" FontTypography="BodyStrong"/>
             </StackPanel>
             
             <Grid>

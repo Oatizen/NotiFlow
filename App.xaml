@@ -7,7 +7,7 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <!-- 注入默认的深色主题 (Dark) -->
-                <ui:ThemesDictionary Theme="Dark" />
+                <ui:ThemesDictionary Theme="Light" />
                 <!-- 注入 WPF-UI 控制样式库 -->
                 <ui:ControlsDictionary />
             </ResourceDictionary.MergedDictionaries>

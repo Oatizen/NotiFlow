@@ -3,7 +3,7 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:pages="clr-namespace:NotiFlow.Views.Pages"
-                 Title="弹幕通知 高级版"
+                 Title="弹幕通知"
                  Height="768"
                  Width="1024"
                  WindowStartupLocation="CenterScreen"
@@ -21,7 +21,7 @@
         <!-- 自定义原生的 Win11 沉浸式标题栏 -->
         <ui:TitleBar
             Grid.Row="0"
-            Title="弹幕通知 高级版"/>
+            Title="弹幕通知"/>
 
         <!-- 基于 WPF-UI 的主导航架构 -->
         <ui:NavigationView

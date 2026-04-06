@@ -13,9 +13,13 @@
             <Grid Margin="0,0,0,24">
                 <ui:TextBlock FontTypography="TitleLarge" Text="自定义" FontWeight="Bold"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <ui:Button Appearance="Primary" Content="开启" Margin="0,0,12,0"/>
-                    <ui:Button Icon="{ui:SymbolIcon QuestionCircle24}" Appearance="Transparent" Margin="0,0,8,0"/>
-                    <ui:Button Icon="{ui:SymbolIcon Person24}" Appearance="Transparent"/>
+                    <ui:Button x:Name="ToggleWorkButton" Appearance="Primary" Content="开启" Click="ToggleWorkButton_Click" Padding="24,0" Height="36" MinWidth="100" Margin="0,0,12,0"/>
+                    <Grid>
+                        <ui:Button x:Name="HelpButton" Icon="{ui:SymbolIcon QuestionCircle24}" Appearance="Transparent" Height="36" Width="36" Padding="0" Click="HelpButton_Click"/>
+                        <ui:Flyout x:Name="HelpFlyout" Placement="Bottom">
+                            <ui:TextBlock Text="仅支持在窗口模式或无边框窗口模式的应用上显示通知，不支持以全屏模式运行的应用" TextWrapping="Wrap" MaxWidth="300" Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                        </ui:Flyout>
+                    </Grid>
                 </StackPanel>
             </Grid>
 
@@ -51,17 +55,17 @@
                             <ui:TextBlock FontTypography="BodyStrong" Text="字体设置" FontSize="16"/>
                         </StackPanel>
 
-                        <ui:TextBlock Text="字体族" Margin="0,0,0,8"/>
+                        <ui:TextBlock Text="字体" Margin="0,0,0,8"/>
                         <ComboBox SelectedIndex="0" Margin="0,0,0,20" HorizontalAlignment="Stretch">
                             <ComboBoxItem Content="Inter"/>
-                            <ComboBoxItem Content="Microsoft YaHei"/>
+                            <ComboBoxItem Content="微软雅黑"/>
                         </ComboBox>
 
                         <Grid Margin="0,0,0,8">
                             <ui:TextBlock Text="字体大小"/>
-                            <ui:TextBlock Text="24px" HorizontalAlignment="Right" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold"/>
+                            <ui:TextBlock x:Name="FontSizeText" Text="24px" HorizontalAlignment="Right" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold"/>
                         </Grid>
-                        <Slider Minimum="12" Maximum="64" Value="24" Margin="0,0,0,20"/>
+                        <Slider x:Name="FontSizeSlider" Minimum="12" Maximum="64" Value="24" Margin="0,0,0,20" ValueChanged="FontSizeSlider_ValueChanged"/>
 
                         <ui:TextBlock Text="字重" Margin="0,0,0,8"/>
                         <!-- ToggleButton 组模拟 Segmented Control -->
@@ -70,8 +74,8 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <ToggleButton Grid.Row="0" Content="常规" IsChecked="True" HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
-                            <ToggleButton Grid.Row="1" Content="加粗" HorizontalAlignment="Stretch"/>
+                            <ui:Button x:Name="FontWeightNormalBtn" Grid.Row="0" Content="常规" Appearance="Primary" HorizontalAlignment="Stretch" Margin="0,0,0,8" Click="FontWeightNormalBtn_Click"/>
+                            <ui:Button x:Name="FontWeightBoldBtn" Grid.Row="1" Content="加粗" Appearance="Transparent" HorizontalAlignment="Stretch" Click="FontWeightBoldBtn_Click"/>
                         </Grid>
 
                         <ui:TextBlock Text="字体样式" Margin="0,0,0,8"/>
@@ -81,8 +85,8 @@
                                 <ColumnDefinition Width="8"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <ToggleButton Grid.Column="0" Content="斜体" HorizontalAlignment="Stretch"/>
-                            <ToggleButton Grid.Column="2" Content="下划线" HorizontalAlignment="Stretch"/>
+                            <ui:Button x:Name="FontStyleItalicBtn" Grid.Column="0" Content="斜体" Appearance="Transparent" HorizontalAlignment="Stretch" Click="FontStyleItalicBtn_Click"/>
+                            <ui:Button x:Name="FontStyleUnderlineBtn" Grid.Column="2" Content="下划线" Appearance="Transparent" HorizontalAlignment="Stretch" Click="FontStyleUnderlineBtn_Click"/>
                         </Grid>
                     </StackPanel>
                 </Border>
@@ -108,28 +112,28 @@
 
                         <Grid Margin="0,0,0,8">
                             <ui:TextBlock Text="不透明度"/>
-                            <ui:TextBlock Text="85%" HorizontalAlignment="Right" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold"/>
+                            <ui:TextBlock x:Name="OpacityText" Text="85%" HorizontalAlignment="Right" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold"/>
                         </Grid>
-                        <Slider Minimum="0" Maximum="100" Value="85" Margin="0,0,0,20"/>
+                        <Slider x:Name="OpacitySlider" Minimum="0" Maximum="100" Value="85" Margin="0,0,0,20" ValueChanged="OpacitySlider_ValueChanged"/>
 
                         <Grid Margin="0,0,0,8">
                             <ui:TextBlock Text="背景不透明度"/>
-                            <ui:TextBlock Text="20%" HorizontalAlignment="Right" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold"/>
+                            <ui:TextBlock x:Name="BackgroundOpacityText" Text="20%" HorizontalAlignment="Right" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold"/>
                         </Grid>
-                        <Slider Minimum="0" Maximum="100" Value="20" Margin="0,0,0,24"/>
+                        <Slider x:Name="BackgroundOpacitySlider" Minimum="0" Maximum="100" Value="20" Margin="0,0,0,24" ValueChanged="BackgroundOpacitySlider_ValueChanged"/>
 
                         <Grid Margin="0,0,0,16">
                             <StackPanel>
-                                <ui:TextBlock Text="显示应用图标" FontTypography="BodyStrong"/>
-                                <ui:TextBlock Text="在弹幕前显示应用图标" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                <ui:TextBlock Text="显示应用图标"/>
+                                <ui:TextBlock Text="弹幕前显示应用图标" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                             </StackPanel>
                             <ui:ToggleSwitch HorizontalAlignment="Right" VerticalAlignment="Center" IsChecked="True"/>
                         </Grid>
 
                         <Grid>
                             <StackPanel>
-                                <ui:TextBlock Text="显示应用名称" FontTypography="BodyStrong"/>
-                                <ui:TextBlock Text="在弹幕前显示应用名称" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                <ui:TextBlock Text="显示应用名称"/>
+                                <ui:TextBlock Text="弹幕前显示应用名称" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                             </StackPanel>
                             <ui:ToggleSwitch HorizontalAlignment="Right" VerticalAlignment="Center" IsChecked="False"/>
                         </Grid>
@@ -153,8 +157,8 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Column="0" Text="动画速度" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                        <Slider Grid.Column="1" Minimum="1" Maximum="30" Value="12" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                        <ui:TextBlock Grid.Column="2" Text="中 (12秒)" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <Slider x:Name="SpeedSlider" Grid.Column="1" Minimum="5" Maximum="30" Value="12" Margin="0,0,16,0" VerticalAlignment="Center" ValueChanged="SpeedSlider_ValueChanged"/>
+                        <ui:TextBlock x:Name="SpeedValueText" Grid.Column="2" Text="中 (12 字/秒)" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" Width="90" TextAlignment="Right"/>
                     </Grid>
                 </StackPanel>
             </Border>

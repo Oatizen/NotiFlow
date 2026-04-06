@@ -32,7 +32,8 @@ namespace NotiFlow
         public int MaxTextLength { get; set; } = 50;
         public bool HighlightEllipsis { get; set; } = true;
         public string EllipsisColorHex { get; set; } = "#32CD32"; // 亮绿色 (LimeGreen)
-        public double ScrollSpeedCharsPerSec { get; set; } = 15.0;
+        public double ScrollSpeedCharsPerSec { get; set; } = 12.0;
+        public bool AutoStartWorking { get; set; } = true;
     }
 
     /// <summary>
@@ -62,7 +63,8 @@ namespace NotiFlow
         public static int MaxTextLength { get; set; } = 50;
         public static bool HighlightEllipsis { get; set; } = true;
         public static Brush EllipsisColor { get; set; } = Brushes.LimeGreen;
-        public static double ScrollSpeedCharsPerSec { get; set; } = 15.0;
+        public static double ScrollSpeedCharsPerSec { get; set; } = 12.0;
+        public static bool AutoStartWorking { get; set; } = true;
 
         // 默认配置文件保存路径（软件运行目录底下的 JSON 文件）
         private static readonly string DefaultConfigPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BarrageConfig.json");
@@ -91,7 +93,8 @@ namespace NotiFlow
                     MaxTextLength = MaxTextLength,
                     HighlightEllipsis = HighlightEllipsis,
                     EllipsisColorHex = (EllipsisColor is SolidColorBrush ellBrush) ? ellBrush.Color.ToString() : "#32CD32",
-                    ScrollSpeedCharsPerSec = ScrollSpeedCharsPerSec
+                    ScrollSpeedCharsPerSec = ScrollSpeedCharsPerSec,
+                    AutoStartWorking = AutoStartWorking
                 };
 
                 var options = new JsonSerializerOptions { WriteIndented = true };
@@ -149,6 +152,7 @@ namespace NotiFlow
                 MaxTextLength = Math.Clamp(dto.MaxTextLength, 5, 500);
                 ScrollSpeedCharsPerSec = Math.Clamp(dto.ScrollSpeedCharsPerSec, 5.0, 100.0);
                 HighlightEllipsis = dto.HighlightEllipsis;
+                AutoStartWorking = dto.AutoStartWorking;
             }
             catch
             {
