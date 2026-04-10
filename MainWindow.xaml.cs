@@ -9,6 +9,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using System.Windows.Documents;
+using CommunityToolkit.Mvvm.Messaging;
 using NotiFlow.Models;
 using NotiFlow.Services;
 
@@ -67,6 +68,18 @@ namespace NotiFlow
         private TimeSpan _lastRenderTime = TimeSpan.Zero;
         private double _screenWidth;
 
+        static MainWindow()
+        {
+            // 在 WPF 属性底层用强制回调锁死背景为全透明，彻底免疫 WpfUi 内部对所有 Window 背景色的暴力推翻注入
+            FrameworkPropertyMetadata metadata = new FrameworkPropertyMetadata(Brushes.Transparent, null, CoerceBackground);
+            BackgroundProperty.OverrideMetadata(typeof(MainWindow), metadata);
+        }
+
+        private static object CoerceBackground(DependencyObject d, object baseValue)
+        {
+            return Brushes.Transparent; // 无论外界如何修改，永远只返回 Transparent
+        }
+
         public MainWindow()
         {
             InitializeComponent();
@@ -92,6 +105,8 @@ namespace NotiFlow
             // 【架构重构：绑定游戏绘图级回调帧】
             _screenWidth = SystemParameters.PrimaryScreenWidth;
             CompositionTarget.Rendering += CompositionTarget_Rendering;
+
+            // （已注销局部预览信使机制，移交至 CustomPage 画布）
 
             // 订阅通知事件
             _notificationService.OnNotificationReceived += (msg) =>

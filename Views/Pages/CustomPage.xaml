@@ -2,9 +2,24 @@
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:viewmodels="clr-namespace:NotiFlow.Models"
+      xmlns:converters="clr-namespace:NotiFlow.Converters"
+      xmlns:rendering="clr-namespace:NotiFlow.Rendering"
       Title="自定义"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-      Background="Transparent">
+      Background="Transparent"
+      SizeChanged="Page_SizeChanged"
+      Loaded="Page_Loaded"
+      Unloaded="Page_Unloaded">
+
+    <Page.DataContext>
+        <viewmodels:SettingsViewModel />
+    </Page.DataContext>
+
+    <Page.Resources>
+        <converters:BooleanToAppearanceConverter x:Key="BoolToAppearance" />
+        <converters:BooleanToAppearanceConverter x:Key="InverseBoolToAppearance" Invert="True"/>
+    </Page.Resources>
 
     <ScrollViewer x:Name="MainScrollViewer" VerticalScrollBarVisibility="Auto" CanContentScroll="False" Background="Transparent">
         <StackPanel Margin="24,12,24,24" Background="Transparent">
@@ -27,55 +42,51 @@
             <StackPanel Margin="0,0,0,24">
                 <Grid Margin="0,0,0,16">
                     <ui:TextBlock Text="弹幕预览" FontTypography="BodyStrong"/>
-                    <ui:TextBlock Text="实时预览" HorizontalAlignment="Right" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                    <ui:TextBlock Text="实时状态同步中" HorizontalAlignment="Right" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                 </Grid>
 
-                <Border Height="200" Background="#1c1c1c" CornerRadius="12" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Orientation="Horizontal">
-                        <ui:SymbolIcon Symbol="Grid24" FontSize="20" Margin="0,0,12,0" Foreground="White" />
-                        <TextBlock Text="这是一段测试弹幕" Foreground="White" FontSize="24" FontWeight="Bold"/>
-                    </StackPanel>
+                <Border x:Name="PreviewBorder" Height="200" Background="#1c1c1c" CornerRadius="12" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" ClipToBounds="True">
+                    <rendering:BarrageEngineHost x:Name="LocalPreviewHost" />
                 </Border>
             </StackPanel>
 
             <!-- 第二区域：双列设置项 -->
-            <Grid Margin="0,0,0,24">
+            <Grid x:Name="SettingsGrid" Margin="0,0,0,24">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="16" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <!-- 左列：字体设置 -->
-                <Border Grid.Column="0" VerticalAlignment="Top" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+                <!-- 左列：内容设置 -->
+                <Border x:Name="LeftSettingsCard" Grid.Column="0" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
                     <StackPanel>
                         <!-- 区域标题 -->
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                             <ui:SymbolIcon Symbol="TextFont24" FontSize="20" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="0,0,8,0"/>
-                            <ui:TextBlock FontTypography="BodyStrong" Text="字体设置" FontSize="16"/>
+                            <ui:TextBlock FontTypography="BodyStrong" Text="内容" FontSize="16"/>
                         </StackPanel>
 
                         <ui:TextBlock Text="字体" Margin="0,0,0,8"/>
-                        <ComboBox SelectedIndex="0" Margin="0,0,0,20" HorizontalAlignment="Stretch">
+                        <ComboBox SelectedIndex="0" Margin="0,0,0,18" HorizontalAlignment="Stretch">
                             <ComboBoxItem Content="Inter"/>
                             <ComboBoxItem Content="微软雅黑"/>
                         </ComboBox>
 
                         <Grid Margin="0,0,0,8">
                             <ui:TextBlock Text="字体大小"/>
-                            <ui:TextBlock x:Name="FontSizeText" Text="24px" HorizontalAlignment="Right" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold"/>
+                            <ui:TextBlock Text="{Binding FontSizeDisplay}" HorizontalAlignment="Right" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold"/>
                         </Grid>
-                        <Slider x:Name="FontSizeSlider" Minimum="12" Maximum="64" Value="24" Margin="0,0,0,20" ValueChanged="FontSizeSlider_ValueChanged"/>
+                        <Slider Minimum="12" Maximum="64" Value="{Binding FontSize, Mode=TwoWay}" Margin="0,0,0,18" />
 
                         <ui:TextBlock Text="字重" Margin="0,0,0,8"/>
-                        <!-- ToggleButton 组模拟 Segmented Control -->
-                        <Grid Margin="0,0,0,20">
+                        <Grid Margin="0,0,0,18">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <ui:Button x:Name="FontWeightNormalBtn" Grid.Row="0" Content="常规" Appearance="Primary" HorizontalAlignment="Stretch" Margin="0,0,0,8" Click="FontWeightNormalBtn_Click"/>
-                            <ui:Button x:Name="FontWeightBoldBtn" Grid.Row="1" Content="加粗" Appearance="Transparent" HorizontalAlignment="Stretch" Click="FontWeightBoldBtn_Click"/>
+                            <ui:Button Grid.Row="0" Content="常规" Appearance="{Binding IsFontWeightBold, Converter={StaticResource InverseBoolToAppearance}}" Command="{Binding SetFontWeightCommand}" CommandParameter="False" HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
+                            <ui:Button Grid.Row="1" Content="加粗" Appearance="{Binding IsFontWeightBold, Converter={StaticResource BoolToAppearance}}" Command="{Binding SetFontWeightCommand}" CommandParameter="True" HorizontalAlignment="Stretch"/>
                         </Grid>
 
                         <ui:TextBlock Text="字体样式" Margin="0,0,0,8"/>
@@ -85,14 +96,20 @@
                                 <ColumnDefinition Width="8"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <ui:Button x:Name="FontStyleItalicBtn" Grid.Column="0" Content="斜体" Appearance="Transparent" HorizontalAlignment="Stretch" Click="FontStyleItalicBtn_Click"/>
-                            <ui:Button x:Name="FontStyleUnderlineBtn" Grid.Column="2" Content="下划线" Appearance="Transparent" HorizontalAlignment="Stretch" Click="FontStyleUnderlineBtn_Click"/>
+                            <ui:Button Grid.Column="0" Content="斜体" Appearance="{Binding IsFontStyleItalic, Converter={StaticResource BoolToAppearance}}" Command="{Binding ToggleFontStyleCommand}" HorizontalAlignment="Stretch"/>
+                            <ui:Button Grid.Column="2" Content="下划线" Appearance="{Binding IsUnderline, Converter={StaticResource BoolToAppearance}}" Command="{Binding ToggleUnderlineCommand}" HorizontalAlignment="Stretch"/>
                         </Grid>
+
+                        <Grid Margin="0,18,0,8">
+                            <ui:TextBlock Text="弹幕最大长度"/>
+                            <ui:TextBlock Text="{Binding MaxLengthDisplay}" HorizontalAlignment="Right" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold"/>
+                        </Grid>
+                        <Slider Minimum="5" Maximum="50" Value="{Binding MaxTextLength, Mode=TwoWay}" Margin="0,0,0,0" />
                     </StackPanel>
                 </Border>
 
                 <!-- 右列：外观设置 -->
-                <Border Grid.Column="2" VerticalAlignment="Top" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+                <Border x:Name="RightSettingsCard" Grid.Column="2" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
                     <StackPanel>
                         <!-- 区域标题 -->
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
@@ -100,8 +117,8 @@
                             <ui:TextBlock FontTypography="BodyStrong" Text="外观" FontSize="16"/>
                         </StackPanel>
 
-                        <ui:TextBlock Text="颜色选择器" Margin="0,0,0,8"/>
-                        <Grid Margin="0,0,0,20">
+                        <ui:TextBlock Text="颜色选择器 (预留)" Margin="0,0,0,8"/>
+                        <Grid Margin="0,0,0,22">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
@@ -111,31 +128,39 @@
                         </Grid>
 
                         <Grid Margin="0,0,0,8">
-                            <ui:TextBlock Text="不透明度"/>
-                            <ui:TextBlock x:Name="OpacityText" Text="85%" HorizontalAlignment="Right" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold"/>
+                            <ui:TextBlock Text="文字不透明度"/>
+                            <ui:TextBlock Text="{Binding TextOpacityDisplay}" HorizontalAlignment="Right" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold"/>
                         </Grid>
-                        <Slider x:Name="OpacitySlider" Minimum="0" Maximum="100" Value="85" Margin="0,0,0,20" ValueChanged="OpacitySlider_ValueChanged"/>
+                        <Slider Minimum="0" Maximum="100" Value="{Binding TextOpacityPercentage, Mode=TwoWay}" Margin="0,0,0,22" />
 
                         <Grid Margin="0,0,0,8">
                             <ui:TextBlock Text="背景不透明度"/>
-                            <ui:TextBlock x:Name="BackgroundOpacityText" Text="20%" HorizontalAlignment="Right" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold"/>
+                            <ui:TextBlock Text="{Binding BackgroundOpacityDisplay}" HorizontalAlignment="Right" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold"/>
                         </Grid>
-                        <Slider x:Name="BackgroundOpacitySlider" Minimum="0" Maximum="100" Value="20" Margin="0,0,0,24" ValueChanged="BackgroundOpacitySlider_ValueChanged"/>
+                        <Slider Minimum="0" Maximum="100" Value="{Binding BackgroundOpacityPercentage, Mode=TwoWay}" Margin="0,0,0,22" />
 
-                        <Grid Margin="0,0,0,16">
+                        <Grid Margin="0,0,0,22">
                             <StackPanel>
                                 <ui:TextBlock Text="显示应用图标"/>
                                 <ui:TextBlock Text="弹幕前显示应用图标" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                             </StackPanel>
-                            <ui:ToggleSwitch HorizontalAlignment="Right" VerticalAlignment="Center" IsChecked="True"/>
+                            <ui:ToggleSwitch HorizontalAlignment="Right" VerticalAlignment="Center" IsChecked="{Binding ShowAppIcon, Mode=TwoWay}"/>
                         </Grid>
 
-                        <Grid>
+                        <Grid Margin="0,0,0,22">
                             <StackPanel>
                                 <ui:TextBlock Text="显示应用名称"/>
                                 <ui:TextBlock Text="弹幕前显示应用名称" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                             </StackPanel>
-                            <ui:ToggleSwitch HorizontalAlignment="Right" VerticalAlignment="Center" IsChecked="False"/>
+                            <ui:ToggleSwitch HorizontalAlignment="Right" VerticalAlignment="Center" IsChecked="{Binding ShowAppName, Mode=TwoWay}"/>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,0">
+                            <StackPanel>
+                                <ui:TextBlock Text="省略号高对比度显示"/>
+                                <ui:TextBlock Text="高亮被截断的弹幕标识" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                            </StackPanel>
+                            <ui:ToggleSwitch HorizontalAlignment="Right" VerticalAlignment="Center" IsChecked="{Binding HighlightEllipsis, Mode=TwoWay}"/>
                         </Grid>
 
                     </StackPanel>
@@ -157,8 +182,8 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Column="0" Text="动画速度" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                        <Slider x:Name="SpeedSlider" Grid.Column="1" Minimum="5" Maximum="30" Value="12" Margin="0,0,16,0" VerticalAlignment="Center" ValueChanged="SpeedSlider_ValueChanged"/>
-                        <ui:TextBlock x:Name="SpeedValueText" Grid.Column="2" Text="中 (12 字/秒)" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" Width="90" TextAlignment="Right"/>
+                        <Slider Grid.Column="1" Minimum="5" Maximum="30" Value="{Binding ScrollSpeedCharsPerSec, Mode=TwoWay}" Margin="0,0,16,0" VerticalAlignment="Center" />
+                        <ui:TextBlock Grid.Column="2" Text="{Binding SpeedDisplay}" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" Width="90" TextAlignment="Right"/>
                     </Grid>
                 </StackPanel>
             </Border>

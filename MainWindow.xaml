@@ -10,7 +10,7 @@
         Background="Transparent"
         Topmost="True"
         ShowInTaskbar="False"
+        Style="{x:Null}"
         Loaded="Window_Loaded">
     <rendering:BarrageEngineHost x:Name="EngineHost" />
 </Window>
-

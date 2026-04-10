@@ -6,6 +6,8 @@
                  Title="弹幕通知"
                  Height="768"
                  Width="1024"
+                 MinWidth="550"
+                 MinHeight="600"
                  WindowStartupLocation="CenterScreen"
                  ExtendsContentIntoTitleBar="True"
                  WindowBackdropType="Mica"

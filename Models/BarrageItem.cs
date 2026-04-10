@@ -59,7 +59,11 @@ namespace NotiFlow.Models
 
             // 预烘焙字形以获取精确的像素尺寸
             var typeface = new Typeface(fontFamily, fontStyle, fontWeight, FontStretches.Normal);
-            if (textBrush.CanFreeze) textBrush.Freeze();
+            
+            // 真正修复：拷贝原始颜色画刷并注入透明度配置设置
+            Brush finalTxtBrush = textBrush.Clone();
+            finalTxtBrush.Opacity *= BarrageSettings.TextOpacity;
+            if (finalTxtBrush.CanFreeze) finalTxtBrush.Freeze();
 
             double pixelsPerDip = VisualTreeHelper.GetDpi(Application.Current.MainWindow).PixelsPerDip;
 
@@ -70,8 +74,14 @@ namespace NotiFlow.Models
                 FlowDirection.LeftToRight,
                 typeface,
                 fontSize,
-                textBrush,
+                finalTxtBrush,
                 pixelsPerDip);
+
+            // 修复省略号高亮度：当开启选项并且文本真的以省略号结尾时，对最后6个字符上色
+            if (BarrageSettings.HighlightEllipsis && fullText.EndsWith("......"))
+            {
+                formattedText.SetForegroundBrush(BarrageSettings.EllipsisColor, fullText.Length - 6, 6);
+            }
 #pragma warning restore CS0618
 
             contentWidth += formattedText.WidthIncludingTrailingWhitespace;
@@ -134,7 +144,7 @@ namespace NotiFlow.Models
                 if (!BarrageSettings.ShowBackground)
                 {
                     var shadowBrush = Brushes.Black.Clone();
-                    shadowBrush.Opacity = 0.9;
+                    shadowBrush.Opacity = 0.9 * BarrageSettings.TextOpacity; // 阴影不透明度也需要受到全局透明度乘数影响
                     shadowBrush.Freeze();
 
 #pragma warning disable CS0618
@@ -157,11 +167,12 @@ namespace NotiFlow.Models
                 // 5. 下划线
                 if (BarrageSettings.IsUnderlined)
                 {
-                    var pen = new Pen(textBrush, 2);
+                    var pen = new Pen(finalTxtBrush, 2);
                     pen.Freeze();
+                    // 修复下划线遮挡文字：将其置于整个文本框的高度的底侧而非基准线底侧
                     dc.DrawLine(pen,
-                        new Point(drawX, textY + formattedText.Baseline + 2),
-                        new Point(drawX + formattedText.WidthIncludingTrailingWhitespace, textY + formattedText.Baseline + 2));
+                        new Point(drawX, textY + formattedText.Height),
+                        new Point(drawX + formattedText.WidthIncludingTrailingWhitespace, textY + formattedText.Height));
                 }
 
                 // 记录总物理宽度（含背景边距），供物理引擎判断越界

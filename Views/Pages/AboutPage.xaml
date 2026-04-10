@@ -6,8 +6,8 @@
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       Background="Transparent">
 
-    <ScrollViewer x:Name="MainScrollViewer" VerticalScrollBarVisibility="Auto" CanContentScroll="False" Background="Transparent">
-        <StackPanel Margin="24,12,24,24" Background="Transparent">
+    <ScrollViewer x:Name="MainScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Background="Transparent">
+        <StackPanel Margin="24,12,24,24" HorizontalAlignment="Stretch" VerticalAlignment="Top" Background="Transparent">
             
             <!-- 页面大标题 -->
             <Grid Margin="0,0,0,32">
@@ -42,11 +42,11 @@
                                       TextWrapping="Wrap" 
                                       Margin="0,0,0,16"/>
                                       
-                        <StackPanel Orientation="Horizontal">
-                            <ui:Button Appearance="Primary" Content="GitHub 仓库" Icon="{ui:SymbolIcon Branch24}" Margin="0,0,12,0"/>
-                            <ui:Button Appearance="Primary" Content="检查更新" Icon="{ui:SymbolIcon ArrowSync24}" Margin="0,0,12,0"/>
-                            <ui:Button Appearance="Secondary" Content="许可证" Icon="{ui:SymbolIcon Document24}"/>
-                        </StackPanel>
+                        <WrapPanel Orientation="Horizontal">
+                            <ui:Button Appearance="Primary" Content="GitHub 仓库" Icon="{ui:SymbolIcon Branch24}" Margin="0,0,12,12"/>
+                            <ui:Button Appearance="Primary" Content="检查更新" Icon="{ui:SymbolIcon ArrowSync24}" Margin="0,0,12,12"/>
+                            <ui:Button Appearance="Secondary" Content="许可证" Icon="{ui:SymbolIcon Document24}" Margin="0,0,0,12"/>
+                        </WrapPanel>
                     </StackPanel>
                 </Grid>
             </Border>

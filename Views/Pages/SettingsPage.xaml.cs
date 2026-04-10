@@ -1,3 +1,4 @@
+using System.Windows;
 using System.Windows.Controls;
 using Wpf.Ui.Appearance;
 
@@ -45,6 +46,25 @@ namespace NotiFlow.Views.Pages
                 case 2: // 深色
                     ApplicationThemeManager.Apply(ApplicationTheme.Dark);
                     break;
+            }
+
+            // 主题切换后，WPF-UI 会通过 DWM API 将所有窗口强制设置深色模式属性，
+            // 导致全透明的弹幕叠加窗口变为黑色不透明并遮挡整个桌面。
+            // 此处立即在 Win32 DWM 层面将 MainWindow 的深色渲染属性重置回去。
+            RestoreBarrageWindowTransparency();
+        }
+
+        /// <summary>
+        /// 遍历当前应用的所有窗口，找到弹幕叠加窗口并在 OS 层面重置其透明状态。
+        /// </summary>
+        private static void RestoreBarrageWindowTransparency()
+        {
+            foreach (Window window in Application.Current.Windows)
+            {
+                if (window is MainWindow)
+                {
+                    NativeMethods.ResetWindowTransparency(window);
+                }
             }
         }
     }
