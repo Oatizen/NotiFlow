@@ -361,3 +361,22 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# ====== NotiFlow 项目专用排除 ======
+# AI 辅助开发上下文与架构笔记（非公开）
+AI_CONTEXT_SUMMARY.md
+BARRAGE_ENGINE_ARCHITECTURE.md
+overlay_tech_research.md
+
+# 开发调试用脚本
+inspect_wpfui.ps1
+
+# 项目备份目录
+Backup/
+
+# 运行时生成的弹幕配置文件
+BarrageConfig.json
+/AI_CONTEXT_SUMMARY.md
+/BARRAGE_ENGINE_ARCHITECTURE.md
+/overlay_tech_research.md
+/inspect_wpfui.ps1
