@@ -22,23 +22,21 @@ namespace NotiFlow
 
             if (e.Handled) return;
 
-            // 1. 获取当前鼠标在窗口内的坐标
-            Point mousePoint = e.GetPosition(this);
-
-            // 2. HitTest 向下扫描鼠标悬停的底层元素
-            HitTestResult hitResult = VisualTreeHelper.HitTest(this, mousePoint);
-            if (hitResult == null || hitResult.VisualHit == null) return;
-
-            // 3. 从命中元素向上遍历，找到第一个「真正能滚动」的 ScrollViewer
-            //    关键：跳过 ScrollableHeight == 0 的 ScrollViewer（它们只是空壳）
-            ScrollViewer sv = FindScrollableParent(hitResult.VisualHit);
-
-            // 4. 强行驱动滚动
-            if (sv != null)
+            // 1. 使用 OriginalSource 获取触发滚轮事件的真实底层元素。
+            //    不要使用 VisualTreeHelper.HitTest(this)，因为它无法穿透到具有独立视觉树的 Popup (例如 ComboBox 的下拉弹窗) 中，
+            //    导致下拉框中的滚轮事件被错误地路由到了背后的主页面上。
+            if (e.OriginalSource is DependencyObject originalSource)
             {
-                double scrollAmount = e.Delta / 2.0;
-                sv.ScrollToVerticalOffset(sv.VerticalOffset - scrollAmount);
-                e.Handled = true;
+                // 2. 从命中元素向上遍历，找到第一个「真正能滚动」的 ScrollViewer
+                ScrollViewer sv = FindScrollableParent(originalSource);
+
+                // 3. 强行驱动滚动
+                if (sv != null)
+                {
+                    double scrollAmount = e.Delta / 2.0;
+                    sv.ScrollToVerticalOffset(sv.VerticalOffset - scrollAmount);
+                    e.Handled = true;
+                }
             }
         }
 

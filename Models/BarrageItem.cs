@@ -38,15 +38,20 @@ namespace NotiFlow.Models
                 contentWidth += iconSize + 10; // 图标宽 + 右间距
             }
 
-            // 文字内容拼接
+            // 文字内容拼接：纯净格式 "应用名称：内容"
             string prefix = "";
             if (BarrageSettings.ShowAppName && !string.IsNullOrEmpty(message.AppName))
             {
-                prefix += $"[{message.AppName}] ";
+                prefix += message.AppName;
             }
             if (!string.IsNullOrEmpty(message.Title))
             {
-                prefix += $"【{message.Title}】";
+                if (prefix.Length > 0) prefix += " ";
+                prefix += message.Title;
+            }
+            if (prefix.Length > 0)
+            {
+                prefix += "：";
             }
 
             string bodyText = message.Body ?? "";

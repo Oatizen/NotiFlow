@@ -91,7 +91,6 @@ namespace NotiFlow
             BarrageSettings.ImportConfig();
 
             InitializeTracks();
-            EnableClickThrough();
 
             // 绑定 Esc 键退出
             KeyDown += (s, args) =>
@@ -111,6 +110,8 @@ namespace NotiFlow
             // 订阅通知事件
             _notificationService.OnNotificationReceived += (msg) =>
             {
+                if (!BarrageSettings.IsWorking) return;
+
                 // 必须回到 UI 线程执行
                 Application.Current.Dispatcher.Invoke(() =>
                 {
@@ -178,11 +179,25 @@ namespace NotiFlow
             }
         }
 
-        private void EnableClickThrough()
+        protected override void OnSourceInitialized(EventArgs e)
         {
+            base.OnSourceInitialized(e);
+
+            // 1像素欺骗法：手动覆盖屏幕铺满不使用最大化，规避第三方任务栏软件的误判
+            this.Left = 0;
+            this.Top = 0;
+            this.Width = SystemParameters.PrimaryScreenWidth;
+            this.Height = SystemParameters.PrimaryScreenHeight - 1;
+
             var hwnd = new WindowInteropHelper(this).Handle;
             int extendedStyle = NativeMethods.GetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE);
-            NativeMethods.SetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE, extendedStyle | NativeMethods.WS_EX_TRANSPARENT);
+            
+            // 复合样式：
+            // WS_EX_TRANSPARENT 允许鼠标穿透
+            // WS_EX_TOOLWINDOW 隐藏常规窗口属性避免捕捉
+            // WS_EX_NOACTIVATE 避免抢占当前前台焦点
+            NativeMethods.SetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE, 
+                extendedStyle | NativeMethods.WS_EX_TRANSPARENT | NativeMethods.WS_EX_TOOLWINDOW | NativeMethods.WS_EX_NOACTIVATE);
         }
 
         private void EnqueueBarrage(NotificationMessage msg)
@@ -200,8 +215,6 @@ namespace NotiFlow
 
         private void LaunchBarrage(NotificationMessage message, int track)
         {
-            var color = _colors[_random.Next(_colors.Length)];
-            
             // 🚀 从对象池抓取死掉的图层，如果不空闲才 new，杜绝反复开启 GC
             BarrageItem item;
             if (_pool.Count > 0)
@@ -223,7 +236,8 @@ namespace NotiFlow
             item.TrackIndex = track;
             
             // 将设置的颜色解冻，这是后续使用对象池的核心技术基础，但当前先进行普通的独立绘制
-            Brush unFrozenBrush = color.Clone();
+            // 使用设置中的统一色彩，抛弃之前的随机色彩数组
+            Brush unFrozenBrush = BarrageSettings.TextColor.Clone();
             unFrozenBrush.Freeze();
 
             FontFamily fontFamily = BarrageSettings.FontFamily;

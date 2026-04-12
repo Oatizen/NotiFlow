@@ -42,7 +42,6 @@
             <StackPanel Margin="0,0,0,24">
                 <Grid Margin="0,0,0,16">
                     <ui:TextBlock Text="弹幕预览" FontTypography="BodyStrong"/>
-                    <ui:TextBlock Text="实时状态同步中" HorizontalAlignment="Right" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                 </Grid>
 
                 <Border x:Name="PreviewBorder" Height="200" Background="#1c1c1c" CornerRadius="12" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" ClipToBounds="True">
@@ -59,7 +58,7 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- 左列：内容设置 -->
-                <Border x:Name="LeftSettingsCard" Grid.Column="0" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+                <Border x:Name="LeftSettingsCard" Grid.Column="0" VerticalAlignment="Stretch" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
                     <StackPanel>
                         <!-- 区域标题 -->
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
@@ -68,9 +67,19 @@
                         </StackPanel>
 
                         <ui:TextBlock Text="字体" Margin="0,0,0,8"/>
-                        <ComboBox SelectedIndex="0" Margin="0,0,0,18" HorizontalAlignment="Stretch">
-                            <ComboBoxItem Content="Inter"/>
-                            <ComboBoxItem Content="微软雅黑"/>
+                        <ComboBox ItemsSource="{Binding AvailableFonts}" SelectedItem="{Binding SelectedFontItem, Mode=TwoWay}" MaxDropDownHeight="300" ScrollViewer.VerticalScrollBarVisibility="Visible" Margin="0,0,0,18" HorizontalAlignment="Stretch" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="200"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding LocalizedName}" VerticalAlignment="Center" ToolTip="{Binding LocalizedName}" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"/>
+                                        <TextBlock Grid.Column="1" Text="Abc弹幕" FontFamily="{Binding Family}" VerticalAlignment="Center" FontSize="14" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
                         </ComboBox>
 
                         <Grid Margin="0,0,0,8">
@@ -109,7 +118,7 @@
                 </Border>
 
                 <!-- 右列：外观设置 -->
-                <Border x:Name="RightSettingsCard" Grid.Column="2" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+                <Border x:Name="RightSettingsCard" Grid.Column="2" VerticalAlignment="Stretch" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
                     <StackPanel>
                         <!-- 区域标题 -->
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
@@ -117,14 +126,49 @@
                             <ui:TextBlock FontTypography="BodyStrong" Text="外观" FontSize="16"/>
                         </StackPanel>
 
-                        <ui:TextBlock Text="颜色选择器 (预留)" Margin="0,0,0,8"/>
+                        <ui:TextBlock Text="文字颜色" Margin="0,0,0,0"/>
+                        <ui:TextBlock Text="点击方框或输入16进制色号改变颜色" Margin="0,4,0,8" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+
+                        <!-- 取色弹窗与 HEX 手动输入 -->
                         <Grid Margin="0,0,0,22">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" Width="40" Height="40" Background="White" CornerRadius="8" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" Margin="0,0,12,0"/>
-                            <ui:TextBox Grid.Column="1" Text="#FFFFFF" IsReadOnly="True" VerticalAlignment="Center"/>
+                            
+                            <Grid Grid.Column="0" Margin="0,0,12,0">
+                                <Button Padding="0" BorderThickness="0" Background="Transparent" Click="ColorPickerButton_Click" Cursor="Hand">
+                                    <Border Width="40" Height="40" Background="{Binding CurrentColorBrush}" CornerRadius="8" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
+                                </Button>
+                                
+                                <ui:Flyout x:Name="ColorPaletteFlyout" Placement="Bottom">
+                                    <ItemsControl ItemsSource="{Binding PresetColors}" Margin="8,8,0,0" Width="160">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel Orientation="Horizontal" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Button Background="{Binding Brush}" 
+                                                        Command="{Binding DataContext.SelectColorCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" 
+                                                        CommandParameter="{Binding Hex}"
+                                                        Width="32" Height="32" 
+                                                        Margin="0,0,8,8" 
+                                                        BorderThickness="0">
+                                                    <Button.Template>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border Background="{TemplateBinding Background}" CornerRadius="16" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" Cursor="Hand"/>
+                                                        </ControlTemplate>
+                                                    </Button.Template>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ui:Flyout>
+                            </Grid>
+                            
+                            <ui:TextBox Grid.Column="1" Text="{Binding TextColorHex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="HEX (例如: #FFFFFF)" VerticalAlignment="Center"/>
                         </Grid>
 
                         <Grid Margin="0,0,0,8">

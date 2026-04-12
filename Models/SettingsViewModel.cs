@@ -2,11 +2,50 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows;
+using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace NotiFlow.Models
 {
+    /// <summary>
+    /// 用于包装 FontFamily 并提供其本地化名称（如处理中文名，防止符号字体显示乱码）
+    /// </summary>
+    public class FontViewModel
+    {
+        public FontFamily Family { get; }
+        public string LocalizedName { get; }
+
+        public FontViewModel(FontFamily family)
+        {
+            Family = family;
+            
+            // 尝试获取本地化字体名称，优先级：中文 -> 英语 -> 字体原始名称
+            var zhLang = System.Windows.Markup.XmlLanguage.GetLanguage("zh-cn");
+            var enLang = System.Windows.Markup.XmlLanguage.GetLanguage("en-us");
+
+            if (family.FamilyNames.TryGetValue(zhLang, out string? zhName))
+                LocalizedName = zhName;
+            else if (family.FamilyNames.TryGetValue(enLang, out string? enName))
+                LocalizedName = enName;
+            else
+                LocalizedName = family.Source;
+        }
+    }
+
+    /// <summary>
+    /// 用于装载预设调色板信息的结构体
+    /// </summary>
+    public class ColorPaletteItem
+    {
+        public string Name { get; set; }
+        public string Hex { get; set; }
+        public Brush Brush { get; set; }
+    }
+
     /// <summary>
     /// 设置界面的总调度 ViewModel，主要作用是将静态层里的 BarrageSettings 与前端进行带缓冲的双向绑定
     /// </summary>
@@ -16,6 +55,33 @@ namespace NotiFlow.Models
         public SettingsViewModel()
         {
             // 从静态内存中拉取初始状态
+            
+            // 初始化系统字体列表并尝试配对当前使用字体
+            AvailableFonts = Fonts.SystemFontFamilies
+                .Select(f => new FontViewModel(f))
+                .OrderBy(f => f.LocalizedName)
+                .ToList();
+                
+            var currentSource = BarrageSettings.FontFamily.Source;
+            _selectedFontItem = AvailableFonts.FirstOrDefault(f => f.Family.Source.Equals(currentSource, StringComparison.OrdinalIgnoreCase))
+                               ?? AvailableFonts.FirstOrDefault(f => f.Family.Source.Equals("Microsoft YaHei", StringComparison.OrdinalIgnoreCase))
+                               ?? AvailableFonts.FirstOrDefault();
+
+            _textColorHex = (BarrageSettings.TextColor is SolidColorBrush brush) ? brush.Color.ToString() : "#FFFFFF";
+            _currentColorBrush = BarrageSettings.TextColor;
+
+            PresetColors = new ObservableCollection<ColorPaletteItem>
+            {
+                new ColorPaletteItem { Name = "纯净白", Hex = "#FFFFFF", Brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFFFFF")) },
+                new ColorPaletteItem { Name = "樱花粉", Hex = "#FFA1C5", Brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFA1C5")) },
+                new ColorPaletteItem { Name = "明媚黄", Hex = "#FFD700", Brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFD700")) },
+                new ColorPaletteItem { Name = "青草绿", Hex = "#98FB98", Brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#98FB98")) },
+                new ColorPaletteItem { Name = "天际蓝", Hex = "#87CEEB", Brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#87CEEB")) },
+                new ColorPaletteItem { Name = "梦幻紫", Hex = "#DDA0DD", Brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#DDA0DD")) },
+                new ColorPaletteItem { Name = "活力橙", Hex = "#FFA500", Brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFA500")) },
+                new ColorPaletteItem { Name = "暗夜黑", Hex = "#000000", Brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#000000")) },
+            };
+
             _fontSize = BarrageSettings.FontSize;
             _maxTextLength = BarrageSettings.MaxTextLength;
             _textOpacityPercentage = BarrageSettings.TextOpacity * 100;
@@ -28,6 +94,7 @@ namespace NotiFlow.Models
             _isFontWeightBold = BarrageSettings.FontWeight == FontWeights.Bold;
             _isFontStyleItalic = BarrageSettings.FontStyle == FontStyles.Italic;
             _isUnderline = BarrageSettings.IsUnderlined;
+            _autoStartWorking = BarrageSettings.AutoStartWorking;
 
             _debounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
             _debounceTimer.Tick += (s, e) =>
@@ -36,6 +103,48 @@ namespace NotiFlow.Models
                 BarrageSettings.ExportConfig();
                 WeakReferenceMessenger.Default.Send(new BarragePreviewMessage(""));
             };
+        }
+
+        public IEnumerable<FontViewModel> AvailableFonts { get; }
+
+        [ObservableProperty]
+        private FontViewModel? _selectedFontItem;
+        partial void OnSelectedFontItemChanged(FontViewModel? value)
+        {
+            if (value != null)
+            {
+                BarrageSettings.FontFamily = value.Family;
+                TriggerSaveAndPreview();
+            }
+        }
+
+        public ObservableCollection<ColorPaletteItem> PresetColors { get; }
+
+        [ObservableProperty]
+        private Brush _currentColorBrush;
+
+        [ObservableProperty]
+        private string _textColorHex;
+        partial void OnTextColorHexChanged(string value)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(value)) return;
+                var color = (Color)ColorConverter.ConvertFromString(value);
+                CurrentColorBrush = new SolidColorBrush(color);
+                BarrageSettings.TextColor = CurrentColorBrush;
+                TriggerSaveAndPreview();
+            }
+            catch
+            {
+                // 如果输入不合法，原封不动，防止崩溃
+            }
+        }
+
+        [RelayCommand]
+        private void SelectColor(string hex)
+        {
+            TextColorHex = hex;
         }
 
         [ObservableProperty]
@@ -143,6 +252,14 @@ namespace NotiFlow.Models
         partial void OnIsUnderlineChanged(bool value)
         {
             BarrageSettings.IsUnderlined = value;
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        private bool _autoStartWorking;
+        partial void OnAutoStartWorkingChanged(bool value)
+        {
+            BarrageSettings.AutoStartWorking = value;
             TriggerSaveAndPreview();
         }
 

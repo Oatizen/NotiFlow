@@ -22,6 +22,8 @@ namespace NotiFlow.Views.Pages
 
         private void Page_Loaded(object sender, RoutedEventArgs e)
         {
+            UpdateWorkButtonState(); // 刚进入页面时先校准一次当前实际状态
+
             CompositionTarget.Rendering += CompositionTarget_Rendering;
             
             WeakReferenceMessenger.Default.Register<BarragePreviewMessage>(this, (recipient, message) =>
@@ -65,8 +67,8 @@ namespace NotiFlow.Views.Pages
                 Body = "这是一条测试弹幕......"
             };
 
-            // 测试弹幕颜色写死白色，真实中它是个随机数组
-            Brush textBrush = _whiteBrush;
+            // 使用全局设定的文字颜色而非固定白色
+            Brush textBrush = BarrageSettings.TextColor;
 
             _previewItem.BuildVisual(msg, textBrush, BarrageSettings.FontSize, BarrageSettings.FontFamily, BarrageSettings.FontStyle, BarrageSettings.FontWeight);
 
@@ -114,7 +116,14 @@ namespace NotiFlow.Views.Pages
 
         private void ToggleWorkButton_Click(object sender, System.Windows.RoutedEventArgs e)
         {
-            if (ToggleWorkButton.Content.ToString() == "开启")
+            // 在内存中取反实际渲染开关，并更新所有与之相连的状态组件
+            BarrageSettings.IsWorking = !BarrageSettings.IsWorking;
+            UpdateWorkButtonState();
+        }
+
+        private void UpdateWorkButtonState()
+        {
+            if (BarrageSettings.IsWorking)
             {
                 ToggleWorkButton.Content = "工作中";
                 ToggleWorkButton.Appearance = Wpf.Ui.Controls.ControlAppearance.Primary;
@@ -129,6 +138,11 @@ namespace NotiFlow.Views.Pages
         private void HelpButton_Click(object sender, System.Windows.RoutedEventArgs e)
         {
             HelpFlyout.Show();
+        }
+
+        private void ColorPickerButton_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            ColorPaletteFlyout.Show();
         }
 
         /// <summary>

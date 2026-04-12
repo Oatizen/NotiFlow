@@ -19,6 +19,7 @@ namespace NotiFlow
         public string FontStyle { get; set; } = "Normal";
         public bool IsUnderlined { get; set; } = false;
         
+        public string TextColorHex { get; set; } = "#FFFFFF"; // 默认白色
         public double TextOpacity { get; set; } = 1.0;
         
         public bool ShowAppIcon { get; set; } = true;
@@ -49,6 +50,7 @@ namespace NotiFlow
         public static FontStyle FontStyle { get; set; } = FontStyles.Normal;
         public static bool IsUnderlined { get; set; } = false;
         
+        public static Brush TextColor { get; set; } = Brushes.White;
         public static double TextOpacity { get; set; } = 1.0;
         
         public static bool ShowAppIcon { get; set; } = true;
@@ -65,6 +67,13 @@ namespace NotiFlow
         public static Brush EllipsisColor { get; set; } = Brushes.LimeGreen;
         public static double ScrollSpeedCharsPerSec { get; set; } = 12.0;
         public static bool AutoStartWorking { get; set; } = true;
+
+        // ====== 运行时应用状态 ======
+        /// <summary>
+        /// 指示程序当前是否正处于开启（渲染弹幕）状态。
+        /// 不进行落盘持久化，每次启动由 AutoStartWorking 赋值。
+        /// </summary>
+        public static bool IsWorking { get; set; } = false;
 
         // 默认配置文件保存路径（软件运行目录底下的 JSON 文件）
         private static readonly string DefaultConfigPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BarrageConfig.json");
@@ -83,6 +92,7 @@ namespace NotiFlow
                     FontWeight = FontWeight.ToString(),
                     FontStyle = FontStyle.ToString(),
                     IsUnderlined = IsUnderlined,
+                    TextColorHex = (TextColor is SolidColorBrush textBrush) ? textBrush.Color.ToString() : "#FFFFFF",
                     TextOpacity = TextOpacity,
                     ShowAppIcon = ShowAppIcon,
                     ShowAppName = ShowAppName,
@@ -145,6 +155,7 @@ namespace NotiFlow
                 try { FontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(dto.FontStyle)!; } catch { FontStyle = FontStyles.Normal; }
 
                 // 5. 解析系统颜色（HexString 转换到 Brush 画刷模型）
+                try { TextColor = new SolidColorBrush((Color)ColorConverter.ConvertFromString(dto.TextColorHex)); } catch { TextColor = Brushes.White; }
                 try { BackgroundColor = new SolidColorBrush((Color)ColorConverter.ConvertFromString(dto.BackgroundColorHex)); } catch { BackgroundColor = Brushes.Black; }
                 try { EllipsisColor = new SolidColorBrush((Color)ColorConverter.ConvertFromString(dto.EllipsisColorHex)); } catch { EllipsisColor = Brushes.LimeGreen; }
 
@@ -153,6 +164,7 @@ namespace NotiFlow
                 ScrollSpeedCharsPerSec = Math.Clamp(dto.ScrollSpeedCharsPerSec, 5.0, 100.0);
                 HighlightEllipsis = dto.HighlightEllipsis;
                 AutoStartWorking = dto.AutoStartWorking;
+                IsWorking = AutoStartWorking; // 启动时自动同步工作状态
             }
             catch
             {
