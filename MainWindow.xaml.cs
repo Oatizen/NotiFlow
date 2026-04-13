@@ -87,8 +87,7 @@ namespace NotiFlow
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            // 启动时自动尝试导入曾经落盘的配置文件（带安全回落防注入机制）
-            BarrageSettings.ImportConfig();
+            // 配置导入已迁移至 App.OnStartup 统一管理
 
             InitializeTracks();
 
@@ -270,8 +269,16 @@ namespace NotiFlow
 
             if (dt == 0) return;
 
-            // 如果当前没有任何存活弹幕，直接跳过所有计算
-            if (_activeItems.Count == 0) return;
+            // 如果当前没有任何存活弹幕
+            if (_activeItems.Count == 0)
+            {
+                // 当用户关闭了工作开关且所有弹幕已飞完，自动隐藏透明窗口释放桌面资源
+                if (!BarrageSettings.IsWorking && this.IsVisible)
+                {
+                    this.Hide();
+                }
+                return;
+            }
 
             // 反向遍历以免由于 List.Remove 引发集合修改报错
             for (int i = _activeItems.Count - 1; i >= 0; i--)

@@ -119,6 +119,12 @@ namespace NotiFlow.Views.Pages
             // 在内存中取反实际渲染开关，并更新所有与之相连的状态组件
             BarrageSettings.IsWorking = !BarrageSettings.IsWorking;
             UpdateWorkButtonState();
+
+            // 同步刷新托盘图标菜单状态与主窗口可见性
+            if (Application.Current is App app)
+            {
+                app.RefreshTrayState();
+            }
         }
 
         private void UpdateWorkButtonState()

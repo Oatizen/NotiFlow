@@ -1,13 +1,21 @@
 using System.Windows;
 using Wpf.Ui.Appearance;
+using NotiFlow.Services;
 
 namespace NotiFlow
 {
     public partial class App : Application
     {
+        private TrayIconService? _trayIconService;
+        private MainWindow? _mainWindow;
+        private SettingsWindow? _settingsWindow;
+
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+
+            // 切换为显式关闭模式：关闭所有窗口不会自动终结应用，由托盘"退出"控制生命周期
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
             // 仅在启动时应用一次默认主题 (浅色)
             ApplicationThemeManager.Apply(ApplicationTheme.Light);
@@ -29,9 +37,101 @@ namespace NotiFlow
                 });
             };
 
-            // 同步启动最高层级的全局透明弹幕引擎宿主窗口（隐藏状态运行）
-            var mainWindow = new MainWindow();
-            mainWindow.Show();
+            // 启动时自动尝试导入曾经落盘的配置文件（带安全回落防注入机制）
+            BarrageSettings.ImportConfig();
+
+            // 初始化系统托盘图标
+            _trayIconService = new TrayIconService();
+
+            // 根据自动启动设置决定是否立即显示主弹幕窗口
+            if (BarrageSettings.IsWorking)
+            {
+                EnsureMainWindowVisible();
+            }
+
+            // 默认启动时显示设置窗口
+            ShowOrActivateSettingsWindow();
+        }
+
+        /// <summary>
+        /// 确保弹幕主窗口处于可见状态。如果尚未创建则新建。
+        /// </summary>
+        public void EnsureMainWindowVisible()
+        {
+            if (_mainWindow == null || !_mainWindow.IsLoaded)
+            {
+                _mainWindow = new MainWindow();
+                _mainWindow.Show();
+            }
+            else if (!_mainWindow.IsVisible)
+            {
+                _mainWindow.Show();
+            }
+        }
+
+        /// <summary>
+        /// 隐藏弹幕主窗口（不销毁，保留通知服务订阅）
+        /// </summary>
+        public void HideMainWindow()
+        {
+            _mainWindow?.Hide();
+        }
+
+        /// <summary>
+        /// 根据当前工作状态与弹幕活跃情况同步主窗口的可见性。
+        /// 由 TrayIconService 和 CustomPage 的开关按钮调用。
+        /// </summary>
+        public void SyncMainWindowVisibility()
+        {
+            if (BarrageSettings.IsWorking)
+            {
+                EnsureMainWindowVisible();
+            }
+            // 注意：关闭工作状态时不立即隐藏，要等到所有弹幕飞完
+            // MainWindow 内部的渲染循环会检测并自动隐藏
+        }
+
+        /// <summary>
+        /// 显示或唤醒设置窗口。如果已存在则激活到前台，否则新建。
+        /// </summary>
+        public void ShowOrActivateSettingsWindow()
+        {
+            if (_settingsWindow == null || !_settingsWindow.IsLoaded)
+            {
+                _settingsWindow = new SettingsWindow();
+                _settingsWindow.Show();
+            }
+            else if (_settingsWindow.IsVisible)
+            {
+                // 窗口已可见，激活到前台
+                _settingsWindow.Activate();
+                if (_settingsWindow.WindowState == WindowState.Minimized)
+                {
+                    _settingsWindow.WindowState = WindowState.Normal;
+                }
+            }
+            else
+            {
+                // 窗口存在但被隐藏，重新显示并激活
+                _settingsWindow.Show();
+                _settingsWindow.Activate();
+            }
+        }
+
+        /// <summary>
+        /// 刷新托盘菜单中的工作状态显示
+        /// </summary>
+        public void RefreshTrayState()
+        {
+            _trayIconService?.RefreshWorkingState();
+        }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+            _trayIconService?.Dispose();
+            _mainWindow?.Close();
+            _settingsWindow?.Close();
+            base.OnExit(e);
         }
     }
 }

@@ -14,6 +14,13 @@ namespace NotiFlow
             
             // 手动设定加载时要显示的首页（也可以在使用 MVVM 和导航服务时通过路由来配置）
             Loaded += (s, e) => RootNavigation.Navigate(typeof(Views.Pages.CustomPage));
+
+            // 拦截关闭事件：隐藏到后台而非销毁，等待用户通过托盘图标重新唤出
+            Closing += (s, e) =>
+            {
+                e.Cancel = true;
+                this.Hide();
+            };
         }
 
         protected override void OnPreviewMouseWheel(MouseWheelEventArgs e)
