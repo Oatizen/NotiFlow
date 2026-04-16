@@ -67,7 +67,7 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- 导入设置 -->
-                <ui:Button Grid.Column="0" Height="100" HorizontalAlignment="Stretch" CornerRadius="12">
+                <ui:Button Grid.Column="0" Height="100" HorizontalAlignment="Stretch" CornerRadius="12" Click="Import_Click">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                         <ui:SymbolIcon Symbol="ArrowUpload24" FontSize="24" Margin="0,0,0,12" HorizontalAlignment="Center"/>
                         <ui:TextBlock Text="导入设置" FontTypography="BodyStrong" HorizontalAlignment="Center"/>
@@ -75,7 +75,7 @@
                 </ui:Button>
 
                 <!-- 导出设置 -->
-                <ui:Button Grid.Column="2" Height="100" HorizontalAlignment="Stretch" CornerRadius="12">
+                <ui:Button Grid.Column="2" Height="100" HorizontalAlignment="Stretch" CornerRadius="12" Click="Export_Click">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                         <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="24" Margin="0,0,0,12" HorizontalAlignment="Center"/>
                         <ui:TextBlock Text="导出设置" FontTypography="BodyStrong" HorizontalAlignment="Center"/>
@@ -83,7 +83,7 @@
                 </ui:Button>
 
                 <!-- 重置设置 -->
-                <ui:Button Grid.Column="4" Height="100" HorizontalAlignment="Stretch" CornerRadius="12">
+                <ui:Button Grid.Column="4" Height="100" HorizontalAlignment="Stretch" CornerRadius="12" Click="Reset_Click">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                         <ui:SymbolIcon Symbol="ArrowCounterclockwise24" FontSize="24" Margin="0,0,0,12" HorizontalAlignment="Center"/>
                         <ui:TextBlock Text="重置设置" FontTypography="BodyStrong" HorizontalAlignment="Center"/>

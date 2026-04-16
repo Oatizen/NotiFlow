@@ -36,17 +36,33 @@ namespace NotiFlow.Services
             }
 
             // 构建 WPF 风格的 Fluent Design 右键上下文菜单
-            _toggleWorkItem = new MenuItem { Header = GetWorkingText() };
+            _toggleWorkItem = new MenuItem 
+            { 
+                Header = GetWorkingText(),
+                Icon = new Wpf.Ui.Controls.SymbolIcon(BarrageSettings.IsWorking ? Wpf.Ui.Controls.SymbolRegular.Checkmark24 : Wpf.Ui.Controls.SymbolRegular.Dismiss24)
+            };
             _toggleWorkItem.Click += (_, _) => ToggleWorking();
 
-            var openSettingsItem = new MenuItem { Header = "打开设置" };
+            var openSettingsItem = new MenuItem 
+            { 
+                Header = "设置",
+                Icon = new Wpf.Ui.Controls.SymbolIcon(Wpf.Ui.Controls.SymbolRegular.Settings24)
+            };
             openSettingsItem.Click += (_, _) => ShowSettingsWindow();
 
-            var exitItem = new MenuItem { Header = "退出 NotiFlow" };
+            var exitItem = new MenuItem 
+            { 
+                Header = "退出",
+                Icon = new Wpf.Ui.Controls.SymbolIcon(Wpf.Ui.Controls.SymbolRegular.Power24)
+            };
             exitItem.Click += (_, _) => ExitApplication();
 
             _contextMenu = new ContextMenu
             {
+                // 使背景呈现符合 Fluent Design 规范的微灰半透明质感 (白底亚克力模拟)
+                Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(240, 243, 243, 243)),
+                BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(50, 0, 0, 0)),
+                BorderThickness = new Thickness(1),
                 Items =
                 {
                     _toggleWorkItem,
@@ -56,6 +72,10 @@ namespace NotiFlow.Services
                     exitItem
                 }
             };
+
+            // 【关键修复】覆盖系统默认的“菜单滑动(Slide)”动画。
+            // 解决上下边缘时动画方向反直觉的问题，将其修改为现代化的“Fade(渐变)”效果，更像 Win11 原生。
+            _contextMenu.Resources.Add(SystemParameters.MenuPopupAnimationKey, System.Windows.Controls.Primitives.PopupAnimation.Fade);
 
             _notifyIcon = new NotifyIcon
             {
@@ -87,8 +107,25 @@ namespace NotiFlow.Services
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
+                // 每次弹出前，先根据当前深浅模式给菜单糊上一层动态对应半透明“亚克力”颜色
+                var theme = Wpf.Ui.Appearance.ApplicationThemeManager.GetAppTheme();
+                if (theme == Wpf.Ui.Appearance.ApplicationTheme.Dark)
+                {
+                    _contextMenu.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(240, 30, 30, 30));
+                    _contextMenu.BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(80, 255, 255, 255));
+                }
+                else
+                {
+                    _contextMenu.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(240, 243, 243, 243));
+                    _contextMenu.BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(50, 0, 0, 0));
+                }
+
                 // 刷新菜单项状态
                 _toggleWorkItem.Header = GetWorkingText();
+                if (_toggleWorkItem.Icon is Wpf.Ui.Controls.SymbolIcon icon)
+                {
+                    icon.Symbol = BarrageSettings.IsWorking ? Wpf.Ui.Controls.SymbolRegular.Checkmark24 : Wpf.Ui.Controls.SymbolRegular.Dismiss24;
+                }
 
                 // 确保辅助窗口存在（一个像素级别的隐藏窗口，仅用于承载前台焦点）
                 if (_helperWindow == null)
@@ -135,7 +172,7 @@ namespace NotiFlow.Services
         /// </summary>
         private static string GetWorkingText()
         {
-            return BarrageSettings.IsWorking ? "⏸ 暂停工作" : "▶ 开始工作";
+            return BarrageSettings.IsWorking ? "工作中" : "未工作";
         }
 
         /// <summary>
@@ -148,21 +185,57 @@ namespace NotiFlow.Services
         }
 
         /// <summary>
-        /// 刷新所有与工作状态相关的 UI 组件（菜单文本、托盘提示、主窗口可见性）
+        /// 刷新所有与工作状态相关的 UI 组件（菜单文本、图标方向、托盘提示、主窗口可见性）
         /// </summary>
         public void RefreshWorkingState()
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
                 _toggleWorkItem.Header = GetWorkingText();
+                if (_toggleWorkItem.Icon is Wpf.Ui.Controls.SymbolIcon icon)
+                {
+                    icon.Symbol = BarrageSettings.IsWorking ? Wpf.Ui.Controls.SymbolRegular.Checkmark24 : Wpf.Ui.Controls.SymbolRegular.Dismiss24;
+                }
+
                 _notifyIcon.Text = BarrageSettings.IsWorking
                     ? "NotiFlow - 工作中"
-                    : "NotiFlow - 已暂停";
+                    : "NotiFlow - 未工作";
 
                 // 通知主窗口根据工作状态决定显示或隐藏
                 if (Application.Current is App app)
                 {
                     app.SyncMainWindowVisibility();
+                }
+            });
+        }
+
+        /// <summary>
+        /// 当用户按下全局快捷键时触发的状态切换。
+        /// 包含一个简单的状态通知提示。
+        /// </summary>
+        public void RefreshWorkingStateFromHotKey()
+        {
+            BarrageSettings.IsWorking = !BarrageSettings.IsWorking;
+            RefreshWorkingState();
+
+            // 弹出气泡通知提示状态已更改
+            _notifyIcon.ShowBalloonTip(2000, "快捷键响应", 
+                BarrageSettings.IsWorking ? "NotiFlow 已恢复工作" : "NotiFlow 已暂停工作", 
+                ToolTipIcon.Info);
+        }
+
+        /// <summary>
+        /// 重新向系统注册全局热键。通常在设置页面修改了热键后调用。
+        /// </summary>
+        public void ReRegisterHotKey()
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                if (Application.Current.MainWindow is MainWindow main)
+                {
+                    var hwnd = new System.Windows.Interop.WindowInteropHelper(main).Handle;
+                    NativeMethods.UnregisterHotKey(hwnd, 9000);
+                    NativeMethods.RegisterHotKey(hwnd, 9000, BarrageSettings.HotKeyModifier, BarrageSettings.HotKey);
                 }
             });
         }

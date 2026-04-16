@@ -67,5 +67,33 @@ namespace NotiFlow.Views.Pages
                 }
             }
         }
+
+        private void Page_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (DataContext is Models.SettingsViewModel viewModel && viewModel.IsCapturingHotKey)
+            {
+                // 拦截所有按键，防止触发页面原本的动作
+                e.Handled = true;
+
+                // 检查修饰键
+                uint modifiers = 0;
+                if (System.Windows.Input.Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Control)) modifiers |= NativeMethods.MOD_CONTROL;
+                if (System.Windows.Input.Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Shift)) modifiers |= NativeMethods.MOD_SHIFT;
+                if (System.Windows.Input.Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Alt)) modifiers |= NativeMethods.MOD_ALT;
+                if (System.Windows.Input.Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Windows)) modifiers |= NativeMethods.MOD_WIN;
+
+                // 过滤掉单纯按下修饰键的情况，必须包含一个非修饰键作为主键
+                var key = e.Key == System.Windows.Input.Key.System ? e.SystemKey : e.Key;
+                if (key != System.Windows.Input.Key.LeftCtrl && key != System.Windows.Input.Key.RightCtrl &&
+                    key != System.Windows.Input.Key.LeftShift && key != System.Windows.Input.Key.RightShift &&
+                    key != System.Windows.Input.Key.LeftAlt && key != System.Windows.Input.Key.RightAlt &&
+                    key != System.Windows.Input.Key.LWin && key != System.Windows.Input.Key.RWin)
+                {
+                    // 找到了一个主键，完成捕获
+                    uint vk = (uint)System.Windows.Input.KeyInterop.VirtualKeyFromKey(key);
+                    viewModel.FinishCaptureHotKey(modifiers, vk);
+                }
+            }
+        }
     }
 }

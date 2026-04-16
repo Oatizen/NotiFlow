@@ -95,6 +95,7 @@ namespace NotiFlow.Models
             _isFontStyleItalic = BarrageSettings.FontStyle == FontStyles.Italic;
             _isUnderline = BarrageSettings.IsUnderlined;
             _autoStartWorking = BarrageSettings.AutoStartWorking;
+            _hotKeyText = GetHotKeyString(BarrageSettings.HotKeyModifier, BarrageSettings.HotKey);
 
             _debounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
             _debounceTimer.Tick += (s, e) =>
@@ -261,6 +262,48 @@ namespace NotiFlow.Models
         {
             BarrageSettings.AutoStartWorking = value;
             TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        private string _hotKeyText;
+
+        [ObservableProperty]
+        private bool _isCapturingHotKey;
+
+        [RelayCommand]
+        private void StartCaptureHotKey()
+        {
+            IsCapturingHotKey = true;
+            HotKeyText = "输入快捷键以绑定";
+        }
+
+        public void FinishCaptureHotKey(uint modifiers, uint key)
+        {
+            BarrageSettings.HotKeyModifier = modifiers;
+            BarrageSettings.HotKey = key;
+            HotKeyText = GetHotKeyString(modifiers, key);
+            IsCapturingHotKey = false;
+            
+            // 立即生效：通知托盘服务重新注册热键
+            (App.Current as App)?.TrayIconService?.ReRegisterHotKey();
+            
+            // 保存配置
+            BarrageSettings.ExportConfig();
+        }
+
+        private string GetHotKeyString(uint modifiers, uint key)
+        {
+            var parts = new List<string>();
+            if ((modifiers & NativeMethods.MOD_CONTROL) != 0) parts.Add("Ctrl");
+            if ((modifiers & NativeMethods.MOD_SHIFT) != 0) parts.Add("Shift");
+            if ((modifiers & NativeMethods.MOD_ALT) != 0) parts.Add("Alt");
+            if ((modifiers & NativeMethods.MOD_WIN) != 0) parts.Add("Win");
+            
+            // 将 KeyCode 转为字符串 (简单映射，满足常用场景)
+            string keyName = ((System.Windows.Input.Key)System.Windows.Input.KeyInterop.KeyFromVirtualKey((int)key)).ToString();
+            parts.Add(keyName);
+            
+            return string.Join(" + ", parts);
         }
 
         [RelayCommand]

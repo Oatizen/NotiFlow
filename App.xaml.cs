@@ -7,6 +7,7 @@ namespace NotiFlow
     public partial class App : Application
     {
         private TrayIconService? _trayIconService;
+        public TrayIconService? TrayIconService => _trayIconService;
         private MainWindow? _mainWindow;
         private SettingsWindow? _settingsWindow;
 

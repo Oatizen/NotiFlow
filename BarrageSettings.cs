@@ -35,6 +35,10 @@ namespace NotiFlow
         public string EllipsisColorHex { get; set; } = "#32CD32"; // 亮绿色 (LimeGreen)
         public double ScrollSpeedCharsPerSec { get; set; } = 12.0;
         public bool AutoStartWorking { get; set; } = true;
+
+        // 快捷键配置
+        public uint HotKeyModifier { get; set; } = 0x0006; // 默认 Ctrl + Shift (MOD_CONTROL | MOD_SHIFT)
+        public uint HotKey { get; set; } = 0x44; // 默认 'D' 键
     }
 
     /// <summary>
@@ -67,6 +71,10 @@ namespace NotiFlow
         public static Brush EllipsisColor { get; set; } = Brushes.LimeGreen;
         public static double ScrollSpeedCharsPerSec { get; set; } = 12.0;
         public static bool AutoStartWorking { get; set; } = true;
+
+        // ====== 快捷键配置 ======
+        public static uint HotKeyModifier { get; set; } = 0x0006; // MOD_CONTROL | MOD_SHIFT
+        public static uint HotKey { get; set; } = 0x44; // 'D'
 
         // ====== 运行时应用状态 ======
         /// <summary>
@@ -104,7 +112,9 @@ namespace NotiFlow
                     HighlightEllipsis = HighlightEllipsis,
                     EllipsisColorHex = (EllipsisColor is SolidColorBrush ellBrush) ? ellBrush.Color.ToString() : "#32CD32",
                     ScrollSpeedCharsPerSec = ScrollSpeedCharsPerSec,
-                    AutoStartWorking = AutoStartWorking
+                    AutoStartWorking = AutoStartWorking,
+                    HotKeyModifier = HotKeyModifier,
+                    HotKey = HotKey
                 };
 
                 var options = new JsonSerializerOptions { WriteIndented = true };
@@ -164,12 +174,46 @@ namespace NotiFlow
                 ScrollSpeedCharsPerSec = Math.Clamp(dto.ScrollSpeedCharsPerSec, 5.0, 100.0);
                 HighlightEllipsis = dto.HighlightEllipsis;
                 AutoStartWorking = dto.AutoStartWorking;
-                IsWorking = AutoStartWorking; // 启动时自动同步工作状态
+                IsWorking = AutoStartWorking;
+
+                // 7. 快捷键加载
+                HotKeyModifier = dto.HotKeyModifier;
+                HotKey = dto.HotKey;
             }
-            catch
+            catch (Exception ex)
             {
-                // 反序列化格式大崩溃时（如把原本内容删了乱写），什么都不做，保留当前启动的默认健壮值
+                Console.WriteLine($"无法导入配置文件: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// 将所有设置重置为系统出厂默认值。
+        /// </summary>
+        public static void ResetToDefault()
+        {
+            FontFamily = new FontFamily("Microsoft YaHei");
+            FontSize = 36;
+            FontWeight = FontWeights.Bold;
+            FontStyle = FontStyles.Normal;
+            IsUnderlined = false;
+            TextColor = Brushes.White;
+            TextOpacity = 1.0;
+            ShowAppIcon = true;
+            ShowAppName = true;
+            ShowBackground = true;
+            BackgroundColor = Brushes.Black;
+            BackgroundOpacity = 0.4;
+            BackgroundCornerRadius = new CornerRadius(8);
+            MaxTextLength = 50;
+            HighlightEllipsis = true;
+            EllipsisColor = Brushes.LimeGreen;
+            ScrollSpeedCharsPerSec = 12.0;
+            AutoStartWorking = true;
+            HotKeyModifier = 0x0006;
+            HotKey = 0x44;
+            
+            // 重置后立即保存生效
+            ExportConfig();
         }
     }
 }

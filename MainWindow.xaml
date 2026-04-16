@@ -12,6 +12,8 @@
         Topmost="True"
         ShowInTaskbar="False"
         Style="{x:Null}"
+        IsEnabled="False"
+        IsHitTestVisible="False"
         Loaded="Window_Loaded">
     <rendering:BarrageEngineHost x:Name="EngineHost" />
 </Window>

@@ -124,6 +124,22 @@ namespace NotiFlow
                 MessageBox.Show("获取通知系统读取权限失败！\n\n请前往 Windows 设置 -> 隐私和安全性 -> 通知，允许桌面应用获取通知。", "权限不足", MessageBoxButton.OK, MessageBoxImage.Warning);
                 Application.Current.Shutdown();
             }
+
+            // 【隐身 API】在窗口完全加载和渲染后，向 DWM 注册防截屏，并加入旧系统的兼顾回落
+            Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, new Action(() =>
+            {
+                var hwnd = new WindowInteropHelper(this).Handle;
+                if (hwnd == IntPtr.Zero) return;
+
+                // 尝试 Win10 2004+ 的完美隐身 API (截屏时不留黑块)
+                bool apiSuccess = NativeMethods.SetWindowDisplayAffinity(hwnd, NativeMethods.WDA_EXCLUDEFROMCAPTURE);
+                
+                if (!apiSuccess)
+                {
+                    // 如果系统过旧不支持 0x11，则回落到 0x01 (WDA_MONITOR)。至少保证隐私，代价是截屏时该层为黑块。
+                    NativeMethods.SetWindowDisplayAffinity(hwnd, 0x00000001);
+                }
+            }));
         }
 
         private void InitializeTracks()
@@ -197,6 +213,58 @@ namespace NotiFlow
             // WS_EX_NOACTIVATE 避免抢占当前前台焦点
             NativeMethods.SetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE, 
                 extendedStyle | NativeMethods.WS_EX_TRANSPARENT | NativeMethods.WS_EX_TOOLWINDOW | NativeMethods.WS_EX_NOACTIVATE);
+
+            // 【核心修正】强制接管窗口底层的 HitTest（命中测试）消息。
+            // 虽然 WPF 自身禁用了 HitTest，但外部的截屏软件（如 Snipaste）探测边界时会发送系统级探测。
+            // 我们必须底层拦截它，告诉探测软件“这里什么也没有”。
+            HwndSource? source = HwndSource.FromHwnd(hwnd);
+            source?.AddHook(WndProc);
+
+            // 注册初始全局热键
+            RegisterGlobalHotKey(hwnd);
+        }
+
+        private void RegisterGlobalHotKey(IntPtr hwnd)
+        {
+            // 使用 ID 为 9000 的唯一标识符注册热键
+            NativeMethods.RegisterHotKey(hwnd, 9000, BarrageSettings.HotKeyModifier, BarrageSettings.HotKey);
+        }
+
+        private void UnregisterGlobalHotKey(IntPtr hwnd)
+        {
+            NativeMethods.UnregisterHotKey(hwnd, 9000);
+        }
+
+        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            const int WM_NCHITTEST = 0x0084;
+            const int HTTRANSPARENT = -1;
+
+            if (msg == NativeMethods.WM_HOTKEY && (int)wParam == 9000)
+            {
+                // 触发托盘服务中的切换逻辑 (保持状态同步)
+                var trayService = (App.Current as App)?.TrayIconService;
+                trayService?.RefreshWorkingStateFromHotKey(); // 我们稍后在 TrayIconService 中实现这个方法
+                handled = true;
+                return IntPtr.Zero;
+            }
+
+            if (msg == WM_NCHITTEST)
+            {
+                // 欺骗系统的光标探测与窗口拾取工具，让它们认为鼠标穿透了该窗口
+                handled = true;
+                return (IntPtr)HTTRANSPARENT;
+            }
+
+            return IntPtr.Zero;
+        }
+
+        // 彻底切断 Windows UI Automation 树探测
+        // 高级截屏工具（如 Snipaste）不仅使用光标坐标探测，还会读取 UI Automation 自动化树来绘制自动贴边拾取框。
+        // 返回 null 会让本窗口直接从自动化树中消失，杜绝被获取到边界。
+        protected override System.Windows.Automation.Peers.AutomationPeer? OnCreateAutomationPeer()
+        {
+            return null;
         }
 
         private void EnqueueBarrage(NotificationMessage msg)
@@ -311,6 +379,12 @@ namespace NotiFlow
                     _pool.Enqueue(item);
                 }
             }
+        }
+        protected override void OnClosed(EventArgs e)
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            UnregisterGlobalHotKey(hwnd);
+            base.OnClosed(e);
         }
     }
 }

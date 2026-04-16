@@ -5,7 +5,8 @@
       xmlns:viewmodels="clr-namespace:NotiFlow.Models"
       Title="设置"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-      Background="Transparent">
+      Background="Transparent"
+      PreviewKeyDown="Page_PreviewKeyDown">
 
     <Page.DataContext>
         <viewmodels:SettingsViewModel />
@@ -25,12 +26,15 @@
             <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Margin="0,0,0,32" Padding="16">
                 <Grid>
                     <ui:TextBlock Text="切换弹幕显示" VerticalAlignment="Center"/>
-                    <Border Background="{DynamicResource ControlFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" HorizontalAlignment="Right" Padding="12,6">
+                    <ui:Button Appearance="Secondary" 
+                               HorizontalAlignment="Right" 
+                               Command="{Binding StartCaptureHotKeyCommand}"
+                               Padding="24,8">
                         <StackPanel Orientation="Horizontal">
-                            <ui:TextBlock Text="Ctrl + Shift + D" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,24,0"/>
-                            <ui:SymbolIcon Symbol="Keyboard24" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                            <ui:TextBlock Text="{Binding HotKeyText}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <ui:SymbolIcon Symbol="Keyboard24" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                         </StackPanel>
-                    </Border>
+                    </ui:Button>
                 </Grid>
             </Border>
 
