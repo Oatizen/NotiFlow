@@ -125,21 +125,7 @@ namespace NotiFlow
                 Application.Current.Shutdown();
             }
 
-            // 【隐身 API】在窗口完全加载和渲染后，向 DWM 注册防截屏，并加入旧系统的兼顾回落
-            Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, new Action(() =>
-            {
-                var hwnd = new WindowInteropHelper(this).Handle;
-                if (hwnd == IntPtr.Zero) return;
-
-                // 尝试 Win10 2004+ 的完美隐身 API (截屏时不留黑块)
-                bool apiSuccess = NativeMethods.SetWindowDisplayAffinity(hwnd, NativeMethods.WDA_EXCLUDEFROMCAPTURE);
-                
-                if (!apiSuccess)
-                {
-                    // 如果系统过旧不支持 0x11，则回落到 0x01 (WDA_MONITOR)。至少保证隐私，代价是截屏时该层为黑块。
-                    NativeMethods.SetWindowDisplayAffinity(hwnd, 0x00000001);
-                }
-            }));
+            // SetWindowDisplayAffinity 已移至 OnSourceInitialized，在 DWM 透明生效后立即调用
         }
 
         private void InitializeTracks()
@@ -207,21 +193,42 @@ namespace NotiFlow
             var hwnd = new WindowInteropHelper(this).Handle;
             int extendedStyle = NativeMethods.GetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE);
             
-            // 复合样式：
-            // WS_EX_TRANSPARENT 允许鼠标穿透
-            // WS_EX_TOOLWINDOW 隐藏常规窗口属性避免捕捉
-            // WS_EX_NOACTIVATE 避免抢占当前前台焦点
+            // WS_EX_TRANSPARENT + WS_EX_TOOLWINDOW + WS_EX_NOACTIVATE
             NativeMethods.SetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE, 
                 extendedStyle | NativeMethods.WS_EX_TRANSPARENT | NativeMethods.WS_EX_TOOLWINDOW | NativeMethods.WS_EX_NOACTIVATE);
 
-            // 【核心修正】强制接管窗口底层的 HitTest（命中测试）消息。
-            // 虽然 WPF 自身禁用了 HitTest，但外部的截屏软件（如 Snipaste）探测边界时会发送系统级探测。
-            // 我们必须底层拦截它，告诉探测软件“这里什么也没有”。
+            // 根据防截屏配置动态施加相关 API
+            ApplyCaptureSetting();
+
             HwndSource? source = HwndSource.FromHwnd(hwnd);
             source?.AddHook(WndProc);
 
-            // 注册初始全局热键
             RegisterGlobalHotKey(hwnd);
+        }
+
+        /// <summary>
+        /// 动态应用防截屏设置（允许截屏或者彻底隐身）
+        /// </summary>
+        public void ApplyCaptureSetting()
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            if (hwnd == IntPtr.Zero) return;
+
+            if (BarrageSettings.AllowCapture)
+            {
+                // WDA_NONE (0x0) 取消隐身，允许正常截屏
+                NativeMethods.SetWindowDisplayAffinity(hwnd, 0x00000000);
+            }
+            else
+            {
+                // WDA_EXCLUDEFROMCAPTURE (0x11) 尝试防截屏
+                bool apiSuccess = NativeMethods.SetWindowDisplayAffinity(hwnd, NativeMethods.WDA_EXCLUDEFROMCAPTURE);
+                if (!apiSuccess)
+                {
+                    // 若系统太旧或遇版本限制导致 WDA_EXCLUDEFROMCAPTURE 失败，则后备退化到 WDA_MONITOR (0x1) 保证防截（表现为黑块）
+                    NativeMethods.SetWindowDisplayAffinity(hwnd, 0x00000001);
+                }
+            }
         }
 
         private void RegisterGlobalHotKey(IntPtr hwnd)

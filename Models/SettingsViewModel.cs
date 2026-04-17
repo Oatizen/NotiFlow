@@ -95,6 +95,11 @@ namespace NotiFlow.Models
             _isFontStyleItalic = BarrageSettings.FontStyle == FontStyles.Italic;
             _isUnderline = BarrageSettings.IsUnderlined;
             _autoStartWorking = BarrageSettings.AutoStartWorking;
+            _autoCheckUpdate = BarrageSettings.AutoCheckUpdate;
+            _allowCapture = BarrageSettings.AllowCapture;
+            _minimizeToTray = BarrageSettings.MinimizeToTray;
+            _closeToTray = BarrageSettings.CloseToTray;
+            _runOnStartup = BarrageSettings.RunOnStartup;
             _hotKeyText = GetHotKeyString(BarrageSettings.HotKeyModifier, BarrageSettings.HotKey);
 
             _debounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
@@ -265,6 +270,61 @@ namespace NotiFlow.Models
         }
 
         [ObservableProperty]
+        private bool _autoCheckUpdate;
+        partial void OnAutoCheckUpdateChanged(bool value)
+        {
+            BarrageSettings.AutoCheckUpdate = value;
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        private bool _allowCapture;
+        partial void OnAllowCaptureChanged(bool value)
+        {
+            BarrageSettings.AllowCapture = value;
+            TriggerSaveAndPreview();
+            
+            // 立即生效防截屏设置
+            Application.Current.Dispatcher.Invoke(() => 
+            {
+                foreach (Window window in Application.Current.Windows)
+                {
+                    if (window is MainWindow mainWin)
+                    {
+                        mainWin.ApplyCaptureSetting();
+                    }
+                }
+            });
+        }
+
+        [ObservableProperty]
+        private bool _minimizeToTray;
+        partial void OnMinimizeToTrayChanged(bool value)
+        {
+            BarrageSettings.MinimizeToTray = value;
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        private bool _closeToTray;
+        partial void OnCloseToTrayChanged(bool value)
+        {
+            BarrageSettings.CloseToTray = value;
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        private bool _runOnStartup;
+        partial void OnRunOnStartupChanged(bool value)
+        {
+            BarrageSettings.RunOnStartup = value;
+            TriggerSaveAndPreview();
+            
+            // 处理开机自启动快捷方式
+            App.UpdateStartupShortcut(value);
+        }
+
+        [ObservableProperty]
         private string _hotKeyText;
 
         [ObservableProperty]
@@ -291,7 +351,7 @@ namespace NotiFlow.Models
             BarrageSettings.ExportConfig();
         }
 
-        private string GetHotKeyString(uint modifiers, uint key)
+        public string GetHotKeyString(uint modifiers, uint key)
         {
             var parts = new List<string>();
             if ((modifiers & NativeMethods.MOD_CONTROL) != 0) parts.Add("Ctrl");

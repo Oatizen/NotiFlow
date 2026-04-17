@@ -1,3 +1,4 @@
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -15,12 +16,29 @@ namespace NotiFlow
             // 手动设定加载时要显示的首页（也可以在使用 MVVM 和导航服务时通过路由来配置）
             Loaded += (s, e) => RootNavigation.Navigate(typeof(Views.Pages.CustomPage));
 
-            // 拦截关闭事件：隐藏到后台而非销毁，等待用户通过托盘图标重新唤出
+            // 拦截关闭事件：根据用户配置决定是最小化到托盘还是真正退出应用
             Closing += (s, e) =>
             {
-                e.Cancel = true;
-                this.Hide();
+                if (BarrageSettings.CloseToTray)
+                {
+                    e.Cancel = true;
+                    this.Hide();
+                }
+                else
+                {
+                    // 若关闭不进入托盘，意味着关闭设置页等同于退出应用
+                    Application.Current.Shutdown();
+                }
             };
+        }
+
+        protected override void OnStateChanged(EventArgs e)
+        {
+            base.OnStateChanged(e);
+            if (this.WindowState == WindowState.Minimized && BarrageSettings.MinimizeToTray)
+            {
+                this.Hide();
+            }
         }
 
         protected override void OnPreviewMouseWheel(MouseWheelEventArgs e)

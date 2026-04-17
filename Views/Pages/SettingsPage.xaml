@@ -5,8 +5,7 @@
       xmlns:viewmodels="clr-namespace:NotiFlow.Models"
       Title="设置"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-      Background="Transparent"
-      PreviewKeyDown="Page_PreviewKeyDown">
+      Background="Transparent">
 
     <Page.DataContext>
         <viewmodels:SettingsViewModel />
@@ -18,7 +17,6 @@
             <!-- 页面大标题 -->
             <Grid Margin="0,0,0,32">
                 <ui:TextBlock FontTypography="TitleLarge" Text="设置" FontWeight="Bold"/>
-                <ui:Button Appearance="Primary" Content="检查更新" HorizontalAlignment="Right" VerticalAlignment="Center"/>
             </Grid>
 
             <!-- 快捷键区块 -->
@@ -29,7 +27,9 @@
                     <ui:Button Appearance="Secondary" 
                                HorizontalAlignment="Right" 
                                Command="{Binding StartCaptureHotKeyCommand}"
-                               Padding="24,8">
+                               Padding="24,8"
+                               PreviewKeyDown="HotkeyButton_PreviewKeyDown"
+                               LostKeyboardFocus="HotkeyButton_LostKeyboardFocus">
                         <StackPanel Orientation="Horizontal">
                             <ui:TextBlock Text="{Binding HotKeyText}" VerticalAlignment="Center" Margin="0,0,12,0"/>
                             <ui:SymbolIcon Symbol="Keyboard24" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
@@ -116,6 +116,20 @@
                         <ui:ToggleSwitch Grid.Column="2" IsChecked="{Binding AutoStartWorking, Mode=TwoWay}" VerticalAlignment="Center"/>
                     </Grid>
 
+                    <!-- 启动时自动检测更新 -->
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="52"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ControlFillColorDefaultBrush}" CornerRadius="8" HorizontalAlignment="Left" VerticalAlignment="Center">
+                            <ui:SymbolIcon Symbol="ArrowSync24" FontSize="18"/>
+                        </Border>
+                        <ui:TextBlock Grid.Column="1" Text="启动时自动检测更新" VerticalAlignment="Center"/>
+                        <ui:ToggleSwitch Grid.Column="2" IsChecked="{Binding AutoCheckUpdate, Mode=TwoWay}" VerticalAlignment="Center"/>
+                    </Grid>
+
                     <!-- 开机自启动 -->
                     <Grid Margin="0,0,0,16">
                         <Grid.ColumnDefinitions>
@@ -127,7 +141,7 @@
                             <ui:SymbolIcon Symbol="Rocket24" FontSize="18"/>
                         </Border>
                         <ui:TextBlock Grid.Column="1" Text="开机自启动" VerticalAlignment="Center"/>
-                        <ui:ToggleSwitch Grid.Column="2" IsChecked="False" VerticalAlignment="Center"/>
+                        <ui:ToggleSwitch Grid.Column="2" IsChecked="{Binding RunOnStartup, Mode=TwoWay}" VerticalAlignment="Center"/>
                     </Grid>
 
                     <!-- 最小化到系统托盘 -->
@@ -141,11 +155,11 @@
                             <ui:SymbolIcon Symbol="ArrowMinimize24" FontSize="18"/>
                         </Border>
                         <ui:TextBlock Grid.Column="1" Text="最小化到系统托盘" VerticalAlignment="Center"/>
-                        <ui:ToggleSwitch Grid.Column="2" IsChecked="True" VerticalAlignment="Center"/>
+                        <ui:ToggleSwitch Grid.Column="2" IsChecked="{Binding MinimizeToTray, Mode=TwoWay}" VerticalAlignment="Center"/>
                     </Grid>
 
                     <!-- 关闭到系统托盘 -->
-                    <Grid>
+                    <Grid Margin="0,0,0,16">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="52"/>
                             <ColumnDefinition Width="*"/>
@@ -154,8 +168,22 @@
                         <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ControlFillColorDefaultBrush}" CornerRadius="8" HorizontalAlignment="Left" VerticalAlignment="Center">
                             <ui:SymbolIcon Symbol="DismissSquare24" FontSize="18"/>
                         </Border>
-                        <ui:TextBlock Grid.Column="1" Text="关闭到系统托盘" VerticalAlignment="Center"/>
-                        <ui:ToggleSwitch Grid.Column="2" IsChecked="True" VerticalAlignment="Center"/>
+                        <ui:TextBlock Grid.Column="1" Text="关闭时最小化到托盘" VerticalAlignment="Center"/>
+                        <ui:ToggleSwitch Grid.Column="2" IsChecked="{Binding CloseToTray, Mode=TwoWay}" VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <!-- 允许截图工具截取弹幕 -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="52"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ControlFillColorDefaultBrush}" CornerRadius="8" HorizontalAlignment="Left" VerticalAlignment="Center">
+                            <ui:SymbolIcon Symbol="Camera24" FontSize="18"/>
+                        </Border>
+                        <ui:TextBlock Grid.Column="1" Text="允许截图工具等应用获取弹幕内容" VerticalAlignment="Center"/>
+                        <ui:ToggleSwitch Grid.Column="2" IsChecked="{Binding AllowCapture, Mode=TwoWay}" VerticalAlignment="Center"/>
                     </Grid>
                 </StackPanel>
             </Border>

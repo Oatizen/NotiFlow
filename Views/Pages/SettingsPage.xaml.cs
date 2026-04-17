@@ -68,31 +68,57 @@ namespace NotiFlow.Views.Pages
             }
         }
 
-        private void Page_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        private void HotkeyButton_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
             if (DataContext is Models.SettingsViewModel viewModel && viewModel.IsCapturingHotKey)
             {
-                // 拦截所有按键，防止触发页面原本的动作
                 e.Handled = true;
 
-                // 检查修饰键
+                // 按下 ESC 键直接取消捕捉
+                if (e.Key == System.Windows.Input.Key.Escape)
+                {
+                    viewModel.IsCapturingHotKey = false;
+                    viewModel.HotKeyText = viewModel.GetHotKeyString(BarrageSettings.HotKeyModifier, BarrageSettings.HotKey);
+                    return;
+                }
+
                 uint modifiers = 0;
                 if (System.Windows.Input.Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Control)) modifiers |= NativeMethods.MOD_CONTROL;
                 if (System.Windows.Input.Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Shift)) modifiers |= NativeMethods.MOD_SHIFT;
                 if (System.Windows.Input.Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Alt)) modifiers |= NativeMethods.MOD_ALT;
                 if (System.Windows.Input.Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Windows)) modifiers |= NativeMethods.MOD_WIN;
 
-                // 过滤掉单纯按下修饰键的情况，必须包含一个非修饰键作为主键
+                // 真主键提取，包含对 IME 处理过的键的容错
                 var key = e.Key == System.Windows.Input.Key.System ? e.SystemKey : e.Key;
-                if (key != System.Windows.Input.Key.LeftCtrl && key != System.Windows.Input.Key.RightCtrl &&
+                if (key == System.Windows.Input.Key.ImeProcessed)
+                {
+                    // 若使用了中文输入法拦截，退回硬虚拟键码提取 (依赖底层互操作)
+                    key = System.Windows.Input.KeyInterop.KeyFromVirtualKey((int)NativeMethods.MapVirtualKey((uint)System.Windows.Input.KeyInterop.VirtualKeyFromKey(e.ImeProcessedKey), 0));
+                }
+
+                if (key != System.Windows.Input.Key.None &&
+                    key != System.Windows.Input.Key.LeftCtrl && key != System.Windows.Input.Key.RightCtrl &&
                     key != System.Windows.Input.Key.LeftShift && key != System.Windows.Input.Key.RightShift &&
                     key != System.Windows.Input.Key.LeftAlt && key != System.Windows.Input.Key.RightAlt &&
                     key != System.Windows.Input.Key.LWin && key != System.Windows.Input.Key.RWin)
                 {
-                    // 找到了一个主键，完成捕获
                     uint vk = (uint)System.Windows.Input.KeyInterop.VirtualKeyFromKey(key);
-                    viewModel.FinishCaptureHotKey(modifiers, vk);
+                    // 确保按下了真正的功能主键
+                    if (vk != 0 && vk != 255)
+                    {
+                        viewModel.FinishCaptureHotKey(modifiers, vk);
+                    }
                 }
+            }
+        }
+
+        private void HotkeyButton_LostKeyboardFocus(object sender, System.Windows.Input.KeyboardFocusChangedEventArgs e)
+        {
+            if (DataContext is Models.SettingsViewModel viewModel && viewModel.IsCapturingHotKey)
+            {
+                // 焦点丢失时自动退出捕获状态，还原原有文本
+                viewModel.IsCapturingHotKey = false;
+                viewModel.HotKeyText = viewModel.GetHotKeyString(BarrageSettings.HotKeyModifier, BarrageSettings.HotKey);
             }
         }
     }

@@ -39,6 +39,16 @@ namespace NotiFlow
         // 快捷键配置
         public uint HotKeyModifier { get; set; } = 0x0006; // 默认 Ctrl + Shift (MOD_CONTROL | MOD_SHIFT)
         public uint HotKey { get; set; } = 0x44; // 默认 'D' 键
+        
+        // 更新与版本配置
+        public int ConfigVersion { get; set; } = 1;
+        public bool AutoCheckUpdate { get; set; } = true;
+        
+        // 行为与系统互操作配置
+        public bool AllowCapture { get; set; } = true;         // 允许截图工具截取弹幕
+        public bool MinimizeToTray { get; set; } = true;       // 最小化到系统托盘
+        public bool CloseToTray { get; set; } = true;          // 关闭主窗口到托盘
+        public bool RunOnStartup { get; set; } = false;        // 开机自启动
     }
 
     /// <summary>
@@ -76,6 +86,15 @@ namespace NotiFlow
         public static uint HotKeyModifier { get; set; } = 0x0006; // MOD_CONTROL | MOD_SHIFT
         public static uint HotKey { get; set; } = 0x44; // 'D'
 
+        // ====== 更新配置 ======
+        public static bool AutoCheckUpdate { get; set; } = true;
+
+        // ====== 行为与系统互操作 ======
+        public static bool AllowCapture { get; set; } = true;
+        public static bool MinimizeToTray { get; set; } = true;
+        public static bool CloseToTray { get; set; } = true;
+        public static bool RunOnStartup { get; set; } = false;
+
         // ====== 运行时应用状态 ======
         /// <summary>
         /// 指示程序当前是否正处于开启（渲染弹幕）状态。
@@ -83,8 +102,11 @@ namespace NotiFlow
         /// </summary>
         public static bool IsWorking { get; set; } = false;
 
-        // 默认配置文件保存路径（软件运行目录底下的 JSON 文件）
-        private static readonly string DefaultConfigPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BarrageConfig.json");
+        // 默认配置文件保存路径（迁移至用户 AppData 目录以防止覆盖安装丢失设置）
+        private static readonly string DefaultConfigPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), 
+            "NotiFlow", 
+            "BarrageConfig.json");
 
         /// <summary>
         /// 将当前内存中的配置导出到指定文件路径。如果为空则导出到默认路径。
@@ -114,8 +136,21 @@ namespace NotiFlow
                     ScrollSpeedCharsPerSec = ScrollSpeedCharsPerSec,
                     AutoStartWorking = AutoStartWorking,
                     HotKeyModifier = HotKeyModifier,
-                    HotKey = HotKey
+                    HotKey = HotKey,
+                    ConfigVersion = 1,
+                    AutoCheckUpdate = AutoCheckUpdate,
+                    AllowCapture = AllowCapture,
+                    MinimizeToTray = MinimizeToTray,
+                    CloseToTray = CloseToTray,
+                    RunOnStartup = RunOnStartup
                 };
+
+                // 确保目录存在
+                string? dir = Path.GetDirectoryName(filePath ?? DefaultConfigPath);
+                if (dir != null && !Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
 
                 var options = new JsonSerializerOptions { WriteIndented = true };
                 string json = JsonSerializer.Serialize(dto, options);
@@ -134,6 +169,18 @@ namespace NotiFlow
         {
             string targetPath = filePath ?? DefaultConfigPath;
             
+            // 一次性无缝迁移：如果 AppData 中尚未有配置文件，但旧的安装目录中有，自动拷贝过来
+            if (!File.Exists(targetPath) && filePath == null)
+            {
+                string legacyPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BarrageConfig.json");
+                if (File.Exists(legacyPath))
+                {
+                    string? dir = Path.GetDirectoryName(targetPath);
+                    if (dir != null) Directory.CreateDirectory(dir);
+                    File.Copy(legacyPath, targetPath);
+                }
+            }
+
             // 没有配置文件时（初次运行），直接保留初始设置
             if (!File.Exists(targetPath)) return;
 
@@ -179,6 +226,13 @@ namespace NotiFlow
                 // 7. 快捷键加载
                 HotKeyModifier = dto.HotKeyModifier;
                 HotKey = dto.HotKey;
+                
+                // 8. 其他行为设置
+                AutoCheckUpdate = dto.AutoCheckUpdate;
+                AllowCapture = dto.AllowCapture;
+                MinimizeToTray = dto.MinimizeToTray;
+                CloseToTray = dto.CloseToTray;
+                RunOnStartup = dto.RunOnStartup;
             }
             catch (Exception ex)
             {
@@ -211,6 +265,11 @@ namespace NotiFlow
             AutoStartWorking = true;
             HotKeyModifier = 0x0006;
             HotKey = 0x44;
+            AutoCheckUpdate = true;
+            AllowCapture = true;
+            MinimizeToTray = true;
+            CloseToTray = true;
+            RunOnStartup = false;
             
             // 重置后立即保存生效
             ExportConfig();

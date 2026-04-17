@@ -1,4 +1,5 @@
 using System.Windows;
+using Microsoft.Win32;
 using Wpf.Ui.Appearance;
 using NotiFlow.Services;
 
@@ -52,6 +53,46 @@ namespace NotiFlow
 
             // 默认启动时显示设置窗口
             ShowOrActivateSettingsWindow();
+
+            // 自动检查更新 (静默进行)
+            if (BarrageSettings.AutoCheckUpdate)
+            {
+                // 不要 await 阻塞启动流程，让它在后台静默执行
+                _ = UpdateService.CheckForUpdatesAsync(isManualCheck: false);
+            }
+
+            // 同步一次开机自启状态（防脏数据）
+            UpdateStartupShortcut(BarrageSettings.RunOnStartup);
+        }
+
+        /// <summary>
+        /// 更新开机自启动状态（修改系统注册表）
+        /// </summary>
+        public static void UpdateStartupShortcut(bool enable)
+        {
+            try
+            {
+                // AppDomain.CurrentDomain.BaseDirectory 加上执行程序名
+                string exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName ?? "";
+                if (string.IsNullOrEmpty(exePath)) return;
+
+                using RegistryKey key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true)!;
+                if (key != null)
+                {
+                    if (enable)
+                    {
+                        key.SetValue("NotiFlow", $"\"{exePath}\"");
+                    }
+                    else
+                    {
+                        key.DeleteValue("NotiFlow", false);
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                System.Console.WriteLine($"更新开机自启状态失败: {ex.Message}");
+            }
         }
 
         /// <summary>

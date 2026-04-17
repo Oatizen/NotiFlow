@@ -38,6 +38,9 @@ namespace NotiFlow
         [DllImport("user32.dll")]
         public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
+        [DllImport("user32.dll")]
+        public static extern uint MapVirtualKey(uint uCode, uint uMapType);
+
         public const uint WDA_EXCLUDEFROMCAPTURE = 0x00000011;
 
         [DllImport("user32.dll")]
@@ -56,6 +59,29 @@ namespace NotiFlow
         // WPF-UI 的 ApplicationThemeManager 在切换主题时会调用 DwmSetWindowAttribute
         // 对所有窗口设置 DWMWA_USE_IMMERSIVE_DARK_MODE 等属性，
         // 这会在操作系统层面将全透明弹幕窗口渲染为黑色不透明。
+
+        /// <summary>
+        /// DWM 边距结构体，用于 DwmExtendFrameIntoClientArea。
+        /// 设置为全 -1 时，表示将玻璃效果扩展至整个客户区域，实现全窗口透明。
+        /// </summary>
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MARGINS
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
+        /// <summary>
+        /// 将 DWM 合成帧（玻璃效果）扩展到窗口客户区域。
+        /// 当所有边距设为 -1 时，整个窗口变为 DWM 合成透明层。
+        /// 这是替代 WPF AllowsTransparency 的核心方案：
+        /// AllowsTransparency 会创建 WS_EX_LAYERED 分层窗口，导致 SetWindowDisplayAffinity 失效；
+        /// 而 DWM 合成透明不创建分层窗口，因此 SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE) 可正常工作。
+        /// </summary>
+        [DllImport("dwmapi.dll")]
+        public static extern int DwmExtendFrameIntoClientArea(IntPtr hwnd, ref MARGINS margins);
 
         [DllImport("dwmapi.dll", PreserveSig = true)]
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);

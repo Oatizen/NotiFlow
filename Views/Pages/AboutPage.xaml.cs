@@ -7,6 +7,48 @@ namespace NotiFlow.Views.Pages
         public AboutPage()
         {
             InitializeComponent();
+            
+            // 动态设置版本号
+            var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            VersionTextBase.Text = $"V{version?.Major}.{version?.Minor}.{version?.Build}";
+        }
+
+        private void ApplyUniformBackground(Wpf.Ui.Controls.MessageBox mb)
+        {
+            var accentBrush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources["SecondaryBackgroundFillColorDefaultBrush"];
+            mb.Background = accentBrush;
+            
+            // 强制洗掉所有的内部分层背景画刷
+            mb.Resources["ApplicationBackgroundBrush"] = accentBrush;
+            mb.Resources["SolidBackgroundFillColorBaseBrush"] = accentBrush;
+            mb.Resources["SolidBackgroundFillColorTertiaryBrush"] = accentBrush;
+            mb.Resources["SolidBackgroundFillColorQuarternaryBrush"] = accentBrush;
+            mb.Resources["ControlFillColorDefaultBrush"] = accentBrush;
+
+            // 通过 Loaded 事件进一步剥离内部可能的硬编码模板边框背景
+            mb.Loaded += (s, e) =>
+            {
+                ForceUniformGrey(mb, accentBrush);
+            };
+        }
+
+        private void ForceUniformGrey(System.Windows.DependencyObject parent, System.Windows.Media.Brush brush)
+        {
+            int count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < count; i++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+                if (child is System.Windows.Controls.Border border && border.TemplatedParent is Wpf.Ui.Controls.MessageBox)
+                {
+                    border.Background = System.Windows.Media.Brushes.Transparent;
+                }
+                else if (child is System.Windows.Controls.Grid grid && grid.TemplatedParent is Wpf.Ui.Controls.MessageBox)
+                {
+                    grid.Background = System.Windows.Media.Brushes.Transparent;
+                }
+                
+                ForceUniformGrey(child, brush);
+            }
         }
 
         private void Import_Click(object sender, System.Windows.RoutedEventArgs e)
@@ -31,11 +73,7 @@ namespace NotiFlow.Views.Pages
                     CloseButtonText = "确定"
                 };
                 
-                // 【核心修正】彻底统一 MessageBox 为均匀灰色背景
-                var accentBrush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources["SecondaryBackgroundFillColorDefaultBrush"];
-                mb.Background = accentBrush;
-                mb.Resources["SolidBackgroundFillColorBaseBrush"] = accentBrush;
-                
+                ApplyUniformBackground(mb);
                 mb.ShowDialogAsync();
             }
         }
@@ -60,10 +98,7 @@ namespace NotiFlow.Views.Pages
                     CloseButtonText = "确定"
                 };
 
-                var accentBrush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources["SecondaryBackgroundFillColorDefaultBrush"];
-                mb.Background = accentBrush;
-                mb.Resources["SolidBackgroundFillColorBaseBrush"] = accentBrush;
-
+                ApplyUniformBackground(mb);
                 mb.ShowDialogAsync();
             }
         }
@@ -78,9 +113,7 @@ namespace NotiFlow.Views.Pages
                 CloseButtonText = "取消"
             };
 
-            var accentBrush = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources["SecondaryBackgroundFillColorDefaultBrush"];
-            mb.Background = accentBrush;
-            mb.Resources["SolidBackgroundFillColorBaseBrush"] = accentBrush;
+            ApplyUniformBackground(mb);
 
             var result = await mb.ShowDialogAsync();
             if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
@@ -97,11 +130,24 @@ namespace NotiFlow.Views.Pages
                     CloseButtonText = "确定"
                 };
 
-                successMb.Background = accentBrush;
-                successMb.Resources["SolidBackgroundFillColorBaseBrush"] = accentBrush;
-
+                ApplyUniformBackground(successMb);
                 await successMb.ShowDialogAsync();
             }
+        }
+
+        private void Feedback_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            Services.UpdateService.OpenUrl("https://github.com/Oatizen/NotiFlow/issues");
+        }
+
+        private void GitHubGo_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            Services.UpdateService.OpenUrl("https://github.com/Oatizen/NotiFlow");
+        }
+
+        private async void CheckUpdate_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            await Services.UpdateService.CheckForUpdatesAsync(isManualCheck: true);
         }
     }
 }
