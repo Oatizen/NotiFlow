@@ -11,6 +11,7 @@
         Background="Transparent"
         Topmost="True"
         ShowInTaskbar="False"
+        Icon="/NotiFlow Icon.png"
         Style="{x:Null}"
         IsEnabled="False"
         IsHitTestVisible="False"

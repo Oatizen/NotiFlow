@@ -24,9 +24,7 @@
                     </Grid.ColumnDefinitions>
                     
                     <!-- 左侧大 Logo -->
-                    <Border Grid.Column="0" Width="96" Height="96" CornerRadius="12" Background="{DynamicResource ControlFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" Margin="0,0,24,0">
-                        <ui:SymbolIcon Symbol="Grid24" FontSize="48" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"/>
-                    </Border>
+                    <Image Grid.Column="0" Source="/NotiFlow Icon.png" Width="140" Height="140" Stretch="Uniform" Margin="0,0,16,0" VerticalAlignment="Center"/>
                     
                     <!-- 右侧详情与操作 -->
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">

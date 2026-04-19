@@ -13,12 +13,29 @@
     <Company>NotiFlow</Company>
     <Product>NotiFlow</Product>
     <Description>Windows 通知弹幕显示工具</Description>
+    <ApplicationIcon>NotiFlow Icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="System.Drawing.Common" Version="10.0.5" />
     <PackageReference Include="WPF-UI" Version="4.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="NotiFlow Icon.png" />
+  </ItemGroup>
+
+  <!-- 排除非项目相关的子目录 -->
+  <ItemGroup>
+    <Compile Remove="IconTool\**" />
+    <Compile Remove="Backup\**" />
+    <EmbeddedResource Remove="IconTool\**" />
+    <EmbeddedResource Remove="Backup\**" />
+    <None Remove="IconTool\**" />
+    <None Remove="Backup\**" />
+    <Page Remove="IconTool\**" />
+    <Page Remove="Backup\**" />
   </ItemGroup>
 
 </Project>

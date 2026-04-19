@@ -11,6 +11,7 @@
                  WindowStartupLocation="CenterScreen"
                  ExtendsContentIntoTitleBar="True"
                  WindowBackdropType="Mica"
+                 Icon="/NotiFlow Icon.png"
                  Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     
     <!-- 整个页面划分为两行：顶部系统标题栏、剩余区域留给导航树 -->
@@ -20,10 +21,30 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- 自定义原生的 Win11 沉浸式标题栏 -->
+        <!-- 自定义原生的 Win11 沉浸式标题栏（仅保留功能层） -->
         <ui:TitleBar
             Grid.Row="0"
-            Title="弹幕通知"/>
+            Title="" />
+        
+        <!-- 手动定义的标题内容层：实现真正的垂直居中 -->
+        <StackPanel 
+            Grid.Row="0" 
+            Orientation="Horizontal" 
+            VerticalAlignment="Center" 
+            Margin="14,0,0,0" 
+            IsHitTestVisible="False">
+            <Image 
+                Source="/NotiFlow Icon.png" 
+                Width="18" 
+                Height="18" 
+                VerticalAlignment="Center"/>
+            <TextBlock 
+                Text="弹幕通知" 
+                Margin="8,0,0,0" 
+                VerticalAlignment="Center" 
+                FontSize="12" 
+                Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+        </StackPanel>
 
         <!-- 基于 WPF-UI 的主导航架构 -->
         <ui:NavigationView
