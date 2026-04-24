@@ -38,19 +38,13 @@ namespace NotiFlow.Services
 
         private async Task StartPollingLoopAsync()
         {
-            // 1. 初始化收集并播放目前的历史通知
+            // 1. 初始化收集目前的历史通知，但不播放（避免启动时出现已读弹幕）
             try
             {
                 var initialNotifications = await _listener!.GetNotificationsAsync(NotificationKinds.Toast);
                 foreach (var n in initialNotifications)
                 {
                     _knownNotificationIds.Add(n.Id);
-                    try 
-                    {
-                        var msg = await ParseNotificationAsync(n);
-                        OnNotificationReceived?.Invoke(msg);
-                    }
-                    catch { }
                 }
             }
             catch { }

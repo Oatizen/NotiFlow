@@ -1,86 +1,69 @@
-# NotiFlow
+<div align="center">
+  
+  <img src="https://via.placeholder.com/150?text=NotiFlow+Logo" alt="NotiFlow Logo" width="120" height="120">
 
-基于 .NET 8 + WPF 的 Windows 系统通知弹幕工具。将系统通知中心的消息以弹幕形式叠加在屏幕最顶层滚动显示，支持鼠标穿透，不影响正常操作。
+  <h1>🌊 NotiFlow (弹幕通知)</h1>
 
-## 技术栈
+  <p>
+    <b>在Windows端上实现“弹幕通知”功能</b>
+  </p>
 
-| 类别 | 技术 |
-|------|------|
-| 运行时 | .NET 8 (`net8.0-windows10.0.19041.0`) |
-| UI 框架 | WPF + [WPF-UI](https://github.com/lepoco/wpfui) (Fluent Design) |
-| 通知 API | `Windows.UI.Notifications.Management` (WinRT) |
-| 窗口控制 | `User32.dll` P/Invoke (`WS_EX_TRANSPARENT` 鼠标穿透) |
-| 渲染方式 | `DrawingVisual` + `CompositionTarget.Rendering` 帧循环 |
+  <!-- 徽章区 -->
+  <p>
+    <a href="https://github.com/Oatizen/NotiFlow/releases"><img src="https://img.shields.io/github/v/release/Oatizen/NotiFlow?color=0078D7&style=for-the-badge" alt="Release"></a>
+    <img src="https://img.shields.io/badge/Platform-Windows_10%20%7C%2011-blue?style=for-the-badge&logo=windows" alt="Windows">
+    <img src="https://img.shields.io/badge/.NET-8.0-512BD4?style=for-the-badge&logo=dotnet" alt=".NET">
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-success?style=for-the-badge" alt="License"></a>
+  </p>
+</div>
 
-## 项目结构
+<br/>
 
-```
-NotiFlow/
-├── MainWindow.xaml(.cs)           # 弹幕叠加层（全屏透明置顶窗口）
-├── SettingsWindow.xaml(.cs)       # 设置界面主窗口（NavigationView 导航）
-├── BarrageSettings.cs             # 全局配置管理（静态属性 + JSON 持久化）
-├── NativeMethods.cs               # Win32 P/Invoke 声明
-├── Models/
-│   ├── BarrageItem.cs             # 弹幕渲染单元（DrawingVisual）
-│   └── NotificationMessage.cs    # 通知消息数据模型
-├── Rendering/
-│   └── BarrageEngineHost.cs      # 视觉对象宿主（FrameworkElement）
-├── Services/
-│   └── NotificationService.cs    # 系统通知监听服务
-└── Views/Pages/
-    ├── CustomPage.xaml(.cs)       # 弹幕外观自定义页
-    ├── SettingsPage.xaml(.cs)     # 通用设置页
-    └── AboutPage.xaml(.cs)       # 关于页
-```
+> 打团听到消息提示，不想立即查看但又担心错过重要通知？
+> **NotiFlow** 可以拦截 Windows 原生通知，并将其转化为全透明、鼠标穿透的“弹幕”从屏幕上方飘过。**不错过重要信息，也不打断专注心流。**
 
-## 核心模块说明
+<div align="center">
+  <!-- 这里未来替换成你录制的 GIF 动图链接 -->
+  <img src="https://via.placeholder.com/800x400?text=在这里放一张弹幕飘过游戏画面的+GIF+动图" alt="Demo">
+</div>
 
-### 弹幕引擎 (`MainWindow`)
+## ✨ 核心特性
 
-- 使用 `CompositionTarget.Rendering` 驱动逐帧更新，实现匀速水平滚动。
-- 多轨道管理：根据屏幕高度动态计算轨道数，采用"黄金三分区"优先分配策略（优先使用屏幕上方 1/3 区域）。
-- 对象池复用：`BarrageItem` 飞出屏幕后回收至对象池，减少 GC 压力。
-- 渲染优化：使用 `DrawingVisual` 替代 WPF 控件树，避免布局计算开销。
+- 👻 **鼠标完全穿透**：弹幕处于绝对置顶状态，但鼠标点击会直接穿透到下层游戏/网页，避免。
+- 🎨 **丰富的自定义选项**：字体、字号、文字颜色、透明度、弹幕速度乃至弹幕最大长度，都可自定义
+- 🥷 **防截图隐身**：采用 `DisplayAffinity` 技术，只需开启设置，使用系统截图或 OBS 录屏时，弹幕会在捕捉画面中自动隐形，保护隐私。
+- ⭕ **快捷键开关弹幕显示**：可自定义快捷键，随时开关弹幕显示
+- ⚙️ **开机自启**：可自定义开机自启，无需每次手动启动
 
-### 通知监听 (`NotificationService`)
+---
 
-- 通过 WinRT 的 `UserNotificationListener` 获取系统通知。
-- 采用异步轮询模式（1.5s 周期），通过通知 ID 去重比对检测新消息。
-- 规避了直接事件订阅在未打包桌面应用中可能触发 `COMException` 的问题。
+## 📥 快速开始
 
-### 设置界面 (`SettingsWindow`)
+1. 前往 [Releases 页面](https://github.com/Oatizen/NotiFlow/releases) 下载最新版本的 `NotiFlow.zip`。
+2. 解压后双击运行 `NotiFlow.exe`。
+3. 在系统托盘中找到 NotiFlow，左键单击或是右键菜单进入“设置”界面。
 
-- 基于 WPF-UI 的 `NavigationView` 实现左侧导航 + 右侧内容的分页布局。
-- 使用 Mica 材质背景，遵循 Windows 11 Fluent Design 规范。
-- 在窗口层级重写 `OnPreviewMouseWheel`，通过 `VisualTreeHelper.HitTest` 定位真实可滚动的 `ScrollViewer`，解决 NavigationView 嵌套 ScrollViewer 导致的滚轮事件被拦截问题。
+*注：弹幕仅能在非最大化窗口或窗口化全屏中显示。*
+- ❓为什么不会显示我的微信通知？
+由于微信PC版客户端的通知推送不通过Windows通知中心，因此无法被NotiFlow读取和显示。
 
-### 全局配置 (`BarrageSettings`)
+---
 
-提供弹幕外观和行为的配置接口，支持 JSON 文件导入/导出：
+## 🛠️ 从源码构建 (开发者指南)
 
-- **字体**：FontFamily / FontSize / FontWeight / FontStyle / IsUnderlined
-- **显示**：TextOpacity / ShowAppIcon / ShowAppName
-- **背景**：ShowBackground / BackgroundColor / BackgroundOpacity / BackgroundCornerRadius
-- **行为**：MaxTextLength / ScrollSpeedCharsPerSec / HighlightEllipsis / EllipsisColor
+如果你想自己修改代码或为本项目贡献功能，请参考以下指南：
 
-## 构建与运行
+### 环境依赖
+- [Visual Studio 2022](https://visualstudio.microsoft.com/) (包含 .NET 桌面开发工作负载)
+- .NET 8.0 SDK
 
+### 快速编译
 ```bash
-dotnet build
+# 克隆仓库
+git clone https://github.com/Oatizen/NotiFlow.git
+
+# 进入目录
+cd NotiFlow
+
+# 运行项目
 dotnet run
-```
-
-需要 Windows 10 19041 及以上版本。首次运行时需在系统设置中授予通知访问权限。
-
-## 开发计划
-
-- [x] 全屏透明叠加层 + 鼠标穿透
-- [x] 多轨道弹幕调度算法
-- [x] WinRT 通知监听（异步轮询）
-- [x] DrawingVisual 渲染引擎 + 对象池
-- [x] 设置界面基础布局（NavigationView 三页面）
-- [x] 滚轮事件穿透修复
-- [ ] 设置界面数据绑定（UI ↔ BarrageSettings）
-- [ ] 弹幕预览区实时刷新
-- [ ] MVVM 架构重构（CommunityToolkit.Mvvm）
-- [ ] Win32 应用图标提取（基于 AUMID 的 ExtractAssociatedIcon 回退方案）
