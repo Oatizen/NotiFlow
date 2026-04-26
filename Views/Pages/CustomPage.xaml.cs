@@ -58,7 +58,6 @@ namespace NotiFlow.Views.Pages
             }
 
             _previewItem = new BarrageItem();
-            LocalPreviewHost.AddVisual(_previewItem);
 
             var msg = new NotificationMessage
             {
@@ -69,8 +68,11 @@ namespace NotiFlow.Views.Pages
 
             // 使用全局设定的文字颜色而非固定白色
             Brush textBrush = BarrageSettings.TextColor;
+            double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
 
-            _previewItem.BuildVisual(msg, textBrush, BarrageSettings.FontSize, BarrageSettings.FontFamily, BarrageSettings.FontStyle, BarrageSettings.FontWeight);
+            // 先烘焙内容，再挂入视觉树（减少视觉树失效次数）
+            _previewItem.BuildVisual(msg, textBrush, BarrageSettings.FontSize, BarrageSettings.FontFamily, BarrageSettings.FontStyle, BarrageSettings.FontWeight, pixelsPerDip);
+            LocalPreviewHost.AddVisual(_previewItem);
 
             // 从 Border 最右边缘出发
             double targetWidth = PreviewBorder.ActualWidth > 0 ? PreviewBorder.ActualWidth : 800;

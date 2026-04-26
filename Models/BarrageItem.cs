@@ -25,7 +25,7 @@ namespace NotiFlow.Models
         public bool IsAlive { get; set; } = true;
         public bool TrackReleased { get; set; } = false;
 
-        public void BuildVisual(NotificationMessage message, Brush textBrush, double fontSize, FontFamily fontFamily, FontStyle fontStyle, FontWeight fontWeight)
+        public void BuildVisual(NotificationMessage message, Brush textBrush, double fontSize, FontFamily fontFamily, FontStyle fontStyle, FontWeight fontWeight, double pixelsPerDip)
         {
             // ===== 预计算阶段（不绘制，仅测量尺寸） =====
             double iconSize = fontSize * 1.25;
@@ -53,8 +53,11 @@ namespace NotiFlow.Models
             {
                 prefix += "：";
             }
+            prefix = prefix.Replace("\r\n", " ").Replace("\n", " ").Replace("\r", " ");
 
             string bodyText = message.Body ?? "";
+            bodyText = bodyText.Replace("\r\n", " ").Replace("\n", " ").Replace("\r", " ");
+            
             if (bodyText.Length > BarrageSettings.MaxTextLength)
             {
                 bodyText = bodyText.Substring(0, BarrageSettings.MaxTextLength) + "......";
@@ -70,7 +73,6 @@ namespace NotiFlow.Models
             finalTxtBrush.Opacity *= BarrageSettings.TextOpacity;
             if (finalTxtBrush.CanFreeze) finalTxtBrush.Freeze();
 
-            double pixelsPerDip = VisualTreeHelper.GetDpi(Application.Current.MainWindow).PixelsPerDip;
 
 #pragma warning disable CS0618
             var formattedText = new FormattedText(
@@ -81,6 +83,9 @@ namespace NotiFlow.Models
                 fontSize,
                 finalTxtBrush,
                 pixelsPerDip);
+
+            // NOTE: WPF 的 FormattedText 渲染管线不支持彩色 Emoji (COLR/CPAL)，
+            // Emoji 会以当前画刷颜色渲染为单色轮廓，这是 WPF 框架级的已知限制。
 
             // 修复省略号高亮度：当开启选项并且文本真的以省略号结尾时，对最后6个字符上色
             if (BarrageSettings.HighlightEllipsis && fullText.EndsWith("......"))

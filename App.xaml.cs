@@ -145,8 +145,6 @@ namespace NotiFlow
             }
             else if (_settingsWindow.IsVisible)
             {
-                // 窗口已可见，激活到前台
-                _settingsWindow.Activate();
                 if (_settingsWindow.WindowState == WindowState.Minimized)
                 {
                     _settingsWindow.WindowState = WindowState.Normal;
@@ -154,10 +152,15 @@ namespace NotiFlow
             }
             else
             {
-                // 窗口存在但被隐藏，重新显示并激活
+                // 窗口存在但被隐藏，重新显示
                 _settingsWindow.Show();
-                _settingsWindow.Activate();
             }
+
+            // 强制置顶并获取焦点（突破 Windows 防焦点窃取限制）
+            _settingsWindow.Activate();
+            _settingsWindow.Topmost = true;
+            _settingsWindow.Topmost = false;
+            _settingsWindow.Focus();
         }
 
         /// <summary>

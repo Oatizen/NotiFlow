@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -46,6 +47,18 @@ namespace NotiFlow
         private readonly Queue<NotificationMessage> _pendingMessages = new();
 
         /// <summary>
+        /// 跨线程无锁生产队列。后台通知线程只管往里塞，渲染帧循环负责取出消费。
+        /// 彻底解耦通知接收与视觉树变更，杜绝 Dispatcher 调度引发的帧卡顿。
+        /// </summary>
+        private readonly ConcurrentQueue<NotificationMessage> _spawnQueue = new();
+
+        /// <summary>
+        /// 已预烘焙就绪队列。BuildVisual 已完成但尚未挂入视觉树的弹幕在此等待。
+        /// 下一帧的 CommitBarrage 会将其挂入视觉树，实现双阶段流水线。
+        /// </summary>
+        private readonly Queue<BarrageItem> _readyQueue = new();
+
+        /// <summary>
         /// 弹幕可用颜色池，随机分配以增强视觉区分度。
         /// </summary>
         private readonly Brush[] _colors =
@@ -67,6 +80,7 @@ namespace NotiFlow
         private readonly Queue<BarrageItem> _pool = new(); // 🚀 对象复用池
         private TimeSpan _lastRenderTime = TimeSpan.Zero;
         private double _screenWidth;
+        private double _pixelsPerDip;
 
         static MainWindow()
         {
@@ -102,6 +116,7 @@ namespace NotiFlow
 
             // 【架构重构：绑定游戏绘图级回调帧】
             _screenWidth = SystemParameters.PrimaryScreenWidth;
+            _pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
             CompositionTarget.Rendering += CompositionTarget_Rendering;
 
             // （已注销局部预览信使机制，移交至 CustomPage 画布）
@@ -111,11 +126,10 @@ namespace NotiFlow
             {
                 if (!BarrageSettings.IsWorking) return;
 
-                // 必须回到 UI 线程执行
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    EnqueueBarrage(msg);
-                });
+                // 零开销入队：ConcurrentQueue 是无锁线程安全结构，
+                // 完全不需要 Dispatcher 调度，不会阻塞任何线程。
+                // 真正的弹幕创建（BuildVisual）延迟到渲染帧循环中按需消费。
+                _spawnQueue.Enqueue(msg);
             };
 
             bool success = await _notificationService.InitializeAsync();
@@ -176,7 +190,7 @@ namespace NotiFlow
                 int track = AllocateTrack();
                 if (track < 0) break;
                 var message = _pendingMessages.Dequeue();
-                LaunchBarrage(message, track);
+                PrepareBarrage(message, track);
             }
         }
 
@@ -279,7 +293,7 @@ namespace NotiFlow
             int track = AllocateTrack();
             if (track >= 0)
             {
-                LaunchBarrage(msg, track);
+                PrepareBarrage(msg, track);
             }
             else
             {
@@ -287,40 +301,37 @@ namespace NotiFlow
             }
         }
 
-        private void LaunchBarrage(NotificationMessage message, int track)
+        /// <summary>
+        /// 第一阶段：预烘焙弹幕内容（重量级操作）。
+        /// 仅创建 FormattedText 并绘制到 DrawingVisual 中，但不挂入视觉树。
+        /// 此阶段不会触发 DWM 重合成，对当前帧无副作用。
+        /// </summary>
+        private void PrepareBarrage(NotificationMessage message, int track)
         {
-            // 🚀 从对象池抓取死掉的图层，如果不空闲才 new，杜绝反复开启 GC
             BarrageItem item;
             if (_pool.Count > 0)
             {
                 item = _pool.Dequeue();
-                // 唤醒它
                 item.IsAlive = true;
                 item.TrackReleased = false;
-                
-                // 将重新启用的死魂灵重新挂入宿主（它之前死掉的时候被我们移除了引用）
-                EngineHost.AddVisual(item);
             }
             else
             {
                 item = new BarrageItem();
-                EngineHost.AddVisual(item);
             }
             
             item.TrackIndex = track;
             
-            // 将设置的颜色解冻，这是后续使用对象池的核心技术基础，但当前先进行普通的独立绘制
-            // 使用设置中的统一色彩，抛弃之前的随机色彩数组
             Brush unFrozenBrush = BarrageSettings.TextColor.Clone();
             unFrozenBrush.Freeze();
 
             FontFamily fontFamily = BarrageSettings.FontFamily;
             double topPosition = TopMargin + track * TrackHeight;
             
-            // 进行像素级的预绘制烘焙
-            item.BuildVisual(message, unFrozenBrush, BarrageSettings.FontSize, fontFamily, BarrageSettings.FontStyle, BarrageSettings.FontWeight);
+            // 烘焙绘制内容（RenderOpen），但尚未挂入视觉树
+            item.BuildVisual(message, unFrozenBrush, BarrageSettings.FontSize, fontFamily, BarrageSettings.FontStyle, BarrageSettings.FontWeight, _pixelsPerDip);
 
-            // 物理位置注册
+            // 预设物理位置
             item.CurrentX = _screenWidth;
             item.CurrentY = topPosition;
             item.Offset = new Vector(item.CurrentX, item.CurrentY);
@@ -329,11 +340,21 @@ namespace NotiFlow
             if (speedPixelsPerSec < 10) speedPixelsPerSec = 10;
             item.SpeedPixelsPerSec = speedPixelsPerSec;
 
-            // 送入底层实体执行链
+            // 送入就绪队列，等待下一帧挂入视觉树
+            _readyQueue.Enqueue(item);
+        }
+
+        /// <summary>
+        /// 第二阶段：将已烘焙的弹幕挂入视觉树（轻量级操作）。
+        /// 内容已就绪，仅触发一次极轻量的视觉树失效。
+        /// </summary>
+        private void CommitBarrage(BarrageItem item)
+        {
+            EngineHost.AddVisual(item);
             _activeItems.Add(item);
         }
 
-        // ===== 核心物理引擎（帧率节流至 ~30fps 以减少 DWM 全屏 Alpha 合成次数） =====
+        // ===== 核心物理引擎 =====
         private void CompositionTarget_Rendering(object? sender, EventArgs e)
         {
             var renderingArgs = (RenderingEventArgs)e;
@@ -344,8 +365,22 @@ namespace NotiFlow
 
             if (dt == 0) return;
 
+            // ===== 双阶段流水线弹幕生成 =====
+            // 阶段 1（本帧）：从通知队列取出 1 条 → 预烘焙内容（不触发 DWM）
+            // 阶段 2（本帧）：从就绪队列取出 1 条 → 挂入视觉树（极轻量 DWM 合成）
+            // 重量级的 BuildVisual 与视觉树变更永远不在同一帧执行，彻底消除帧尖峰。
+            if (_spawnQueue.TryDequeue(out var spawnMsg))
+            {
+                EnqueueBarrage(spawnMsg);
+            }
+
+            if (_readyQueue.Count > 0)
+            {
+                CommitBarrage(_readyQueue.Dequeue());
+            }
+
             // 如果当前没有任何存活弹幕
-            if (_activeItems.Count == 0)
+            if (_activeItems.Count == 0 && _spawnQueue.IsEmpty && _readyQueue.Count == 0)
             {
                 // 当用户关闭了工作开关且所有弹幕已飞完，自动隐藏透明窗口释放桌面资源
                 if (!BarrageSettings.IsWorking && this.IsVisible)
