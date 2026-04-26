@@ -43,7 +43,7 @@
                         <WrapPanel Orientation="Horizontal">
                             <ui:Button Appearance="Primary" Content="GitHub 仓库" Icon="{ui:SymbolIcon Branch24}" Margin="0,0,12,12" Click="GitHubGo_Click"/>
                             <ui:Button Appearance="Primary" Content="检查更新" Icon="{ui:SymbolIcon ArrowSync24}" Margin="0,0,12,12" Click="CheckUpdate_Click"/>
-                            <ui:Button Appearance="Secondary" Content="许可证" Icon="{ui:SymbolIcon Document24}" Margin="0,0,0,12"/>
+                            <ui:Button Appearance="Secondary" Content="许可证" Icon="{ui:SymbolIcon Document24}" Margin="0,0,0,12" Click="LicenseGo_Click"/>
                         </WrapPanel>
                     </StackPanel>
                 </Grid>
