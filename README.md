@@ -23,9 +23,7 @@
 > **NotiFlow** 可以拦截 Windows 原生通知，并将其转化为全透明、鼠标穿透的“弹幕”从屏幕上方飘过。**不错过重要信息，也不打断专注心流。**
 
 <div align="center">
-  
-  ![Demo Video](Presentation.mp4)
-
+  <video src="https://github.com/user-attachments/assets/d6c6ac91-e404-48e4-8109-85fa61497eff" autoplay loop muted playsinline width="100%"></video>
 </div>
 
 ## ✨ 功能介绍
