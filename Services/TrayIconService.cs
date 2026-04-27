@@ -27,7 +27,7 @@ namespace NotiFlow.Services
             Icon appIcon;
             try
             {
-                string exePath = Environment.ProcessPath ?? System.Reflection.Assembly.GetExecutingAssembly().Location;
+                string exePath = Environment.ProcessPath ?? System.AppContext.BaseDirectory;
                 appIcon = Icon.ExtractAssociatedIcon(exePath) ?? SystemIcons.Application;
             }
             catch

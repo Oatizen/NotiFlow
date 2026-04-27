@@ -43,6 +43,7 @@ namespace NotiFlow
         // 更新与版本配置
         public int ConfigVersion { get; set; } = 1;
         public bool AutoCheckUpdate { get; set; } = true;
+        public string Theme { get; set; } = "System"; // 主题配置：System / Light / Dark
         
         // 行为与系统互操作配置
         public bool AllowCapture { get; set; } = true;         // 允许截图工具截取弹幕
@@ -88,6 +89,9 @@ namespace NotiFlow
 
         // ====== 更新配置 ======
         public static bool AutoCheckUpdate { get; set; } = true;
+        
+        // ====== 界面外观配置 ======
+        public static string Theme { get; set; } = "System";
 
         // ====== 行为与系统互操作 ======
         public static bool AllowCapture { get; set; } = true;
@@ -139,6 +143,7 @@ namespace NotiFlow
                     HotKey = HotKey,
                     ConfigVersion = 1,
                     AutoCheckUpdate = AutoCheckUpdate,
+                    Theme = Theme,
                     AllowCapture = AllowCapture,
                     MinimizeToTray = MinimizeToTray,
                     CloseToTray = CloseToTray,
@@ -229,6 +234,7 @@ namespace NotiFlow
                 
                 // 8. 其他行为设置
                 AutoCheckUpdate = dto.AutoCheckUpdate;
+                Theme = dto.Theme ?? "System";
                 AllowCapture = dto.AllowCapture;
                 MinimizeToTray = dto.MinimizeToTray;
                 CloseToTray = dto.CloseToTray;
@@ -266,6 +272,7 @@ namespace NotiFlow
             HotKeyModifier = 0x0006;
             HotKey = 0x44;
             AutoCheckUpdate = true;
+            Theme = "System";
             AllowCapture = true;
             MinimizeToTray = true;
             CloseToTray = true;

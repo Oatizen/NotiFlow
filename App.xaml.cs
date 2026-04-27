@@ -1,4 +1,6 @@
 using System.Windows;
+using System.Linq;
+using System.Threading;
 using Microsoft.Win32;
 using Wpf.Ui.Appearance;
 using NotiFlow.Services;
@@ -7,6 +9,7 @@ namespace NotiFlow
 {
     public partial class App : Application
     {
+        private static Mutex? _mutex;
         private TrayIconService? _trayIconService;
         public TrayIconService? TrayIconService => _trayIconService;
         private MainWindow? _mainWindow;
@@ -14,13 +17,35 @@ namespace NotiFlow
 
         protected override void OnStartup(StartupEventArgs e)
         {
+            // 单实例运行检测
+            const string appMutexName = "NotiFlow_SingleInstance_Mutex";
+            _mutex = new Mutex(true, appMutexName, out bool createdNew);
+            if (!createdNew)
+            {
+                // 如果是静默自启，就不弹窗打扰用户，直接退出
+                if (!e.Args.Contains("--startup"))
+                {
+                    MessageBox.Show("有另一个 NotiFlow 正在运行！\n请检查系统任务栏托盘。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                Current.Shutdown();
+                return;
+            }
+
             base.OnStartup(e);
 
             // 切换为显式关闭模式：关闭所有窗口不会自动终结应用，由托盘"退出"控制生命周期
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
-            // 仅在启动时应用一次默认主题 (浅色)
-            ApplicationThemeManager.Apply(ApplicationTheme.Light);
+            // 启动时自动尝试导入曾经落盘的配置文件（带安全回落防注入机制）
+            BarrageSettings.ImportConfig();
+
+            // 仅在启动时应用一次默认主题 (根据配置)
+            if (BarrageSettings.Theme == "Dark")
+                ApplicationThemeManager.Apply(ApplicationTheme.Dark);
+            else if (BarrageSettings.Theme == "System")
+                ApplicationThemeManager.ApplySystemTheme();
+            else
+                ApplicationThemeManager.Apply(ApplicationTheme.Light);
 
             // 【关键】注册全局主题变更事件，确保任何途径触发的主题切换都不会污染弹幕窗口
             // WPF-UI 内部会通过 DWM API 遍历所有窗口强制设置深色模式属性，
@@ -39,9 +64,6 @@ namespace NotiFlow
                 });
             };
 
-            // 启动时自动尝试导入曾经落盘的配置文件（带安全回落防注入机制）
-            BarrageSettings.ImportConfig();
-
             // 初始化系统托盘图标
             _trayIconService = new TrayIconService();
 
@@ -51,8 +73,12 @@ namespace NotiFlow
                 EnsureMainWindowVisible();
             }
 
-            // 默认启动时显示设置窗口
-            ShowOrActivateSettingsWindow();
+            // 如果不是开机自启自动运行的，则默认显示设置窗口
+            bool isSilentStartup = e.Args.Contains("--startup");
+            if (!isSilentStartup)
+            {
+                ShowOrActivateSettingsWindow();
+            }
 
             // 自动检查更新 (静默进行)
             if (BarrageSettings.AutoCheckUpdate)
@@ -81,7 +107,8 @@ namespace NotiFlow
                 {
                     if (enable)
                     {
-                        key.SetValue("NotiFlow", $"\"{exePath}\"");
+                        // 添加 --startup 参数，以便区分是用户手动打开还是开机自启
+                        key.SetValue("NotiFlow", $"\"{exePath}\" --startup");
                     }
                     else
                     {
@@ -158,9 +185,15 @@ namespace NotiFlow
 
             // 强制置顶并获取焦点（突破 Windows 防焦点窃取限制）
             _settingsWindow.Activate();
-            _settingsWindow.Topmost = true;
-            _settingsWindow.Topmost = false;
-            _settingsWindow.Focus();
+            Dispatcher.BeginInvoke(new System.Action(() =>
+            {
+                if (_settingsWindow != null)
+                {
+                    _settingsWindow.Topmost = true;
+                    _settingsWindow.Topmost = false;
+                    _settingsWindow.Focus();
+                }
+            }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
 
         /// <summary>

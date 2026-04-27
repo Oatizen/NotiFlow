@@ -12,18 +12,17 @@ namespace NotiFlow.Views.Pages
         {
             InitializeComponent();
 
-            // 根据当前应用主题，初始化 ComboBox 选中项
-            var currentTheme = ApplicationThemeManager.GetAppTheme();
-            switch (currentTheme)
+            // 根据当前用户保存的主题配置，初始化 ComboBox 选中项
+            switch (BarrageSettings.Theme)
             {
-                case ApplicationTheme.Light:
+                case "Light":
                     ThemeComboBox.SelectedIndex = 1;
                     break;
-                case ApplicationTheme.Dark:
+                case "Dark":
                     ThemeComboBox.SelectedIndex = 2;
                     break;
                 default:
-                    ThemeComboBox.SelectedIndex = 0; // 系统默认
+                    ThemeComboBox.SelectedIndex = 0; // System
                     break;
             }
 
@@ -39,13 +38,27 @@ namespace NotiFlow.Views.Pages
             {
                 case 0: // 系统默认
                     ApplicationThemeManager.ApplySystemTheme();
+                    BarrageSettings.Theme = "System";
                     break;
                 case 1: // 浅色
                     ApplicationThemeManager.Apply(ApplicationTheme.Light);
+                    BarrageSettings.Theme = "Light";
                     break;
                 case 2: // 深色
                     ApplicationThemeManager.Apply(ApplicationTheme.Dark);
+                    BarrageSettings.Theme = "Dark";
                     break;
+            }
+
+            // 保存主题配置到磁盘
+            BarrageSettings.ExportConfig();
+
+            // 修复 WPF-UI 切换主题后窗口背景卡顿/失焦颜色的 Bug（重置 Backdrop 触发刷新）
+            var currentWindow = Window.GetWindow(this) as Wpf.Ui.Controls.FluentWindow;
+            if (currentWindow != null)
+            {
+                currentWindow.WindowBackdropType = Wpf.Ui.Controls.WindowBackdropType.None;
+                currentWindow.WindowBackdropType = Wpf.Ui.Controls.WindowBackdropType.Mica;
             }
 
             // 主题切换后，WPF-UI 会通过 DWM API 将所有窗口强制设置深色模式属性，

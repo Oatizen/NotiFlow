@@ -40,7 +40,7 @@ https://github.com/user-attachments/assets/d6c6ac91-e404-48e4-8109-85fa61497eff
 2. 解压后双击运行 `NotiFlow.exe`。
 3. 在系统托盘中找到 NotiFlow，左键单击或是右键菜单进入“设置”界面。
 
-*注：弹幕不支持在全屏模式下运行的程序上方显示*
+*注：弹幕不支持在以全屏模式运行的程序上方显示*
 - ❓为什么不会显示我的微信通知？
 由于微信PC版客户端的通知推送不经过Windows通知中心，因此无法被NotiFlow读取和显示。这并非NotiFlow的问题。
 

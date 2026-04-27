@@ -29,7 +29,17 @@ namespace NotiFlow.Services
                 var response = await client.GetAsync(GitHubApiUrl);
                 if (!response.IsSuccessStatusCode)
                 {
-                    if (isManualCheck) ShowMessage("检查失败", $"无法连接到服务器，状态码: {response.StatusCode}");
+                    if (isManualCheck)
+                    {
+                        if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                        {
+                            ShowMessage("检查失败", "访问过于频繁，触发了 GitHub API 限制。\n请稍后再试，或直接点击左侧前往 GitHub 仓库查看。");
+                        }
+                        else
+                        {
+                            ShowMessage("检查失败", $"无法连接到服务器，状态码: {response.StatusCode}");
+                        }
+                    }
                     return;
                 }
 
