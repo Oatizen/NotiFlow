@@ -198,18 +198,20 @@ namespace NotiFlow
         {
             base.OnSourceInitialized(e);
 
-            // 1像素欺骗法：手动覆盖屏幕铺满不使用最大化，规避第三方任务栏软件的误判
+            // "1像素欺骗法"：手动覆盖屏幕铺满不使用最大化，规避第三方任务栏软件的误判
+            // 已知局限性：对某些非标准任务栏软件（如需要 2px 差值）可能仍然失效，
+            // 但目前没有更好的通用检测方案，在标准 Windows 10/11 环境下工作正常。
             this.Left = 0;
             this.Top = 0;
             this.Width = SystemParameters.PrimaryScreenWidth;
             this.Height = SystemParameters.PrimaryScreenHeight - 1;
 
             var hwnd = new WindowInteropHelper(this).Handle;
-            int extendedStyle = NativeMethods.GetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE);
+            IntPtr extendedStyle = NativeMethods.GetWindowLongPtr(hwnd, NativeMethods.GWL_EXSTYLE);
             
             // WS_EX_TRANSPARENT + WS_EX_TOOLWINDOW + WS_EX_NOACTIVATE
-            NativeMethods.SetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE, 
-                extendedStyle | NativeMethods.WS_EX_TRANSPARENT | NativeMethods.WS_EX_TOOLWINDOW | NativeMethods.WS_EX_NOACTIVATE);
+            IntPtr newStyle = (IntPtr)((long)extendedStyle | NativeMethods.WS_EX_TRANSPARENT | NativeMethods.WS_EX_TOOLWINDOW | NativeMethods.WS_EX_NOACTIVATE);
+            NativeMethods.SetWindowLongPtr(hwnd, NativeMethods.GWL_EXSTYLE, newStyle);
 
             // 根据防截屏配置动态施加相关 API
             ApplyCaptureSetting();
@@ -312,8 +314,7 @@ namespace NotiFlow
             if (_pool.Count > 0)
             {
                 item = _pool.Dequeue();
-                item.IsAlive = true;
-                item.TrackReleased = false;
+                item.Reset();
             }
             else
             {
@@ -380,7 +381,7 @@ namespace NotiFlow
             }
 
             // 如果当前没有任何存活弹幕
-            if (_activeItems.Count == 0 && _spawnQueue.IsEmpty && _readyQueue.Count == 0)
+            if (_activeItems.Count == 0 && _spawnQueue.IsEmpty && _readyQueue.Count == 0 && _pendingMessages.Count == 0)
             {
                 // 当用户关闭了工作开关且所有弹幕已飞完，自动隐藏透明窗口释放桌面资源
                 if (!BarrageSettings.IsWorking && this.IsVisible)

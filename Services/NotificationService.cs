@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media.Imaging;
@@ -11,10 +13,11 @@ using System.IO;
 
 namespace NotiFlow.Services
 {
-    public class NotificationService
+    public class NotificationService : IDisposable
     {
         private UserNotificationListener? _listener;
         private readonly HashSet<uint> _knownNotificationIds = new();
+        private CancellationTokenSource? _cts;
         
         // 抛回给 WPF UI 调度器的主动事件钩子
         public event Action<NotificationMessage>? OnNotificationReceived;
@@ -31,12 +34,13 @@ namespace NotiFlow.Services
 
             // 解决传统的 WinRT 事件订阅 (_listener.NotificationChanged += ...) 在未打包成商店应用的传统 WPF 环境下抛出 0x80070490 的系统级底层缺陷。
             // 我们直接完全废弃这条由于 COM 桥接不可靠带来的报错捷径，转而使用高性能且极其稳健的后台异步身份ID轮询比对法。
-            _ = StartPollingLoopAsync();
+            _cts = new CancellationTokenSource();
+            _ = StartPollingLoopAsync(_cts.Token);
             
             return true;
         }
 
-        private async Task StartPollingLoopAsync()
+        private async Task StartPollingLoopAsync(CancellationToken cancellationToken)
         {
             // 1. 初始化收集目前的历史通知，但不播放（避免启动时出现已读弹幕）
             try
@@ -47,12 +51,15 @@ namespace NotiFlow.Services
                     _knownNotificationIds.Add(n.Id);
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[NotificationService] 初始化历史通知失败: {ex.Message}");
+            }
 
             // 2. 无限跨线程安全轮询（间隔1.5秒非常轻量，完全没有任何性能负担）
-            while (true)
+            while (!cancellationToken.IsCancellationRequested)
             {
-                await Task.Delay(1500);
+                await Task.Delay(1500, cancellationToken);
                 try
                 {
                     var currentNotifications = await _listener!.GetNotificationsAsync(NotificationKinds.Toast);
@@ -78,8 +85,17 @@ namespace NotiFlow.Services
                     // 取交集清理已经被用户划掉的旧追踪，杜绝内存泄漏
                     _knownNotificationIds.IntersectWith(currentIds);
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[NotificationService] 轮询异常: {ex.Message}");
+                }
             }
+        }
+
+        public void Dispose()
+        {
+            _cts?.Cancel();
+            _cts?.Dispose();
         }
 
         private async Task<NotificationMessage> ParseNotificationAsync(UserNotification notification)

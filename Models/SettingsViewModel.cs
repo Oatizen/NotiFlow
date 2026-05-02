@@ -96,6 +96,7 @@ namespace NotiFlow.Models
             _isUnderline = BarrageSettings.IsUnderlined;
             _autoStartWorking = BarrageSettings.AutoStartWorking;
             _autoCheckUpdate = BarrageSettings.AutoCheckUpdate;
+            _updateSource = BarrageSettings.UpdateSource;
             _allowCapture = BarrageSettings.AllowCapture;
             _minimizeToTray = BarrageSettings.MinimizeToTray;
             _closeToTray = BarrageSettings.CloseToTray;
@@ -275,6 +276,35 @@ namespace NotiFlow.Models
         {
             BarrageSettings.AutoCheckUpdate = value;
             TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        private string _updateSource;
+        partial void OnUpdateSourceChanged(string value)
+        {
+            BarrageSettings.UpdateSource = value;
+            TriggerSaveAndPreview();
+            OnPropertyChanged(nameof(IsUpdateSourceAuto));
+            OnPropertyChanged(nameof(IsUpdateSourceGitee));
+            OnPropertyChanged(nameof(IsUpdateSourceGitHub));
+        }
+
+        public bool IsUpdateSourceAuto
+        {
+            get => UpdateSource == "Auto";
+            set { if (value) UpdateSource = "Auto"; }
+        }
+
+        public bool IsUpdateSourceGitee
+        {
+            get => UpdateSource == "Gitee";
+            set { if (value) UpdateSource = "Gitee"; }
+        }
+
+        public bool IsUpdateSourceGitHub
+        {
+            get => UpdateSource == "GitHub";
+            set { if (value) UpdateSource = "GitHub"; }
         }
 
         [ObservableProperty]

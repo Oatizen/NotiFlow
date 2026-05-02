@@ -150,6 +150,11 @@ namespace NotiFlow.Views.Pages
             Services.UpdateService.OpenUrl("https://github.com/Oatizen/NotiFlow?tab=MIT-1-ov-file");
         }
 
+        private void GiteeGo_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            Services.UpdateService.OpenUrl("https://gitee.com/Oatizen/NotiFlow");
+        }
+
         private async void CheckUpdate_Click(object sender, System.Windows.RoutedEventArgs e)
         {
             await Services.UpdateService.CheckForUpdatesAsync(isManualCheck: true);

@@ -43,6 +43,7 @@ namespace NotiFlow
         // 更新与版本配置
         public int ConfigVersion { get; set; } = 1;
         public bool AutoCheckUpdate { get; set; } = true;
+        public string UpdateSource { get; set; } = "Auto"; // 自动, Gitee, GitHub
         public string Theme { get; set; } = "System"; // 主题配置：System / Light / Dark
         
         // 行为与系统互操作配置
@@ -89,6 +90,7 @@ namespace NotiFlow
 
         // ====== 更新配置 ======
         public static bool AutoCheckUpdate { get; set; } = true;
+        public static string UpdateSource { get; set; } = "Auto";
         
         // ====== 界面外观配置 ======
         public static string Theme { get; set; } = "System";
@@ -103,8 +105,10 @@ namespace NotiFlow
         /// <summary>
         /// 指示程序当前是否正处于开启（渲染弹幕）状态。
         /// 不进行落盘持久化，每次启动由 AutoStartWorking 赋值。
+        /// 使用 volatile 保证跨线程可见性（防止 CPU/编译器缓存优化导致读到旧值）。
         /// </summary>
-        public static bool IsWorking { get; set; } = false;
+        private static volatile bool _isWorking;
+        public static bool IsWorking { get => _isWorking; set => _isWorking = value; }
 
         // 默认配置文件保存路径（迁移至用户 AppData 目录以防止覆盖安装丢失设置）
         private static readonly string DefaultConfigPath = Path.Combine(
@@ -143,6 +147,7 @@ namespace NotiFlow
                     HotKey = HotKey,
                     ConfigVersion = 1,
                     AutoCheckUpdate = AutoCheckUpdate,
+                    UpdateSource = UpdateSource,
                     Theme = Theme,
                     AllowCapture = AllowCapture,
                     MinimizeToTray = MinimizeToTray,
@@ -234,6 +239,7 @@ namespace NotiFlow
                 
                 // 8. 其他行为设置
                 AutoCheckUpdate = dto.AutoCheckUpdate;
+                UpdateSource = dto.UpdateSource ?? "Auto";
                 Theme = dto.Theme ?? "System";
                 AllowCapture = dto.AllowCapture;
                 MinimizeToTray = dto.MinimizeToTray;
@@ -272,6 +278,7 @@ namespace NotiFlow
             HotKeyModifier = 0x0006;
             HotKey = 0x44;
             AutoCheckUpdate = true;
+            UpdateSource = "Auto";
             Theme = "System";
             AllowCapture = true;
             MinimizeToTray = true;

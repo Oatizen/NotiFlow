@@ -84,6 +84,44 @@
                 </StackPanel>
             </Border>
 
+            <!-- 更新区块 -->
+            <ui:TextBlock Text="更新" FontTypography="BodyStrong" Margin="0,0,0,12"/>
+            <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Margin="0,0,0,32" Padding="16">
+                <StackPanel>
+                    <!-- 启动时自动检测更新 -->
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="52"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ControlFillColorDefaultBrush}" CornerRadius="8" HorizontalAlignment="Left" VerticalAlignment="Center">
+                            <ui:SymbolIcon Symbol="ArrowSync24" FontSize="18"/>
+                        </Border>
+                        <ui:TextBlock Grid.Column="1" Text="启动时自动检测更新" VerticalAlignment="Center"/>
+                        <ui:ToggleSwitch Grid.Column="2" IsChecked="{Binding AutoCheckUpdate, Mode=TwoWay}" VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <!-- 选择更新源 -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="52"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ControlFillColorDefaultBrush}" CornerRadius="8" HorizontalAlignment="Left" VerticalAlignment="Center">
+                            <ui:SymbolIcon Symbol="Globe24" FontSize="18"/>
+                        </Border>
+                        <ui:TextBlock Grid.Column="1" Text="选择更新源" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                            <RadioButton Content="自动" IsChecked="{Binding IsUpdateSourceAuto, Mode=TwoWay}" Style="{DynamicResource {x:Type ToggleButton}}" Margin="0,0,8,0" Padding="16,6"/>
+                            <RadioButton Content="Gitee" IsChecked="{Binding IsUpdateSourceGitee, Mode=TwoWay}" Style="{DynamicResource {x:Type ToggleButton}}" Margin="0,0,8,0" Padding="16,6"/>
+                            <RadioButton Content="GitHub" IsChecked="{Binding IsUpdateSourceGitHub, Mode=TwoWay}" Style="{DynamicResource {x:Type ToggleButton}}" Padding="16,6"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
             <!-- 行为区块 -->
             <ui:TextBlock Text="行为" FontTypography="BodyStrong" Margin="0,0,0,12"/>
             <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
@@ -114,20 +152,6 @@
                         </Border>
                         <ui:TextBlock Grid.Column="1" Text="应用启动时自动工作" VerticalAlignment="Center"/>
                         <ui:ToggleSwitch Grid.Column="2" IsChecked="{Binding AutoStartWorking, Mode=TwoWay}" VerticalAlignment="Center"/>
-                    </Grid>
-
-                    <!-- 启动时自动检测更新 -->
-                    <Grid Margin="0,0,0,16">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="52"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ControlFillColorDefaultBrush}" CornerRadius="8" HorizontalAlignment="Left" VerticalAlignment="Center">
-                            <ui:SymbolIcon Symbol="ArrowSync24" FontSize="18"/>
-                        </Border>
-                        <ui:TextBlock Grid.Column="1" Text="启动时自动检测更新" VerticalAlignment="Center"/>
-                        <ui:ToggleSwitch Grid.Column="2" IsChecked="{Binding AutoCheckUpdate, Mode=TwoWay}" VerticalAlignment="Center"/>
                     </Grid>
 
                     <!-- 开机自启动 -->

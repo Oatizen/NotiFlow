@@ -12,6 +12,12 @@ namespace NotiFlow.Models
     /// </summary>
     public class BarrageItem : DrawingVisual
     {
+        /// <summary>
+        /// UWP 图标缩放补偿系数。
+        /// UWP 应用图标在 256x256 画布中通常包含大量透明垫层，
+        /// 直接绘制会导致图标视觉上偏小，需要放大补偿。
+        /// </summary>
+        private const double UwpIconScaleFactor = 2.5;
         // 物理状态
         public double CurrentX { get; set; }
         public double CurrentY { get; set; }
@@ -24,6 +30,21 @@ namespace NotiFlow.Models
         // 生命周期
         public bool IsAlive { get; set; } = true;
         public bool TrackReleased { get; set; } = false;
+
+        /// <summary>
+        /// 将弹幕对象重置为初始状态，供对象池复用时调用。
+        /// 集中管理所有需要清理的状态字段，防止新增字段时遗漏重置导致脏数据。
+        /// </summary>
+        public void Reset()
+        {
+            IsAlive = true;
+            TrackReleased = false;
+            CurrentX = 0;
+            CurrentY = 0;
+            SpeedPixelsPerSec = 0;
+            PhysicalWidth = 0;
+            TrackIndex = -1;
+        }
 
         public void BuildVisual(NotificationMessage message, Brush textBrush, double fontSize, FontFamily fontFamily, FontStyle fontStyle, FontWeight fontWeight, double pixelsPerDip)
         {
@@ -58,9 +79,24 @@ namespace NotiFlow.Models
             string bodyText = message.Body ?? "";
             bodyText = bodyText.Replace("\r\n", " ").Replace("\n", " ").Replace("\r", " ");
             
-            if (bodyText.Length > BarrageSettings.MaxTextLength)
+            double currentWeight = 0;
+            int truncateIndex = -1;
+            for (int i = 0; i < bodyText.Length; i++)
             {
-                bodyText = bodyText.Substring(0, BarrageSettings.MaxTextLength) + "......";
+                char c = bodyText[i];
+                // ASCII characters usually count as half-width (0.5 weight)
+                currentWeight += (c <= 127) ? 0.5 : 1.0;
+
+                if (currentWeight > BarrageSettings.MaxTextLength)
+                {
+                    truncateIndex = i;
+                    break;
+                }
+            }
+
+            if (truncateIndex != -1)
+            {
+                bodyText = bodyText.Substring(0, truncateIndex) + "......";
             }
 
             string fullText = prefix + bodyText;
@@ -74,7 +110,6 @@ namespace NotiFlow.Models
             if (finalTxtBrush.CanFreeze) finalTxtBrush.Freeze();
 
 
-#pragma warning disable CS0618
             var formattedText = new FormattedText(
                 fullText,
                 System.Globalization.CultureInfo.CurrentUICulture,
@@ -92,7 +127,6 @@ namespace NotiFlow.Models
             {
                 formattedText.SetForegroundBrush(BarrageSettings.EllipsisColor, fullText.Length - 6, 6);
             }
-#pragma warning restore CS0618
 
             contentWidth += formattedText.WidthIncludingTrailingWhitespace;
             double contentHeight = Math.Max(fontSize, iconSize);
@@ -135,7 +169,7 @@ namespace NotiFlow.Models
 
                     if (message.IsUwpIcon)
                     {
-                        dc.PushTransform(new ScaleTransform(2.5, 2.5, imageX + iconSize / 2, imageY + iconSize / 2));
+                        dc.PushTransform(new ScaleTransform(UwpIconScaleFactor, UwpIconScaleFactor, imageX + iconSize / 2, imageY + iconSize / 2));
                         dc.DrawImage(message.AppIcon, new Rect(imageX, imageY, iconSize, iconSize));
                         dc.Pop();
                     }
@@ -157,7 +191,7 @@ namespace NotiFlow.Models
                     shadowBrush.Opacity = 0.9 * BarrageSettings.TextOpacity; // 阴影不透明度也需要受到全局透明度乘数影响
                     shadowBrush.Freeze();
 
-#pragma warning disable CS0618
+#pragma warning disable CS0618 // 阴影文本不需要新版 API 的额外参数
                     var shadowText = new FormattedText(
                         fullText,
                         System.Globalization.CultureInfo.CurrentUICulture,
