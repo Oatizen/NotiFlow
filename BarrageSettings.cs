@@ -45,6 +45,7 @@ namespace NotiFlow
         public int ConfigVersion { get; set; } = 1;
         public bool AutoCheckUpdate { get; set; } = true;
         public string UpdateSource { get; set; } = "Auto"; // 自动, Gitee, GitHub
+        public string SkippedVersion { get; set; } = ""; // 自动检查更新时跳过的版本号
         public string Theme { get; set; } = "System"; // 主题配置：System / Light / Dark
         
         // 行为与系统互操作配置
@@ -93,6 +94,7 @@ namespace NotiFlow
         // ====== 更新配置 ======
         public static bool AutoCheckUpdate { get; set; } = true;
         public static string UpdateSource { get; set; } = "Auto";
+        public static string SkippedVersion { get; set; } = "";
         
         // ====== 界面外观配置 ======
         public static string Theme { get; set; } = "System";
@@ -151,6 +153,7 @@ namespace NotiFlow
                     ConfigVersion = 1,
                     AutoCheckUpdate = AutoCheckUpdate,
                     UpdateSource = UpdateSource,
+                    SkippedVersion = SkippedVersion,
                     Theme = Theme,
                     AllowCapture = AllowCapture,
                     MinimizeToTray = MinimizeToTray,
@@ -244,6 +247,7 @@ namespace NotiFlow
                 // 8. 其他行为设置
                 AutoCheckUpdate = dto.AutoCheckUpdate;
                 UpdateSource = dto.UpdateSource ?? "Auto";
+                SkippedVersion = dto.SkippedVersion ?? "";
                 Theme = dto.Theme ?? "System";
                 AllowCapture = dto.AllowCapture;
                 MinimizeToTray = dto.MinimizeToTray;
@@ -284,6 +288,7 @@ namespace NotiFlow
             HotKey = 0x44;
             AutoCheckUpdate = true;
             UpdateSource = "Auto";
+            SkippedVersion = "";
             Theme = "System";
             AllowCapture = true;
             MinimizeToTray = true;

@@ -66,7 +66,21 @@ namespace NotiFlow.Services
 
             if (result.Success && result.HasUpdate)
             {
-                ShowUpdateDialog($"发现新版本 {result.Version} !", $"更新说明：\n{result.Notes}\n\n是否立即前往仓库下载更新？");
+                if (!isManualCheck && !string.IsNullOrEmpty(BarrageSettings.SkippedVersion))
+                {
+                    if (Version.TryParse(result.Version.TrimStart('v', 'V'), out Version? latestVer) &&
+                        Version.TryParse(BarrageSettings.SkippedVersion.TrimStart('v', 'V'), out Version? skippedVer))
+                    {
+                        if (latestVer <= skippedVer) return;
+                    }
+                    else if (result.Version == BarrageSettings.SkippedVersion)
+                    {
+                        return;
+                    }
+                }
+
+                var mode = isManualCheck ? Views.Windows.UpdateDialogMode.ManualUpdate : Views.Windows.UpdateDialogMode.AutoUpdate;
+                ShowUpdateDialog($"发现新版本 {result.Version} !", $"更新说明：\n{result.Notes}\n\n是否立即前往仓库下载更新？", mode, result.Version);
             }
             else if (isManualCheck)
             {
@@ -134,11 +148,11 @@ namespace NotiFlow.Services
         /// 使用自定义的 UpdateDialogWindow 替代 WPF-UI 内置 MessageBox，
         /// 解决了上下异色、按钮文字截断、以及关闭按钮逻辑冲突等问题。
         /// </summary>
-        private static void ShowUpdateDialog(string title, string content)
+        private static void ShowUpdateDialog(string title, string content, Views.Windows.UpdateDialogMode mode = Views.Windows.UpdateDialogMode.Info, string targetVersion = "")
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
-                var dialog = new UpdateDialogWindow(title, content)
+                var dialog = new Views.Windows.UpdateDialogWindow(title, content, mode)
                 {
                     Owner = Application.Current.MainWindow
                 };
@@ -147,13 +161,20 @@ namespace NotiFlow.Services
 
                 switch (dialog.UserResult)
                 {
-                    case UpdateDialogResult.GitHub:
+                    case Views.Windows.UpdateDialogResult.GitHub:
                         OpenUrl(GitHubReleaseUrl);
                         break;
-                    case UpdateDialogResult.Gitee:
+                    case Views.Windows.UpdateDialogResult.Gitee:
                         OpenUrl(GiteeReleaseUrl);
                         break;
-                    case UpdateDialogResult.Close:
+                    case Views.Windows.UpdateDialogResult.Skip:
+                        if (!string.IsNullOrEmpty(targetVersion))
+                        {
+                            BarrageSettings.SkippedVersion = targetVersion;
+                            BarrageSettings.ExportConfig();
+                        }
+                        break;
+                    case Views.Windows.UpdateDialogResult.Close:
                     default:
                         // 用户点击了"确定"或右上角的 X，不执行任何跳转
                         break;
