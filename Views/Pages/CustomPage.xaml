@@ -211,26 +211,54 @@
                 </Border>
             </Grid>
 
-            <!-- 第三区域：动画设置 -->
-            <Border VerticalAlignment="Top" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                        <ui:SymbolIcon Symbol="Flash24" FontSize="20" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="0,0,8,0"/>
-                        <ui:TextBlock FontTypography="BodyStrong" Text="动画" FontSize="16"/>
-                    </StackPanel>
+            <!-- 第三区域：动画 + 其他（双列，与上方内容/外观对齐） -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- 左列：动画设置 -->
+                <Border Grid.Column="0" VerticalAlignment="Stretch" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                            <ui:SymbolIcon Symbol="Flash24" FontSize="20" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="0,0,8,0"/>
+                            <ui:TextBlock FontTypography="BodyStrong" Text="动画" FontSize="16"/>
+                        </StackPanel>
                     
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock Grid.Column="0" Text="动画速度" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                        <Slider Grid.Column="1" Minimum="5" Maximum="30" Value="{Binding ScrollSpeedCharsPerSec, Mode=TwoWay}" Margin="0,0,16,0" VerticalAlignment="Center" />
-                        <ui:TextBlock Grid.Column="2" Text="{Binding SpeedDisplay}" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" Width="90" TextAlignment="Right"/>
-                    </Grid>
-                </StackPanel>
-            </Border>
+                        <Grid Margin="0,0,0,8">
+                            <ui:TextBlock Text="动画速度"/>
+                            <ui:TextBlock Text="{Binding SpeedDisplay}" HorizontalAlignment="Right" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold"/>
+                        </Grid>
+                        <Slider Minimum="5" Maximum="30" Value="{Binding ScrollSpeedCharsPerSec, Mode=TwoWay}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 右列：其他设置 -->
+                <Border Grid.Column="2" VerticalAlignment="Stretch" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                            <ui:SymbolIcon Symbol="Options24" FontSize="20" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="0,0,8,0"/>
+                            <ui:TextBlock FontTypography="BodyStrong" Text="其他" FontSize="16"/>
+                        </StackPanel>
+
+                        <ui:TextBlock Text="弹幕位置" Margin="0,0,0,8"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <RadioButton Grid.Column="0" Content="居中偏上" IsChecked="{Binding IsTrackUpperCenter, Mode=TwoWay}" Style="{DynamicResource {x:Type ToggleButton}}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="4,6"/>
+                            <RadioButton Grid.Column="2" Content="顶部优先" IsChecked="{Binding IsTrackTopFirst, Mode=TwoWay}" Style="{DynamicResource {x:Type ToggleButton}}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="4,6"/>
+                            <RadioButton Grid.Column="4" Content="底部优先" IsChecked="{Binding IsTrackBottomFirst, Mode=TwoWay}" Style="{DynamicResource {x:Type ToggleButton}}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="4,6"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </Grid>
         </StackPanel>
     </ScrollViewer>
 </Page>

@@ -34,6 +34,7 @@ namespace NotiFlow
         public bool HighlightEllipsis { get; set; } = true;
         public string EllipsisColorHex { get; set; } = "#32CD32"; // 亮绿色 (LimeGreen)
         public double ScrollSpeedCharsPerSec { get; set; } = 12.0;
+        public string TrackStrategy { get; set; } = "UpperCenter"; // UpperCenter, TopFirst, BottomFirst
         public bool AutoStartWorking { get; set; } = true;
 
         // 快捷键配置
@@ -82,6 +83,7 @@ namespace NotiFlow
         public static bool HighlightEllipsis { get; set; } = true;
         public static Brush EllipsisColor { get; set; } = Brushes.LimeGreen;
         public static double ScrollSpeedCharsPerSec { get; set; } = 12.0;
+        public static string TrackStrategy { get; set; } = "UpperCenter";
         public static bool AutoStartWorking { get; set; } = true;
 
         // ====== 快捷键配置 ======
@@ -142,6 +144,7 @@ namespace NotiFlow
                     HighlightEllipsis = HighlightEllipsis,
                     EllipsisColorHex = (EllipsisColor is SolidColorBrush ellBrush) ? ellBrush.Color.ToString() : "#32CD32",
                     ScrollSpeedCharsPerSec = ScrollSpeedCharsPerSec,
+                    TrackStrategy = TrackStrategy,
                     AutoStartWorking = AutoStartWorking,
                     HotKeyModifier = HotKeyModifier,
                     HotKey = HotKey,
@@ -229,6 +232,7 @@ namespace NotiFlow
                 // 6. 新增功能安全回落
                 MaxTextLength = Math.Clamp(dto.MaxTextLength, 5, 500);
                 ScrollSpeedCharsPerSec = Math.Clamp(dto.ScrollSpeedCharsPerSec, 5.0, 100.0);
+                TrackStrategy = (dto.TrackStrategy == "TopFirst" || dto.TrackStrategy == "BottomFirst") ? dto.TrackStrategy : "UpperCenter";
                 HighlightEllipsis = dto.HighlightEllipsis;
                 AutoStartWorking = dto.AutoStartWorking;
                 IsWorking = AutoStartWorking;
@@ -274,6 +278,7 @@ namespace NotiFlow
             HighlightEllipsis = true;
             EllipsisColor = Brushes.LimeGreen;
             ScrollSpeedCharsPerSec = 12.0;
+            TrackStrategy = "UpperCenter";
             AutoStartWorking = true;
             HotKeyModifier = 0x0006;
             HotKey = 0x44;

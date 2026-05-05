@@ -90,6 +90,7 @@ namespace NotiFlow.Models
             _showAppName = BarrageSettings.ShowAppName;
             _highlightEllipsis = BarrageSettings.HighlightEllipsis;
             _scrollSpeedCharsPerSec = BarrageSettings.ScrollSpeedCharsPerSec;
+            _trackStrategy = BarrageSettings.TrackStrategy;
             
             _isFontWeightBold = BarrageSettings.FontWeight == FontWeights.Bold;
             _isFontStyleItalic = BarrageSettings.FontStyle == FontStyles.Italic;
@@ -236,6 +237,35 @@ namespace NotiFlow.Models
                 else if (ScrollSpeedCharsPerSec >= 20) label = "快";
                 return $"{label} ({(int)ScrollSpeedCharsPerSec} 字/秒)";
             }
+        }
+
+        [ObservableProperty]
+        private string _trackStrategy;
+        partial void OnTrackStrategyChanged(string value)
+        {
+            BarrageSettings.TrackStrategy = value;
+            TriggerSaveAndPreview();
+            OnPropertyChanged(nameof(IsTrackUpperCenter));
+            OnPropertyChanged(nameof(IsTrackTopFirst));
+            OnPropertyChanged(nameof(IsTrackBottomFirst));
+        }
+
+        public bool IsTrackUpperCenter
+        {
+            get => TrackStrategy == "UpperCenter";
+            set { if (value) TrackStrategy = "UpperCenter"; }
+        }
+
+        public bool IsTrackTopFirst
+        {
+            get => TrackStrategy == "TopFirst";
+            set { if (value) TrackStrategy = "TopFirst"; }
+        }
+
+        public bool IsTrackBottomFirst
+        {
+            get => TrackStrategy == "BottomFirst";
+            set { if (value) TrackStrategy = "BottomFirst"; }
         }
 
         [ObservableProperty]

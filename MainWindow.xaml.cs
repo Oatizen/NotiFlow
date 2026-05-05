@@ -150,7 +150,28 @@ namespace NotiFlow
             _trackOccupied = new bool[_trackCount];
         }
 
+        /// <summary>
+        /// 根据当前配置的轨道策略分配一条空闲轨道。
+        /// - UpperCenter：居中偏上（距顶部 1/3 处优先，原有策略）
+        /// - TopFirst：顶部优先（从上到下依次分配）
+        /// - BottomFirst：底部优先（从下到上依次分配）
+        /// 返回 -1 表示所有轨道均已占满。
+        /// </summary>
         private int AllocateTrack()
+        {
+            return BarrageSettings.TrackStrategy switch
+            {
+                "TopFirst" => AllocateTrackTopFirst(),
+                "BottomFirst" => AllocateTrackBottomFirst(),
+                _ => AllocateTrackUpperCenter()
+            };
+        }
+
+        /// <summary>
+        /// 居中偏上策略：以屏幕顶部 1/3 处为黄金锚点，距离越近优先级越高。
+        /// 锚点以下的轨道会额外乘以 1.8 倍惩罚系数，使弹幕自然聚集在视觉焦点区域。
+        /// </summary>
+        private int AllocateTrackUpperCenter()
         {
             int goldenTrackIndex = _trackCount / 3;
             var candidates = new List<(int TrackIndex, double Score)>();
@@ -172,6 +193,40 @@ namespace NotiFlow
 
             _trackOccupied[chosen] = true;
             return chosen;
+        }
+
+        /// <summary>
+        /// 顶部优先策略：从第 0 条轨道开始向下搜索，返回第一条空闲轨道。
+        /// 弹幕会尽可能贴近屏幕顶部，适合不希望弹幕遮挡画面中心的场景。
+        /// </summary>
+        private int AllocateTrackTopFirst()
+        {
+            for (int i = 0; i < _trackCount; i++)
+            {
+                if (!_trackOccupied[i])
+                {
+                    _trackOccupied[i] = true;
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// 底部优先策略：从最后一条轨道开始向上搜索，返回第一条空闲轨道。
+        /// 弹幕会尽可能靠近屏幕底部，适合需要保持顶部视野清晰的场景。
+        /// </summary>
+        private int AllocateTrackBottomFirst()
+        {
+            for (int i = _trackCount - 1; i >= 0; i--)
+            {
+                if (!_trackOccupied[i])
+                {
+                    _trackOccupied[i] = true;
+                    return i;
+                }
+            }
+            return -1;
         }
 
         private void ReleaseTrack(int trackIndex)

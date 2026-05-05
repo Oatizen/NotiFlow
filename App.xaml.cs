@@ -25,7 +25,10 @@ namespace NotiFlow
                 // 如果是静默自启，就不弹窗打扰用户，直接退出
                 if (!e.Args.Contains("--startup"))
                 {
-                    MessageBox.Show("有另一个 NotiFlow 正在运行！\n请检查系统任务栏托盘。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                    var dialog = new Views.Windows.SimpleDialogWindow(
+                        "有另一个 NotiFlow 正在运行！",
+                        "请检查系统任务栏托盘。");
+                    dialog.ShowDialog();
                 }
                 Current.Shutdown();
                 return;
