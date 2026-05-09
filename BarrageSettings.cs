@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -53,6 +54,12 @@ namespace NotiFlow
         public bool MinimizeToTray { get; set; } = true;       // 最小化到系统托盘
         public bool CloseToTray { get; set; } = true;          // 关闭主窗口到托盘
         public bool RunOnStartup { get; set; } = false;        // 开机自启动
+        
+        // 作用域配置
+        public string SceneFilterMode { get; set; } = "Disabled";   // Disabled / Whitelist / Blacklist
+        public List<Models.ScopeRuleItemDto> SceneFilterList { get; set; } = new();
+        public string SourceFilterMode { get; set; } = "Disabled";  // Disabled / Whitelist / Blacklist
+        public List<Models.ScopeRuleItemDto> SourceFilterList { get; set; } = new();
     }
 
     /// <summary>
@@ -104,6 +111,19 @@ namespace NotiFlow
         public static bool MinimizeToTray { get; set; } = true;
         public static bool CloseToTray { get; set; } = true;
         public static bool RunOnStartup { get; set; } = false;
+
+        // ====== 作用域配置 ======
+        /// <summary>
+        /// 生效场景过滤模式。Disabled = 不过滤；Whitelist = 仅在列表中的应用前台时显示；Blacklist = 列表中的应用前台时隐藏。
+        /// </summary>
+        public static string SceneFilterMode { get; set; } = "Disabled";
+        public static List<Models.ScopeRuleItemDto> SceneFilterList { get; set; } = new();
+        
+        /// <summary>
+        /// 通知来源过滤模式。Disabled = 不过滤；Whitelist = 仅显示列表中应用的通知；Blacklist = 屏蔽列表中应用的通知。
+        /// </summary>
+        public static string SourceFilterMode { get; set; } = "Disabled";
+        public static List<Models.ScopeRuleItemDto> SourceFilterList { get; set; } = new();
 
         // ====== 运行时应用状态 ======
         /// <summary>
@@ -158,7 +178,11 @@ namespace NotiFlow
                     AllowCapture = AllowCapture,
                     MinimizeToTray = MinimizeToTray,
                     CloseToTray = CloseToTray,
-                    RunOnStartup = RunOnStartup
+                    RunOnStartup = RunOnStartup,
+                    SceneFilterMode = SceneFilterMode,
+                    SceneFilterList = SceneFilterList,
+                    SourceFilterMode = SourceFilterMode,
+                    SourceFilterList = SourceFilterList
                 };
 
                 // 确保目录存在
@@ -253,6 +277,12 @@ namespace NotiFlow
                 MinimizeToTray = dto.MinimizeToTray;
                 CloseToTray = dto.CloseToTray;
                 RunOnStartup = dto.RunOnStartup;
+                
+                // 9. 作用域配置（安全回落：非法模式值退化为 Disabled）
+                SceneFilterMode = (dto.SceneFilterMode == "Whitelist" || dto.SceneFilterMode == "Blacklist") ? dto.SceneFilterMode : "Disabled";
+                SceneFilterList = dto.SceneFilterList ?? new();
+                SourceFilterMode = (dto.SourceFilterMode == "Whitelist" || dto.SourceFilterMode == "Blacklist") ? dto.SourceFilterMode : "Disabled";
+                SourceFilterList = dto.SourceFilterList ?? new();
             }
             catch (Exception ex)
             {
@@ -294,6 +324,10 @@ namespace NotiFlow
             MinimizeToTray = true;
             CloseToTray = true;
             RunOnStartup = false;
+            SceneFilterMode = "Disabled";
+            SceneFilterList = new();
+            SourceFilterMode = "Disabled";
+            SourceFilterList = new();
             
             // 重置后立即保存生效
             ExportConfig();

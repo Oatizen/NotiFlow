@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -18,7 +19,14 @@ namespace NotiFlow.Services
         private UserNotificationListener? _listener;
         private readonly HashSet<uint> _knownNotificationIds = new();
         private CancellationTokenSource? _cts;
-        
+
+        /// <summary>
+        /// 启动以来曾发送过通知的应用列表（去重，最多 50 个，最新的在前）。
+        /// 后续 ScopePage 可直接绑定此列表供用户快速添加来源规则。
+        /// </summary>
+        public ObservableCollection<ScopeRuleItemDto> RecentSources { get; } = new();
+        private const int MaxRecentSources = 50;
+
         // 抛回给 WPF UI 调度器的主动事件钩子
         public event Action<NotificationMessage>? OnNotificationReceived;
 
@@ -73,10 +81,19 @@ namespace NotiFlow.Services
                         if (!_knownNotificationIds.Contains(n.Id))
                         {
                             _knownNotificationIds.Add(n.Id);
+
+                            // 作用域预过滤：在昂贵的 ParseNotificationAsync 之前快速跳过被屏蔽的来源
+                            string aumid = n.AppInfo?.AppUserModelId ?? "";
+                            string appName = n.AppInfo?.DisplayInfo?.DisplayName ?? "";
+                            if (!ScopeFilter.ShouldAcceptSource(aumid, appName)) continue;
+
                             try
                             {
                                 var msg = await ParseNotificationAsync(n);
                                 OnNotificationReceived?.Invoke(msg);
+
+                                // 追踪近期通知来源（去重，供 UI 快速选择）
+                                TrackRecentSource(aumid, appName);
                             }
                             catch { }
                         }
@@ -96,6 +113,28 @@ namespace NotiFlow.Services
         {
             _cts?.Cancel();
             _cts?.Dispose();
+        }
+
+        private void TrackRecentSource(string aumid, string appName)
+        {
+            if (string.IsNullOrEmpty(aumid) && string.IsNullOrEmpty(appName)) return;
+
+            Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                if (RecentSources.Any(r =>
+                    (!string.IsNullOrEmpty(r.Identifier) && r.Identifier.Equals(aumid, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(r.DisplayName) && r.DisplayName.Equals(appName, StringComparison.OrdinalIgnoreCase))))
+                    return;
+
+                RecentSources.Insert(0, new ScopeRuleItemDto
+                {
+                    DisplayName = appName,
+                    Identifier = aumid
+                });
+
+                while (RecentSources.Count > MaxRecentSources)
+                    RecentSources.RemoveAt(RecentSources.Count - 1);
+            });
         }
 
         private async Task<NotificationMessage> ParseNotificationAsync(UserNotification notification)

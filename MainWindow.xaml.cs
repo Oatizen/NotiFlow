@@ -427,7 +427,11 @@ namespace NotiFlow
             // 重量级的 BuildVisual 与视觉树变更永远不在同一帧执行，彻底消除帧尖峰。
             if (_spawnQueue.TryDequeue(out var spawnMsg))
             {
-                EnqueueBarrage(spawnMsg);
+                // 生效场景抑制：前台应用命中规则时静默丢弃新弹幕，已有弹幕不受影响
+                if (((App)Application.Current).ForegroundMonitor is { } monitor && !monitor.IsSceneSuppressed)
+                {
+                    EnqueueBarrage(spawnMsg);
+                }
             }
 
             if (_readyQueue.Count > 0)

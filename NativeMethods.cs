@@ -47,6 +47,50 @@ namespace NotiFlow
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool SetWindowDisplayAffinity(IntPtr hWnd, uint dwAffinity);
 
+        // ===== 前台窗口检测 API（供生效场景过滤使用） =====
+
+        /// <summary>
+        /// 获取当前处于前台的窗口句柄。
+        /// 配合 GetWindowThreadProcessId 可确定当前用户正在操作的应用进程。
+        /// </summary>
+        [DllImport("user32.dll")]
+        public static extern IntPtr GetForegroundWindow();
+
+        /// <summary>
+        /// 根据窗口句柄获取其所属的进程 ID。
+        /// </summary>
+        [DllImport("user32.dll")]
+        public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+
+        // ===== 窗口枚举 API（供 ProcessEnumerator 使用） =====
+
+        /// <summary>
+        /// 枚举所有顶级窗口。每枚举到一个窗口时回调一次 lpEnumFunc。
+        /// 回调返回 true 继续枚举，返回 false 停止。
+        /// </summary>
+        [DllImport("user32.dll")]
+        public static extern bool EnumWindows(EnumWindowsProc enumProc, IntPtr lParam);
+
+        public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+        /// <summary>
+        /// 判断窗口是否可见。用于过滤掉隐藏/最小化到托盘的后台窗口。
+        /// </summary>
+        [DllImport("user32.dll")]
+        public static extern bool IsWindowVisible(IntPtr hWnd);
+
+        /// <summary>
+        /// 获取窗口标题文本的长度（字符数）。返回 0 表示窗口无标题。
+        /// </summary>
+        [DllImport("user32.dll")]
+        public static extern int GetWindowTextLength(IntPtr hWnd);
+
+        /// <summary>
+        /// 获取窗口标题文本。配合 GetWindowTextLength 预先分配缓冲区。
+        /// </summary>
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        public static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder lpString, int nMaxCount);
+
         /// <summary>
         /// 设置分层窗口属性（Color Key 色键透明）。
         /// 使用该 API 代替 WPF 的 AllowsTransparency，可以将 DWM 的全屏逐像素 Alpha 合成

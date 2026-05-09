@@ -14,6 +14,8 @@ namespace NotiFlow
         public TrayIconService? TrayIconService => _trayIconService;
         private MainWindow? _mainWindow;
         private SettingsWindow? _settingsWindow;
+        private ForegroundMonitorService? _foregroundMonitorService;
+        public ForegroundMonitorService? ForegroundMonitor => _foregroundMonitorService;
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -69,6 +71,10 @@ namespace NotiFlow
 
             // 初始化系统托盘图标
             _trayIconService = new TrayIconService();
+
+            // 初始化前台窗口监听服务（生效场景过滤）
+            _foregroundMonitorService = new ForegroundMonitorService();
+            _foregroundMonitorService.Start();
 
             // 根据自动启动设置决定是否立即显示主弹幕窗口
             if (BarrageSettings.IsWorking)
@@ -209,6 +215,7 @@ namespace NotiFlow
 
         protected override void OnExit(ExitEventArgs e)
         {
+            _foregroundMonitorService?.Dispose();
             _trayIconService?.Dispose();
             _mainWindow?.Close();
             _settingsWindow?.Close();
