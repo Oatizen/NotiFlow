@@ -3,9 +3,14 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:viewmodels="clr-namespace:NotiFlow.Models"
+      xmlns:converters="clr-namespace:NotiFlow.Converters"
       Title="设置"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       Background="Transparent">
+
+    <Page.Resources>
+        <converters:BooleanToAppearanceConverter x:Key="BoolToAppearance" />
+    </Page.Resources>
 
     <Page.DataContext>
         <viewmodels:SettingsViewModel />
@@ -114,9 +119,9 @@
                         </Border>
                         <ui:TextBlock Grid.Column="1" Text="选择更新源" VerticalAlignment="Center"/>
                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                            <RadioButton Content="自动" IsChecked="{Binding IsUpdateSourceAuto, Mode=TwoWay}" Style="{DynamicResource {x:Type ToggleButton}}" Margin="0,0,8,0" Padding="16,6"/>
-                            <RadioButton Content="Gitee" IsChecked="{Binding IsUpdateSourceGitee, Mode=TwoWay}" Style="{DynamicResource {x:Type ToggleButton}}" Margin="0,0,8,0" Padding="16,6"/>
-                            <RadioButton Content="GitHub" IsChecked="{Binding IsUpdateSourceGitHub, Mode=TwoWay}" Style="{DynamicResource {x:Type ToggleButton}}" Padding="16,6"/>
+                            <ui:Button Content="自动" Appearance="{Binding IsUpdateSourceAuto, Converter={StaticResource BoolToAppearance}}" Command="{Binding SetUpdateSourceCommand}" CommandParameter="Auto" Margin="0,0,8,0" Padding="16,6"/>
+                            <ui:Button Content="Gitee" Appearance="{Binding IsUpdateSourceGitee, Converter={StaticResource BoolToAppearance}}" Command="{Binding SetUpdateSourceCommand}" CommandParameter="Gitee" Margin="0,0,8,0" Padding="16,6"/>
+                            <ui:Button Content="GitHub" Appearance="{Binding IsUpdateSourceGitHub, Converter={StaticResource BoolToAppearance}}" Command="{Binding SetUpdateSourceCommand}" CommandParameter="GitHub" Padding="16,6"/>
                         </StackPanel>
                     </Grid>
                 </StackPanel>

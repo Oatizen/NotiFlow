@@ -57,9 +57,12 @@ namespace NotiFlow
         
         // 作用域配置
         public string SceneFilterMode { get; set; } = "Disabled";   // Disabled / Whitelist / Blacklist
-        public List<Models.ScopeRuleItemDto> SceneFilterList { get; set; } = new();
+        public List<Models.ScopeRuleItemDto> SceneBlacklist { get; set; } = new();
+        public List<Models.ScopeRuleItemDto> SceneWhitelist { get; set; } = new();
         public string SourceFilterMode { get; set; } = "Disabled";  // Disabled / Whitelist / Blacklist
-        public List<Models.ScopeRuleItemDto> SourceFilterList { get; set; } = new();
+        public List<Models.ScopeRuleItemDto> SourceBlacklist { get; set; } = new();
+        public List<Models.ScopeRuleItemDto> SourceWhitelist { get; set; } = new();
+        public List<Models.ScopeRuleItemDto> RecentSourcesCache { get; set; } = new();
     }
 
     /// <summary>
@@ -117,13 +120,20 @@ namespace NotiFlow
         /// 生效场景过滤模式。Disabled = 不过滤；Whitelist = 仅在列表中的应用前台时显示；Blacklist = 列表中的应用前台时隐藏。
         /// </summary>
         public static string SceneFilterMode { get; set; } = "Disabled";
-        public static List<Models.ScopeRuleItemDto> SceneFilterList { get; set; } = new();
+        public static List<Models.ScopeRuleItemDto> SceneBlacklist { get; set; } = new();
+        public static List<Models.ScopeRuleItemDto> SceneWhitelist { get; set; } = new();
         
         /// <summary>
         /// 通知来源过滤模式。Disabled = 不过滤；Whitelist = 仅显示列表中应用的通知；Blacklist = 屏蔽列表中应用的通知。
         /// </summary>
         public static string SourceFilterMode { get; set; } = "Disabled";
-        public static List<Models.ScopeRuleItemDto> SourceFilterList { get; set; } = new();
+        public static List<Models.ScopeRuleItemDto> SourceBlacklist { get; set; } = new();
+        public static List<Models.ScopeRuleItemDto> SourceWhitelist { get; set; } = new();
+        
+        /// <summary>
+        /// 近期接收过通知的应用缓存（带有历史消息列表）
+        /// </summary>
+        public static List<Models.ScopeRuleItemDto> RecentSourcesCache { get; set; } = new();
 
         // ====== 运行时应用状态 ======
         /// <summary>
@@ -180,9 +190,12 @@ namespace NotiFlow
                     CloseToTray = CloseToTray,
                     RunOnStartup = RunOnStartup,
                     SceneFilterMode = SceneFilterMode,
-                    SceneFilterList = SceneFilterList,
+                    SceneBlacklist = SceneBlacklist,
+                    SceneWhitelist = SceneWhitelist,
                     SourceFilterMode = SourceFilterMode,
-                    SourceFilterList = SourceFilterList
+                    SourceBlacklist = SourceBlacklist,
+                    SourceWhitelist = SourceWhitelist,
+                    RecentSourcesCache = RecentSourcesCache
                 };
 
                 // 确保目录存在
@@ -280,9 +293,13 @@ namespace NotiFlow
                 
                 // 9. 作用域配置（安全回落：非法模式值退化为 Disabled）
                 SceneFilterMode = (dto.SceneFilterMode == "Whitelist" || dto.SceneFilterMode == "Blacklist") ? dto.SceneFilterMode : "Disabled";
-                SceneFilterList = dto.SceneFilterList ?? new();
+                SceneBlacklist = dto.SceneBlacklist ?? new();
+                SceneWhitelist = dto.SceneWhitelist ?? new();
+                
                 SourceFilterMode = (dto.SourceFilterMode == "Whitelist" || dto.SourceFilterMode == "Blacklist") ? dto.SourceFilterMode : "Disabled";
-                SourceFilterList = dto.SourceFilterList ?? new();
+                SourceBlacklist = dto.SourceBlacklist ?? new();
+                SourceWhitelist = dto.SourceWhitelist ?? new();
+                RecentSourcesCache = dto.RecentSourcesCache ?? new();
             }
             catch (Exception ex)
             {
@@ -325,9 +342,12 @@ namespace NotiFlow
             CloseToTray = true;
             RunOnStartup = false;
             SceneFilterMode = "Disabled";
-            SceneFilterList = new();
+            SceneBlacklist = new();
+            SceneWhitelist = new();
             SourceFilterMode = "Disabled";
-            SourceFilterList = new();
+            SourceBlacklist = new();
+            SourceWhitelist = new();
+            RecentSourcesCache = new();
             
             // 重置后立即保存生效
             ExportConfig();

@@ -62,9 +62,8 @@ namespace NotiFlow.Services
                 {
                     var proc = Process.GetProcessById((int)pid);
                     string procName = proc.ProcessName;
-                    string exePath = "";
-                    try { exePath = proc.MainModule?.FileName ?? ""; }
-                    catch { /* 权限不足，跳过 */ }
+                    // 使用 QueryFullProcessImageName 获取路径，兼容 UWP 和提权进程
+                    string exePath = NativeMethods.GetProcessImagePath((int)pid);
 
                     result.Add(new WindowProcessInfo
                     {

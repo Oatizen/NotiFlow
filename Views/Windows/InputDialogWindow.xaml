@@ -1,0 +1,38 @@
+<ui:FluentWindow x:Class="NotiFlow.Views.Windows.InputDialogWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="手动添加" Height="250" Width="400"
+        WindowStartupLocation="CenterOwner"
+        ExtendsContentIntoTitleBar="True"
+        WindowBackdropType="Mica"
+        ResizeMode="NoResize"
+        Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="手动添加标识符" />
+
+        <StackPanel Grid.Row="1" Margin="24,12,24,0">
+            <ui:TextBlock Text="应用唯一标识符 (必填)" Margin="0,0,0,8"/>
+            <ui:TextBox x:Name="IdentifierTextBox" PlaceholderText="例如: msedge.exe 或 AUMID" Margin="0,0,0,16"/>
+            
+            <ui:TextBlock Text="显示名称 (选填)" Margin="0,0,0,8"/>
+            <ui:TextBox x:Name="DisplayNameTextBox" PlaceholderText="例如: Microsoft Edge" />
+        </StackPanel>
+
+        <Grid Grid.Row="2" Margin="24,0,24,24">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="8"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <ui:Button Grid.Column="0" Content="取消" HorizontalAlignment="Stretch" Click="CancelButton_Click"/>
+            <ui:Button Grid.Column="2" Content="添加" Appearance="Primary" HorizontalAlignment="Stretch" Click="AddButton_Click"/>
+        </Grid>
+    </Grid>
+</ui:FluentWindow>

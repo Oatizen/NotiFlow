@@ -91,6 +91,43 @@ namespace NotiFlow
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         public static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder lpString, int nMaxCount);
 
+        // ===== 进程路径查询 API（弥补 Process.MainModule 权限不足的问题） =====
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr OpenProcess(uint dwDesiredAccess, bool bInheritHandle, int dwProcessId);
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern bool QueryFullProcessImageName(IntPtr hProcess, uint dwFlags, System.Text.StringBuilder lpExeName, ref int lpdwSize);
+
+        [DllImport("kernel32.dll")]
+        private static extern bool CloseHandle(IntPtr hObject);
+
+        private const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
+
+        /// <summary>
+        /// 通过 PID 获取进程的可执行文件完整路径。
+        /// 使用 QueryFullProcessImageName + PROCESS_QUERY_LIMITED_INFORMATION，
+        /// 相比 Process.MainModule.FileName 具有更高的兼容性：
+        /// 对 UWP 应用、提权进程、64 位进程均有效。
+        /// </summary>
+        public static string GetProcessImagePath(int pid)
+        {
+            IntPtr hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
+            if (hProcess == IntPtr.Zero) return "";
+
+            try
+            {
+                var sb = new System.Text.StringBuilder(1024);
+                int size = sb.Capacity;
+                if (QueryFullProcessImageName(hProcess, 0, sb, ref size))
+                    return sb.ToString();
+                return "";
+            }
+            finally
+            {
+                CloseHandle(hProcess);
+            }
+        }
         /// <summary>
         /// 设置分层窗口属性（Color Key 色键透明）。
         /// 使用该 API 代替 WPF 的 AllowsTransparency，可以将 DWM 的全屏逐像素 Alpha 合成

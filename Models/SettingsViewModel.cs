@@ -435,6 +435,12 @@ namespace NotiFlow.Models
         [RelayCommand]
         private void ToggleUnderline() => IsUnderline = !IsUnderline;
 
+        [RelayCommand]
+        private void SetTrackStrategy(string strategy) => TrackStrategy = strategy;
+
+        [RelayCommand]
+        private void SetUpdateSource(string source) => UpdateSource = source;
+
         /// <summary>
         /// 当 UI 的值成功反写回底部的静态内存对象后，触发落地 IO 和一次通知中心预览
         /// </summary>

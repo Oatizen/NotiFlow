@@ -67,6 +67,11 @@
                     Content="自定义"
                     Icon="{ui:SymbolIcon DesignIdeas24}"
                     TargetPageType="{x:Type pages:CustomPage}" />
+                <!-- 作用域页 -->
+                <ui:NavigationViewItem
+                    Content="作用域"
+                    Icon="{ui:SymbolIcon Target24}"
+                    TargetPageType="{x:Type pages:ScopePage}" />
             </ui:NavigationView.MenuItems>
 
             <ui:NavigationView.FooterMenuItems>

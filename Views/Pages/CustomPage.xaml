@@ -252,9 +252,9 @@
                                 <ColumnDefinition Width="8"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <RadioButton Grid.Column="0" Content="居中偏上" IsChecked="{Binding IsTrackUpperCenter, Mode=TwoWay}" Style="{DynamicResource {x:Type ToggleButton}}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="4,6"/>
-                            <RadioButton Grid.Column="2" Content="顶部优先" IsChecked="{Binding IsTrackTopFirst, Mode=TwoWay}" Style="{DynamicResource {x:Type ToggleButton}}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="4,6"/>
-                            <RadioButton Grid.Column="4" Content="底部优先" IsChecked="{Binding IsTrackBottomFirst, Mode=TwoWay}" Style="{DynamicResource {x:Type ToggleButton}}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="4,6"/>
+                            <ui:Button Grid.Column="0" Content="居中偏上" Appearance="{Binding IsTrackUpperCenter, Converter={StaticResource BoolToAppearance}}" Command="{Binding SetTrackStrategyCommand}" CommandParameter="UpperCenter" HorizontalAlignment="Stretch" Padding="4,6"/>
+                            <ui:Button Grid.Column="2" Content="顶部优先" Appearance="{Binding IsTrackTopFirst, Converter={StaticResource BoolToAppearance}}" Command="{Binding SetTrackStrategyCommand}" CommandParameter="TopFirst" HorizontalAlignment="Stretch" Padding="4,6"/>
+                            <ui:Button Grid.Column="4" Content="底部优先" Appearance="{Binding IsTrackBottomFirst, Converter={StaticResource BoolToAppearance}}" Command="{Binding SetTrackStrategyCommand}" CommandParameter="BottomFirst" HorizontalAlignment="Stretch" Padding="4,6"/>
                         </Grid>
                     </StackPanel>
                 </Border>

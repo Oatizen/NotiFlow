@@ -18,5 +18,10 @@ namespace NotiFlow.Models
         /// 通知来源维度：应用的 AUMID 或 AppName（如 "Microsoft.Windows.Defender_xxx"）
         /// </summary>
         public string Identifier { get; set; } = "";
+
+        /// <summary>
+        /// 缓存该应用近期的通知文本内容，用于在界面展开预览
+        /// </summary>
+        public System.Collections.Generic.List<string> RecentMessages { get; set; } = new();
     }
 }

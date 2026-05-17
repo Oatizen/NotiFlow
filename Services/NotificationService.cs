@@ -16,16 +16,23 @@ namespace NotiFlow.Services
 {
     public class NotificationService : IDisposable
     {
+        public static NotificationService? Instance { get; private set; }
+
+        public NotificationService()
+        {
+            Instance = this;
+        }
         private UserNotificationListener? _listener;
         private readonly HashSet<uint> _knownNotificationIds = new();
         private CancellationTokenSource? _cts;
 
         /// <summary>
-        /// 启动以来曾发送过通知的应用列表（去重，最多 50 个，最新的在前）。
+        /// 启动以来及历史缓存中曾发送过通知的应用列表（去重，最多 20 个，最新的在前）。
         /// 后续 ScopePage 可直接绑定此列表供用户快速添加来源规则。
         /// </summary>
-        public ObservableCollection<ScopeRuleItemDto> RecentSources { get; } = new();
-        private const int MaxRecentSources = 50;
+        public ObservableCollection<ScopeRuleItemDto> RecentSources { get; } = new(BarrageSettings.RecentSourcesCache);
+        private const int MaxRecentSources = 20;
+        private const int MaxMessagesPerSource = 5;
 
         // 抛回给 WPF UI 调度器的主动事件钩子
         public event Action<NotificationMessage>? OnNotificationReceived;
@@ -57,6 +64,15 @@ namespace NotiFlow.Services
                 foreach (var n in initialNotifications)
                 {
                     _knownNotificationIds.Add(n.Id);
+                    
+                    // 记录历史通知的来源及纯文本内容
+                    string aumid = n.AppInfo?.AppUserModelId ?? "";
+                    string appName = n.AppInfo?.DisplayInfo?.DisplayName ?? "";
+                    if (!string.IsNullOrEmpty(aumid) || !string.IsNullOrEmpty(appName))
+                    {
+                        string messageText = ParseNotificationTextOnly(n);
+                        TrackRecentSource(aumid, appName, messageText);
+                    }
                 }
             }
             catch (Exception ex)
@@ -92,8 +108,9 @@ namespace NotiFlow.Services
                                 var msg = await ParseNotificationAsync(n);
                                 OnNotificationReceived?.Invoke(msg);
 
-                                // 追踪近期通知来源（去重，供 UI 快速选择）
-                                TrackRecentSource(aumid, appName);
+                                // 追踪近期通知来源并缓存具体内容（去重，供 UI 快速选择及预览）
+                                string messageText = ParseNotificationTextOnly(n);
+                                TrackRecentSource(aumid, appName, messageText);
                             }
                             catch { }
                         }
@@ -115,26 +132,70 @@ namespace NotiFlow.Services
             _cts?.Dispose();
         }
 
-        private void TrackRecentSource(string aumid, string appName)
+        private void TrackRecentSource(string aumid, string appName, string messageText)
         {
             if (string.IsNullOrEmpty(aumid) && string.IsNullOrEmpty(appName)) return;
 
             Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                if (RecentSources.Any(r =>
+                var existingItem = RecentSources.FirstOrDefault(r =>
                     (!string.IsNullOrEmpty(r.Identifier) && r.Identifier.Equals(aumid, StringComparison.OrdinalIgnoreCase)) ||
-                    (!string.IsNullOrEmpty(r.DisplayName) && r.DisplayName.Equals(appName, StringComparison.OrdinalIgnoreCase))))
-                    return;
+                    (!string.IsNullOrEmpty(r.DisplayName) && r.DisplayName.Equals(appName, StringComparison.OrdinalIgnoreCase)));
 
-                RecentSources.Insert(0, new ScopeRuleItemDto
+                if (existingItem != null)
                 {
-                    DisplayName = appName,
-                    Identifier = aumid
-                });
+                    // 移到最前
+                    RecentSources.Remove(existingItem);
+                    RecentSources.Insert(0, existingItem);
+                }
+                else
+                {
+                    existingItem = new ScopeRuleItemDto
+                    {
+                        DisplayName = appName,
+                        Identifier = aumid
+                    };
+                    RecentSources.Insert(0, existingItem);
+                }
+
+                // 写入缓存文本并去重（避免因为重复推送相同内容导致刷屏）
+                if (!string.IsNullOrWhiteSpace(messageText) && !existingItem.RecentMessages.Contains(messageText))
+                {
+                    existingItem.RecentMessages.Insert(0, messageText);
+                    while (existingItem.RecentMessages.Count > MaxMessagesPerSource)
+                        existingItem.RecentMessages.RemoveAt(existingItem.RecentMessages.Count - 1);
+                }
 
                 while (RecentSources.Count > MaxRecentSources)
                     RecentSources.RemoveAt(RecentSources.Count - 1);
+
+                // 更新配置缓存
+                BarrageSettings.RecentSourcesCache = RecentSources.ToList();
+                BarrageSettings.ExportConfig();
             });
+        }
+
+        /// <summary>
+        /// 极速提取通知的纯文本，跳过高昂的图片流读取，专用于界面历史折叠预览
+        /// </summary>
+        private string ParseNotificationTextOnly(UserNotification notification)
+        {
+            string title = "";
+            string body = "";
+            var binding = notification.Notification.Visual.Bindings.FirstOrDefault();
+            if (binding != null)
+            {
+                var textElements = binding.GetTextElements();
+                if (textElements.Count > 0) title = textElements[0].Text;
+                if (textElements.Count > 1) body = textElements[1].Text;
+                for (int i = 2; i < textElements.Count; i++)
+                {
+                    body += " | " + textElements[i].Text;
+                }
+            }
+            if (string.IsNullOrWhiteSpace(title) && string.IsNullOrWhiteSpace(body)) return "";
+            if (string.IsNullOrWhiteSpace(body)) return title;
+            return $"{title}: {body}";
         }
 
         private async Task<NotificationMessage> ParseNotificationAsync(UserNotification notification)
@@ -248,7 +309,7 @@ namespace NotiFlow.Services
 
                         if (process != null && process.MainModule != null)
                         {
-                            var exePath = process.MainModule.FileName;
+                            var exePath = NativeMethods.GetProcessImagePath(process.Id);
                             if (!string.IsNullOrEmpty(exePath))
                             {
                                 using var sysIcon = System.Drawing.Icon.ExtractAssociatedIcon(exePath);
@@ -267,9 +328,17 @@ namespace NotiFlow.Services
                     }
                     catch
                     {
-                        // 权限不足（如试图访问高权限进程等）时静默失败回落为无图模式
+                        // 权限不足或提取失败静默处理
                     }
                 });
+            }
+
+            // 4. [新增] 成功提取到图标后，将其缓存到本地磁盘，供后续直接快速读取（尤其当该应用关闭时）
+            if (msg.AppIcon is BitmapSource bmp)
+            {
+                // 优先使用 Aumid，如果是空的（Win32 进程），则使用 AppName (即 identifier)
+                string identifier = string.IsNullOrEmpty(msg.Aumid) ? msg.AppName : msg.Aumid;
+                _ = IconCacheService.CacheIconAsync(identifier, bmp);
             }
 
             return msg;

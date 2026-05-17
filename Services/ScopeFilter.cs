@@ -23,7 +23,7 @@ namespace NotiFlow.Services
             var mode = BarrageSettings.SourceFilterMode;
             if (mode == "Disabled") return true;
 
-            var list = BarrageSettings.SourceFilterList;
+            var list = mode == "Whitelist" ? BarrageSettings.SourceWhitelist : BarrageSettings.SourceBlacklist;
             if (list == null || list.Count == 0)
             {
                 // 列表为空时：白名单模式 = 全部拒绝；黑名单模式 = 全部接受
@@ -51,7 +51,7 @@ namespace NotiFlow.Services
             var mode = BarrageSettings.SceneFilterMode;
             if (mode == "Disabled") return true;
 
-            var list = BarrageSettings.SceneFilterList;
+            var list = mode == "Whitelist" ? BarrageSettings.SceneWhitelist : BarrageSettings.SceneBlacklist;
             if (list == null || list.Count == 0)
             {
                 return mode != "Whitelist";
