@@ -25,9 +25,6 @@
                 <!-- 顶部标题区 -->
                 <Grid Margin="0,0,0,24">
                     <ui:TextBlock FontTypography="TitleLarge" Text="作用域" FontWeight="Bold"/>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                        <ui:Button Appearance="Transparent" Icon="{ui:SymbolIcon Search24}" ToolTip="搜索 (开发中)"/>
-                    </StackPanel>
                 </Grid>
 
                 <!-- 选项卡切换区：使用 ui:Button + Command，与项目其他页面保持一致 -->
@@ -293,14 +290,14 @@
                                                         </Style.Triggers>
                                                     </Style>
                                                 </ui:Button.Style>
-                                                <!-- 借助触发器，当按钮被选中（蓝底）时将箭头颜色变为白色 -->
+                                                <!-- 借助触发器，当按钮被选中（蓝底）时将箭头颜色同步为父级 Button 的前景色 -->
                                                 <ui:SymbolIcon Symbol="ChevronDown24" FontSize="16">
                                                     <ui:SymbolIcon.Style>
                                                         <Style TargetType="ui:SymbolIcon">
                                                             <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding IsExpanded}" Value="True">
-                                                                    <Setter Property="Foreground" Value="White" />
+                                                                    <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ui:Button}}" />
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
@@ -343,14 +340,17 @@
                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Top" Margin="0,6,0,0"/>
 
                                         <ItemsControl Grid.Column="1" ItemsSource="{Binding RecentMessages}" Margin="8,0,0,0">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
-                                                        CornerRadius="4" Padding="8" Margin="0,0,0,4">
-                                                    <TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
+                                         <ItemsControl.ItemTemplate>
+                                             <DataTemplate>
+                                                 <!-- 使用层级感更强的 ControlFillColorSecondaryBrush，并加入细微描边，保证浅色模式下的遮罩质感 -->
+                                                 <Border Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                                         BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                                         BorderThickness="1"
+                                                         CornerRadius="6" Padding="8" Margin="0,0,0,4">
+                                                     <TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                                 </Border>
+                                             </DataTemplate>
+                                         </ItemsControl.ItemTemplate>
                                         </ItemsControl>
                                     </Grid>
                                 </StackPanel>

@@ -5,7 +5,7 @@
       xmlns:viewmodels="clr-namespace:NotiFlow.Models"
       xmlns:converters="clr-namespace:NotiFlow.Converters"
       xmlns:rendering="clr-namespace:NotiFlow.Rendering"
-      Title="自定义"
+      Title="弹幕设置"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       Background="Transparent"
       SizeChanged="Page_SizeChanged"
@@ -26,7 +26,7 @@
 
             <!-- 页面大标题 -->
             <Grid Margin="0,0,0,24">
-                <ui:TextBlock FontTypography="TitleLarge" Text="自定义" FontWeight="Bold"/>
+                <ui:TextBlock FontTypography="TitleLarge" Text="弹幕设置" FontWeight="Bold"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <ui:Button x:Name="ToggleWorkButton" Appearance="Primary" Content="开启" Click="ToggleWorkButton_Click" Padding="24,0" Height="36" MinWidth="100" Margin="0,0,12,0"/>
                     <Grid>

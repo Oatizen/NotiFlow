@@ -64,7 +64,7 @@
             <ui:NavigationView.MenuItems>
                 <!-- 自定义页 -->
                 <ui:NavigationViewItem
-                    Content="自定义"
+                    Content="弹幕设置"
                     Icon="{ui:SymbolIcon DesignIdeas24}"
                     TargetPageType="{x:Type pages:CustomPage}" />
                 <!-- 作用域页 -->
