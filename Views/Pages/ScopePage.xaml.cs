@@ -11,6 +11,7 @@ namespace NotiFlow.Views.Pages
         {
             InitializeComponent();
             Loaded += ScopePage_Loaded;
+            Unloaded += ScopePage_Unloaded;
         }
 
         private void ScopePage_Loaded(object sender, RoutedEventArgs e)
@@ -19,6 +20,15 @@ namespace NotiFlow.Views.Pages
             if (DataContext is ScopeViewModel vm)
             {
                 vm.Initialize();
+            }
+        }
+
+        private void ScopePage_Unloaded(object sender, RoutedEventArgs e)
+        {
+            // 在页面卸载移出视觉树时，通知 ViewModel 彻底注销并停用实时轮询定时器，防范任何后台空转与内存泄漏
+            if (DataContext is ScopeViewModel vm)
+            {
+                vm.Deinitialize();
             }
         }
 

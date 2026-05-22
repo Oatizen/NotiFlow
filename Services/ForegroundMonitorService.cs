@@ -48,17 +48,19 @@ namespace NotiFlow.Services
                 NativeMethods.GetWindowThreadProcessId(hWnd, out uint pid);
                 if (pid == 0) return;
 
-                var proc = Process.GetProcessById((int)pid);
-                string procName = proc.ProcessName;
+                using (var proc = Process.GetProcessById((int)pid))
+                {
+                    string procName = proc.ProcessName;
 
-                if (procName.Equals("NotiFlow", StringComparison.OrdinalIgnoreCase)) return;
+                    if (procName.Equals("NotiFlow", StringComparison.OrdinalIgnoreCase)) return;
 
-                CurrentForegroundProcess = procName;
+                    CurrentForegroundProcess = procName;
 
-                if (procName.Equals(_lastProcessName, StringComparison.OrdinalIgnoreCase)) return;
-                _lastProcessName = procName;
+                    if (procName.Equals(_lastProcessName, StringComparison.OrdinalIgnoreCase)) return;
+                    _lastProcessName = procName;
 
-                IsSceneSuppressed = !ScopeFilter.ShouldAcceptScene(procName);
+                    IsSceneSuppressed = !ScopeFilter.ShouldAcceptScene(procName);
+                }
             }
             catch
             {

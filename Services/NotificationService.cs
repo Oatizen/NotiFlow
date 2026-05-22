@@ -280,16 +280,25 @@ namespace NotiFlow.Services
 
                 if (fallbackIcon != null)
                 {
+                    IntPtr hIcon = fallbackIcon.Handle;
                     await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
                         var bitmap = System.Windows.Interop.Imaging.CreateBitmapSourceFromHIcon(
-                            fallbackIcon.Handle,
+                            hIcon,
                             System.Windows.Int32Rect.Empty,
                             BitmapSizeOptions.FromEmptyOptions());
                             
                         bitmap.Freeze();
                         msg.AppIcon = bitmap;
                     });
+
+                    // 物理释放我们自己通过 ExtractAssociatedIcon 获取的原生 HICON 句柄，并调用 Dispose 释放托管 Icon，
+                    // 彻底阻断 GDI 图标句柄内存泄漏。对于系统内置单例（如 SystemIcons.Shield），因为并非由我们创建，此处不能销毁它们，以防止系统范围崩溃。
+                    if (fallbackIcon != System.Drawing.SystemIcons.Shield && fallbackIcon != System.Drawing.SystemIcons.Information)
+                    {
+                        NativeMethods.DestroyIcon(hIcon);
+                        fallbackIcon.Dispose();
+                    }
                 }
             }
 
@@ -315,13 +324,17 @@ namespace NotiFlow.Services
                                 using var sysIcon = System.Drawing.Icon.ExtractAssociatedIcon(exePath);
                                 if (sysIcon != null)
                                 {
+                                    IntPtr hIcon = sysIcon.Handle;
                                     var bitmap = System.Windows.Interop.Imaging.CreateBitmapSourceFromHIcon(
-                                        sysIcon.Handle,
+                                        hIcon,
                                         System.Windows.Int32Rect.Empty,
                                         BitmapSizeOptions.FromEmptyOptions());
                                     
                                     bitmap.Freeze();
                                     msg.AppIcon = bitmap;
+
+                                    // 物理释放提取出来的原生 HICON 句柄，根治高频通知提取 Win32 应用图标时的 GDI 内存泄漏
+                                    NativeMethods.DestroyIcon(hIcon);
                                 }
                             }
                         }

@@ -19,20 +19,20 @@ namespace NotiFlow.Services
         private readonly NotifyIcon _notifyIcon;
         private readonly ContextMenu _contextMenu;
         private readonly MenuItem _toggleWorkItem;
+        private readonly Icon _appIcon;
         private Window? _helperWindow;
 
         public TrayIconService()
         {
             // 使用应用程序自身的可执行文件图标作为托盘图标
-            Icon appIcon;
             try
             {
                 string exePath = Environment.ProcessPath ?? System.AppContext.BaseDirectory;
-                appIcon = Icon.ExtractAssociatedIcon(exePath) ?? SystemIcons.Application;
+                _appIcon = Icon.ExtractAssociatedIcon(exePath) ?? SystemIcons.Application;
             }
             catch
             {
-                appIcon = SystemIcons.Application;
+                _appIcon = SystemIcons.Application;
             }
 
             // 构建 WPF 风格的 Fluent Design 右键上下文菜单
@@ -79,7 +79,7 @@ namespace NotiFlow.Services
 
             _notifyIcon = new NotifyIcon
             {
-                Icon = appIcon,
+                Icon = _appIcon,
                 Text = "NotiFlow - 弹幕通知",
                 Visible = true
             };
@@ -270,6 +270,7 @@ namespace NotiFlow.Services
             _notifyIcon.Visible = false;
             _notifyIcon.Dispose();
             _helperWindow?.Close();
+            _appIcon?.Dispose();
         }
     }
 }

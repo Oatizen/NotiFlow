@@ -50,6 +50,8 @@ namespace NotiFlow.Models
         public ObservableCollection<ScopeItemViewModel> AvailableList { get; } = new();
 
         private bool _initialized;
+        private System.Windows.Threading.DispatcherTimer? _realTimeTimer;
+        private bool _isPolling;
 
         public ScopeViewModel()
         {
@@ -65,12 +67,16 @@ namespace NotiFlow.Models
             if (_initialized) return;
             _initialized = true;
             LoadDataForCurrentTab();
+            UpdateRealTimeTimerState(true);
         }
 
         partial void OnIsSourceTabActiveChanged(bool value)
         {
             if (_initialized)
+            {
                 LoadDataForCurrentTab();
+                UpdateRealTimeTimerState(true);
+            }
         }
 
         private void LoadDataForCurrentTab()
@@ -217,6 +223,9 @@ namespace NotiFlow.Models
                         bitmap.Freeze();
                         vm.Icon = bitmap;
 
+                        // 物理释放原生图标句柄，解决 ScopePage 图标提取时的 GDI 句柄泄漏
+                        NativeMethods.DestroyIcon(iconHandle);
+
                         // 异步将提取的图标写入缓存
                         _ = Services.IconCacheService.CacheIconAsync(vm.Identifier, bitmap);
                     }
@@ -348,6 +357,109 @@ namespace NotiFlow.Models
             {
                 Clipboard.SetText(id);
             }
+        }
+
+        /// <summary>
+        /// 启动或停止正在运行的应用列表的实时更新定时器。
+        /// 仅当 IsSourceTabActive == false（即“生效场景”页）且页面处于活动加载状态时启动轮询。
+        /// </summary>
+        public void UpdateRealTimeTimerState(bool pageLoaded)
+        {
+            if (pageLoaded && !IsSourceTabActive)
+            {
+                if (_realTimeTimer == null)
+                {
+                    _realTimeTimer = new System.Windows.Threading.DispatcherTimer
+                    {
+                        Interval = TimeSpan.FromSeconds(3)
+                    };
+                    _realTimeTimer.Tick += async (s, e) => await PollRunningProcessesAsync();
+                }
+                
+                if (!_realTimeTimer.IsEnabled)
+                {
+                    _realTimeTimer.Start();
+                }
+            }
+            else
+            {
+                _realTimeTimer?.Stop();
+            }
+        }
+
+        /// <summary>
+        /// 后台差分更新正在运行的应用列表。
+        /// 计算当前进程列表与可用列表的差异，仅对增量进行 Add/Remove，极大地优化了渲染和计算开销。
+        /// </summary>
+        private async Task PollRunningProcessesAsync()
+        {
+            if (_isPolling) return;
+            _isPolling = true;
+
+            try
+            {
+                // 1. 后台枚举最新窗口进程
+                var processes = await Task.Run(() => Services.ProcessEnumerator.EnumerateWindowProcesses());
+                
+                // 2. 建立新进程集合
+                var currentPIDs = new HashSet<string>(processes.Select(p => p.ProcessName), StringComparer.OrdinalIgnoreCase);
+
+                // 3. 计算增量
+                // 找出 AvailableList 中需要移除的（当前已经不再运行的）
+                var toRemove = AvailableList.Where(item => 
+                    !currentPIDs.Contains(item.Identifier)
+                ).ToList();
+
+                // 找出需要新增的进程（运行中、不在 AvailableList 中、且不在已选的 RulesList 中）
+                var existingAvailableIdentifiers = new HashSet<string>(AvailableList.Select(a => a.Identifier), StringComparer.OrdinalIgnoreCase);
+                var existingRuleIdentifiers = new HashSet<string>(RulesList.Select(r => r.Identifier), StringComparer.OrdinalIgnoreCase);
+
+                var toAdd = processes.Where(proc => 
+                    !existingAvailableIdentifiers.Contains(proc.ProcessName) && 
+                    !existingRuleIdentifiers.Contains(proc.ProcessName)
+                ).ToList();
+
+                // 4. 切回 UI 线程增量更新列表
+                if (toRemove.Count > 0 || toAdd.Count > 0)
+                {
+                    // 移除已关闭的
+                    foreach (var item in toRemove)
+                    {
+                        AvailableList.Remove(item);
+                    }
+
+                    // 添加新开启的，并异步抓取图标
+                    foreach (var proc in toAdd)
+                    {
+                        var vm = new ScopeItemViewModel
+                        {
+                            DisplayName = proc.MainWindowTitle,
+                            Identifier = proc.ProcessName
+                        };
+                        AvailableList.Add(vm);
+
+                        // 异步提取图标
+                        _ = ExtractIconAsync(vm, proc.ExecutablePath);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ScopeViewModel] 实时刷新进程失败: {ex.Message}");
+            }
+            finally
+            {
+                _isPolling = false;
+            }
+        }
+
+        /// <summary>
+        /// 页面卸载时的清理接口。由 Code-Behind 调用以物理停止并销毁实时轮询定时器。
+        /// </summary>
+        public void Deinitialize()
+        {
+            UpdateRealTimeTimerState(false);
+            _realTimeTimer = null;
         }
     }
 }

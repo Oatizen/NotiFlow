@@ -192,5 +192,16 @@ namespace NotiFlow
             // 在 WPF 层兜底强制重设背景透明
             window.Background = Brushes.Transparent;
         }
+
+        /// <summary>
+        /// 销毁图标句柄并释放其关联的内存。
+        /// 必须在 Imaging.CreateBitmapSourceFromHIcon 创建 WPF 的 Bitmap 副本后，
+        /// 物理销毁传入的 Native HICON 句柄，以彻底防范 GDI 句柄内存泄漏。
+        /// </summary>
+        /// <param name="hIcon">要销毁的图标句柄</param>
+        /// <returns>若成功销毁则返回 true，否则返回 false</returns>
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool DestroyIcon(IntPtr hIcon);
     }
 }
