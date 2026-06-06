@@ -347,12 +347,9 @@ namespace NotiFlow.Models
             // 立即生效防截屏设置
             Application.Current.Dispatcher.Invoke(() => 
             {
-                foreach (Window window in Application.Current.Windows)
+                if (Application.Current is App app)
                 {
-                    if (window is MainWindow mainWin)
-                    {
-                        mainWin.ApplyCaptureSetting();
-                    }
+                    app.ApplyCaptureSetting();
                 }
             });
         }

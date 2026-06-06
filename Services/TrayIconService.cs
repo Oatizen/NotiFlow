@@ -231,11 +231,9 @@ namespace NotiFlow.Services
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
-                if (Application.Current.MainWindow is MainWindow main)
+                if (Application.Current is App app)
                 {
-                    var hwnd = new System.Windows.Interop.WindowInteropHelper(main).Handle;
-                    NativeMethods.UnregisterHotKey(hwnd, 9000);
-                    NativeMethods.RegisterHotKey(hwnd, 9000, BarrageSettings.HotKeyModifier, BarrageSettings.HotKey);
+                    app.ReRegisterHotKey();
                 }
             });
         }

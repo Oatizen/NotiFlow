@@ -72,13 +72,7 @@ namespace NotiFlow.Views.Pages
         /// </summary>
         private static void RestoreBarrageWindowTransparency()
         {
-            foreach (Window window in Application.Current.Windows)
-            {
-                if (window is MainWindow)
-                {
-                    NativeMethods.ResetWindowTransparency(window);
-                }
-            }
+            // 原生窗口由 BarrageOverlayWindow 自己管理透明度，此处不再需要通过 DWM Hack
         }
 
         private void HotkeyButton_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)

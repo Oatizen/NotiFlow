@@ -9,7 +9,6 @@ namespace NotiFlow.Views.Pages
 {
     public partial class CustomPage : Page
     {
-        private BarrageItem? _previewItem;
         private TimeSpan _lastRenderTime = TimeSpan.Zero;
         private readonly SolidColorBrush _whiteBrush;
 
@@ -23,15 +22,12 @@ namespace NotiFlow.Views.Pages
         private void Page_Loaded(object sender, RoutedEventArgs e)
         {
             UpdateWorkButtonState(); // 刚进入页面时先校准一次当前实际状态
-
-            CompositionTarget.Rendering += CompositionTarget_Rendering;
             
             WeakReferenceMessenger.Default.Register<BarragePreviewMessage>(this, (recipient, message) =>
             {
                 SpawnPreviewBarrage();
             });
 
-            // 初始生成一条
             if (PreviewBorder.ActualWidth > 0)
             {
                 SpawnPreviewBarrage();
@@ -40,80 +36,38 @@ namespace NotiFlow.Views.Pages
 
         private void Page_Unloaded(object sender, RoutedEventArgs e)
         {
-            CompositionTarget.Rendering -= CompositionTarget_Rendering;
             WeakReferenceMessenger.Default.Unregister<BarragePreviewMessage>(this);
-            
-            if (_previewItem != null)
-            {
-                LocalPreviewHost.RemoveVisual(_previewItem);
-                _previewItem = null;
-            }
         }
 
         private void SpawnPreviewBarrage()
         {
-            if (_previewItem != null)
-            {
-                LocalPreviewHost.RemoveVisual(_previewItem);
-            }
+            PreviewCanvas.Children.Clear();
 
-            _previewItem = new BarrageItem();
-
-            var msg = new NotificationMessage
+            var textBlock = new TextBlock
             {
-                AppName = "图标 应用名称",
-                Title = "",
-                Body = "这是一条测试弹幕......"
+                Text = "图标 应用名称：这是一条测试弹幕......",
+                Foreground = BarrageSettings.TextColor,
+                FontSize = BarrageSettings.FontSize,
+                FontFamily = BarrageSettings.FontFamily,
+                FontStyle = BarrageSettings.FontStyle,
+                FontWeight = BarrageSettings.FontWeight,
+                VerticalAlignment = VerticalAlignment.Center
             };
 
-            // 使用全局设定的文字颜色而非固定白色
-            Brush textBrush = BarrageSettings.TextColor;
-            double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-
-            // 先烘焙内容，再挂入视觉树（减少视觉树失效次数）
-            _previewItem.BuildVisual(msg, textBrush, BarrageSettings.FontSize, BarrageSettings.FontFamily, BarrageSettings.FontStyle, BarrageSettings.FontWeight, pixelsPerDip);
-            LocalPreviewHost.AddVisual(_previewItem);
-
-            // 从 Border 最右边缘出发
-            double targetWidth = PreviewBorder.ActualWidth > 0 ? PreviewBorder.ActualWidth : 800;
-            _previewItem.CurrentX = targetWidth;
-            
-            // 垂直居中测算 (Border 固定高 200)
-            double contentHeight = Math.Max(BarrageSettings.FontSize, BarrageSettings.FontSize * 1.25) + 12;
-            _previewItem.CurrentY = Math.Max(0, (200 - contentHeight) / 2.0);
-            
-            _previewItem.Offset = new Vector(_previewItem.CurrentX, _previewItem.CurrentY);
-
-            double speed = BarrageSettings.ScrollSpeedCharsPerSec * BarrageSettings.FontSize;
-            if (speed < 10) speed = 10;
-            _previewItem.SpeedPixelsPerSec = speed;
-        }
-
-        private void CompositionTarget_Rendering(object? sender, EventArgs e)
-        {
-            if (_previewItem == null) 
+            var bgBrush = BarrageSettings.BackgroundColor as SolidColorBrush ?? new SolidColorBrush(System.Windows.Media.Colors.Black);
+            var border = new Border
             {
-                // 如果实际宽度刚加载出来，可以利用回调补充第一条！
-                if (PreviewBorder.ActualWidth > 0) SpawnPreviewBarrage();
-                return;
-            }
-            
-            var renderingArgs = (RenderingEventArgs)e;
-            if (_lastRenderTime == renderingArgs.RenderingTime) return;
+                Background = BarrageSettings.ShowBackground ? new SolidColorBrush(System.Windows.Media.Color.FromArgb(
+                    (byte)(bgBrush.Color.A * BarrageSettings.BackgroundOpacity),
+                    bgBrush.Color.R, bgBrush.Color.G, bgBrush.Color.B)) : Brushes.Transparent,
+                CornerRadius = BarrageSettings.BackgroundCornerRadius,
+                Padding = new Thickness(12, 6, 12, 6),
+                Child = textBlock
+            };
 
-            double dt = (_lastRenderTime == TimeSpan.Zero) ? 0 : (renderingArgs.RenderingTime - _lastRenderTime).TotalSeconds;
-            _lastRenderTime = renderingArgs.RenderingTime;
-
-            if (dt == 0) return;
-
-            _previewItem.CurrentX -= _previewItem.SpeedPixelsPerSec * dt;
-            _previewItem.Offset = new Vector(_previewItem.CurrentX, _previewItem.CurrentY);
-
-            // 出界循环核心：飘出了局部画布的最左边时，立刻将其瞬移回最右边，形成永动
-            if (_previewItem.CurrentX < -_previewItem.PhysicalWidth)
-            {
-                _previewItem.CurrentX = PreviewBorder.ActualWidth;
-            }
+            Canvas.SetLeft(border, 20);
+            Canvas.SetTop(border, Math.Max(0, (200 - BarrageSettings.FontSize * 1.5) / 2.0));
+            PreviewCanvas.Children.Add(border);
         }
 
         private void ToggleWorkButton_Click(object sender, System.Windows.RoutedEventArgs e)
@@ -158,7 +112,8 @@ namespace NotiFlow.Views.Pages
         /// </summary>
         private void Page_SizeChanged(object sender, System.Windows.SizeChangedEventArgs e)
         {
-            if (SettingsGrid == null || LeftSettingsCard == null || RightSettingsCard == null) return;
+            if (SettingsGrid == null || LeftSettingsCard == null || RightSettingsCard == null ||
+                BottomSettingsGrid == null || AnimationCard == null || OtherCard == null) return;
 
             if (e.NewSize.Width < 700)
             {
@@ -176,6 +131,21 @@ namespace NotiFlow.Views.Pages
                 System.Windows.Controls.Grid.SetColumn(RightSettingsCard, 0);
                 System.Windows.Controls.Grid.SetRow(RightSettingsCard, 1);
                 RightSettingsCard.Margin = new System.Windows.Thickness(0, 24, 0, 0);
+
+                // BottomSettingsGrid Single column layout
+                BottomSettingsGrid.ColumnDefinitions.Clear();
+                BottomSettingsGrid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) });
+
+                BottomSettingsGrid.RowDefinitions.Clear();
+                BottomSettingsGrid.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = System.Windows.GridLength.Auto });
+                BottomSettingsGrid.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = System.Windows.GridLength.Auto });
+
+                System.Windows.Controls.Grid.SetColumn(AnimationCard, 0);
+                System.Windows.Controls.Grid.SetRow(AnimationCard, 0);
+
+                System.Windows.Controls.Grid.SetColumn(OtherCard, 0);
+                System.Windows.Controls.Grid.SetRow(OtherCard, 1);
+                OtherCard.Margin = new System.Windows.Thickness(0, 24, 0, 0);
             }
             else
             {
@@ -193,6 +163,21 @@ namespace NotiFlow.Views.Pages
                 System.Windows.Controls.Grid.SetColumn(RightSettingsCard, 2);
                 System.Windows.Controls.Grid.SetRow(RightSettingsCard, 0);
                 RightSettingsCard.Margin = new System.Windows.Thickness(0);
+
+                // BottomSettingsGrid Two columns layout
+                BottomSettingsGrid.ColumnDefinitions.Clear();
+                BottomSettingsGrid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) });
+                BottomSettingsGrid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new System.Windows.GridLength(16) });
+                BottomSettingsGrid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) });
+
+                BottomSettingsGrid.RowDefinitions.Clear();
+
+                System.Windows.Controls.Grid.SetColumn(AnimationCard, 0);
+                System.Windows.Controls.Grid.SetRow(AnimationCard, 0);
+
+                System.Windows.Controls.Grid.SetColumn(OtherCard, 2);
+                System.Windows.Controls.Grid.SetRow(OtherCard, 0);
+                OtherCard.Margin = new System.Windows.Thickness(0);
             }
         }
     }

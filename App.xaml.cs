@@ -12,10 +12,33 @@ namespace NotiFlow
         private static Mutex? _mutex;
         private TrayIconService? _trayIconService;
         public TrayIconService? TrayIconService => _trayIconService;
-        private MainWindow? _mainWindow;
+        private Rendering.BarrageOverlayWindow? _mainWindow;
         private SettingsWindow? _settingsWindow;
         private ForegroundMonitorService? _foregroundMonitorService;
         public ForegroundMonitorService? ForegroundMonitor => _foregroundMonitorService;
+
+        public App()
+        {
+            this.DispatcherUnhandledException += (s, e) =>
+            {
+                System.IO.File.WriteAllText("crash_dispatcher.log", e.Exception.ToString());
+                MessageBox.Show(e.Exception.ToString(), "WPF UI 线程崩溃", MessageBoxButton.OK, MessageBoxImage.Error);
+                e.Handled = true;
+            };
+
+            System.AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+            {
+                System.IO.File.WriteAllText("crash_domain.log", e.ExceptionObject.ToString());
+                MessageBox.Show(e.ExceptionObject.ToString(), "应用程序域致命崩溃", MessageBoxButton.OK, MessageBoxImage.Error);
+            };
+
+            System.Threading.Tasks.TaskScheduler.UnobservedTaskException += (s, e) =>
+            {
+                System.IO.File.WriteAllText("crash_task.log", e.Exception.ToString());
+                MessageBox.Show(e.Exception.ToString(), "异步任务后台崩溃", MessageBoxButton.OK, MessageBoxImage.Error);
+                e.SetObserved();
+            };
+        }
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -52,21 +75,9 @@ namespace NotiFlow
             else
                 ApplicationThemeManager.Apply(ApplicationTheme.Light);
 
-            // 【关键】注册全局主题变更事件，确保任何途径触发的主题切换都不会污染弹幕窗口
-            // WPF-UI 内部会通过 DWM API 遍历所有窗口强制设置深色模式属性，
-            // 导致全透明 Topmost 弹幕窗口变为黑色不透明遮挡桌面，用户甚至无法操作导致只能重启。
+            // 【关键】注册全局主题变更事件，无需针对新原生弹幕窗口处理
             ApplicationThemeManager.Changed += (_, _) =>
             {
-                Dispatcher.BeginInvoke(() =>
-                {
-                    foreach (Window window in Current.Windows)
-                    {
-                        if (window is MainWindow)
-                        {
-                            NativeMethods.ResetWindowTransparency(window);
-                        }
-                    }
-                });
             };
 
             // 初始化系统托盘图标
@@ -75,6 +86,10 @@ namespace NotiFlow
             // 初始化前台窗口监听服务（生效场景过滤）
             _foregroundMonitorService = new ForegroundMonitorService();
             _foregroundMonitorService.Start();
+
+            // 【关键修复】初始化 Windows 原生通知监听核心服务
+            new NotificationService();
+            _ = NotificationService.Instance!.InitializeAsync();
 
             // 根据自动启动设置决定是否立即显示主弹幕窗口
             if (BarrageSettings.IsWorking)
@@ -138,13 +153,23 @@ namespace NotiFlow
         {
             if (_mainWindow == null || !_mainWindow.IsLoaded)
             {
-                _mainWindow = new MainWindow();
+                _mainWindow = new Rendering.BarrageOverlayWindow();
                 _mainWindow.Show();
             }
             else if (!_mainWindow.IsVisible)
             {
                 _mainWindow.Show();
             }
+        }
+
+        public void ApplyCaptureSetting()
+        {
+            _mainWindow?.ApplyCaptureSetting();
+        }
+
+        public void ReRegisterHotKey()
+        {
+            _mainWindow?.ReRegisterHotKey();
         }
 
         /// <summary>

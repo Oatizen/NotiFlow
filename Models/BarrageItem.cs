@@ -2,22 +2,20 @@ using System;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Microsoft.Graphics.Canvas;
+using Microsoft.Graphics.Canvas.Text;
+using Windows.UI;
 
 namespace NotiFlow.Models
 {
     /// <summary>
     /// 代表一个底层视觉图层的轻量级弹幕对象。
-    /// 抛弃了厚重的控件树结构，通过 DrawingContext 纯像素绘制。
-    /// 可以直接被统一的视觉宿主管理并进行硬件级位移。
+    /// 抛弃了厚重的控件树结构，通过 Win2D 纯像素离屏绘制。
     /// </summary>
-    public class BarrageItem : DrawingVisual
+    public class BarrageItem : IDisposable
     {
-        /// <summary>
-        /// UWP 图标缩放补偿系数。
-        /// UWP 应用图标在 256x256 画布中通常包含大量透明垫层，
-        /// 直接绘制会导致图标视觉上偏小，需要放大补偿。
-        /// </summary>
         private const double UwpIconScaleFactor = 2.5;
+
         // 物理状态
         public double CurrentX { get; set; }
         public double CurrentY { get; set; }
@@ -31,10 +29,21 @@ namespace NotiFlow.Models
         public bool IsAlive { get; set; } = true;
         public bool TrackReleased { get; set; } = false;
 
-        /// <summary>
-        /// 将弹幕对象重置为初始状态，供对象池复用时调用。
-        /// 集中管理所有需要清理的状态字段，防止新增字段时遗漏重置导致脏数据。
-        /// </summary>
+        // Win2D 资源缓存
+        private CanvasTextLayout? _textLayout;
+        private CanvasBitmap? _appIcon;
+        private Windows.UI.Color _textColor;
+        private Windows.UI.Color _backgroundColor;
+        private bool _hasIcon;
+        private bool _isUwpIcon;
+        private double _iconSize;
+        private double _contentWidth;
+        private double _contentHeight;
+        private double _bgWidth;
+        private double _bgHeight;
+        private double _padH = 12;
+        private double _padV = 6;
+
         public void Reset()
         {
             IsAlive = true;
@@ -44,19 +53,25 @@ namespace NotiFlow.Models
             SpeedPixelsPerSec = 0;
             PhysicalWidth = 0;
             TrackIndex = -1;
+
+            _textLayout?.Dispose();
+            _textLayout = null;
+
+            _appIcon?.Dispose();
+            _appIcon = null;
         }
 
-        public void BuildVisual(NotificationMessage message, Brush textBrush, double fontSize, FontFamily fontFamily, FontStyle fontStyle, FontWeight fontWeight, double pixelsPerDip)
+        public void BuildVisual(CanvasDevice device, NotificationMessage message, SolidColorBrush textBrush, double fontSize, System.Windows.Media.FontFamily fontFamily, FontStyle fontStyle, FontWeight fontWeight)
         {
-            // ===== 预计算阶段（不绘制，仅测量尺寸） =====
-            double iconSize = fontSize * 1.25;
-            double contentWidth = 0;
+            _iconSize = fontSize * 1.25;
+            _contentWidth = 0;
 
-            // 图标占位宽度
-            bool hasIcon = BarrageSettings.ShowAppIcon && message.AppIcon != null;
-            if (hasIcon)
+            _hasIcon = BarrageSettings.ShowAppIcon && message.AppIcon != null;
+            if (_hasIcon)
             {
-                contentWidth += iconSize + 10; // 图标宽 + 右间距
+                _contentWidth += _iconSize + 10;
+                _isUwpIcon = message.IsUwpIcon;
+                _appIcon = ConvertToCanvasBitmap(device, message.AppIcon!);
             }
 
             // 文字内容拼接：纯净格式 "应用名称：内容"
@@ -84,7 +99,6 @@ namespace NotiFlow.Models
             for (int i = 0; i < bodyText.Length; i++)
             {
                 char c = bodyText[i];
-                // ASCII characters usually count as half-width (0.5 weight)
                 currentWeight += (c <= 127) ? 0.5 : 1.0;
 
                 if (currentWeight > BarrageSettings.MaxTextLength)
@@ -101,127 +115,137 @@ namespace NotiFlow.Models
 
             string fullText = prefix + bodyText;
 
-            // 预烘焙字形以获取精确的像素尺寸
-            var typeface = new Typeface(fontFamily, fontStyle, fontWeight, FontStretches.Normal);
-            
-            // 真正修复：拷贝原始颜色画刷并注入透明度配置设置
-            Brush finalTxtBrush = textBrush.Clone();
-            finalTxtBrush.Opacity *= BarrageSettings.TextOpacity;
-            if (finalTxtBrush.CanFreeze) finalTxtBrush.Freeze();
+            _textColor = Windows.UI.Color.FromArgb(
+                (byte)(textBrush.Color.A * BarrageSettings.TextOpacity), 
+                textBrush.Color.R, textBrush.Color.G, textBrush.Color.B);
 
+            var bgBrush = BarrageSettings.BackgroundColor as SolidColorBrush ?? new SolidColorBrush(System.Windows.Media.Colors.Black);
+            _backgroundColor = Windows.UI.Color.FromArgb(
+                (byte)(bgBrush.Color.A * BarrageSettings.BackgroundOpacity),
+                bgBrush.Color.R, bgBrush.Color.G, bgBrush.Color.B);
 
-            var formattedText = new FormattedText(
-                fullText,
-                System.Globalization.CultureInfo.CurrentUICulture,
-                FlowDirection.LeftToRight,
-                typeface,
-                fontSize,
-                finalTxtBrush,
-                pixelsPerDip);
+            var textFormat = new CanvasTextFormat
+            {
+                // 推荐注入 Segoe UI Emoji 以完美渲染彩色 Emoji
+                FontFamily = fontFamily.Source + ", Segoe UI Emoji",
+                FontSize = (float)fontSize,
+                FontWeight = new Windows.UI.Text.FontWeight { Weight = (ushort)fontWeight.ToOpenTypeWeight() },
+                WordWrapping = CanvasWordWrapping.NoWrap
+            };
 
-            // NOTE: WPF 的 FormattedText 渲染管线不支持彩色 Emoji (COLR/CPAL)，
-            // Emoji 会以当前画刷颜色渲染为单色轮廓，这是 WPF 框架级的已知限制。
+            // 如果 WPF 传入的是 Italic 等，可以进一步适配，这里为简略直接赋默认，因为大部分都是 Normal
+            if (fontStyle == FontStyles.Italic)
+            {
+                textFormat.FontStyle = Windows.UI.Text.FontStyle.Italic;
+            }
 
-            // 修复省略号高亮度：当开启选项并且文本真的以省略号结尾时，对最后6个字符上色
+            _textLayout = new CanvasTextLayout(device, fullText, textFormat, 0.0f, 0.0f);
+
             if (BarrageSettings.HighlightEllipsis && fullText.EndsWith("......"))
             {
-                formattedText.SetForegroundBrush(BarrageSettings.EllipsisColor, fullText.Length - 6, 6);
+                var ellBrush = BarrageSettings.EllipsisColor as SolidColorBrush ?? new SolidColorBrush(System.Windows.Media.Colors.White);
+                Windows.UI.Color ellipsisColor = Windows.UI.Color.FromArgb(
+                    (byte)(ellBrush.Color.A * BarrageSettings.TextOpacity),
+                    ellBrush.Color.R, ellBrush.Color.G, ellBrush.Color.B);
+                
+                // 给最后6个字符上高亮颜色 (注意：SetColor 并非原生，需要使用 SetBrush)
+                var brush = new Microsoft.Graphics.Canvas.Brushes.CanvasSolidColorBrush(device, ellipsisColor);
+                _textLayout.SetBrush(fullText.Length - 6, 6, brush);
             }
 
-            contentWidth += formattedText.WidthIncludingTrailingWhitespace;
-            double contentHeight = Math.Max(fontSize, iconSize);
+            double textWidth = _textLayout.LayoutBounds.Width;
+            double textHeight = _textLayout.LayoutBounds.Height;
+            _contentWidth += textWidth;
+            _contentHeight = Math.Max(fontSize, _iconSize);
 
-            // 背景内边距
-            double padH = 12; // 水平内边距
-            double padV = 6;  // 垂直内边距
+            _bgWidth = _contentWidth + _padH * 2;
+            _bgHeight = _contentHeight + _padV * 2;
 
-            // ===== 绘制阶段 =====
-            using (DrawingContext dc = this.RenderOpen())
+            this.PhysicalWidth = BarrageSettings.ShowBackground ? _bgWidth : _contentWidth;
+        }
+
+        public void Draw(CanvasDrawingSession session)
+        {
+            if (_textLayout == null) return;
+
+            float drawX = (float)CurrentX;
+            float drawY = (float)CurrentY;
+
+            if (BarrageSettings.ShowBackground)
             {
-                double bgWidth = contentWidth + padH * 2;
-                double bgHeight = contentHeight + padV * 2;
-
-                // 1. 绘制圆角背景遮罩（深色半透明板）
-                if (BarrageSettings.ShowBackground)
-                {
-                    var bgBrush = BarrageSettings.BackgroundColor.Clone();
-                    bgBrush.Opacity = BarrageSettings.BackgroundOpacity;
-                    bgBrush.Freeze();
-
-                    double cornerRadius = BarrageSettings.BackgroundCornerRadius.TopLeft;
-                    dc.DrawRoundedRectangle(
-                        bgBrush,        // 填充色
-                        null,           // 无描边
-                        new Rect(0, 0, bgWidth, bgHeight),
-                        cornerRadius,
-                        cornerRadius);
-                }
-
-                // 内容区域起始坐标（跳过内边距）
-                double drawX = padH;
-                double drawY = padV;
-
-                // 2. 绘制图标
-                if (hasIcon)
-                {
-                    double imageX = drawX;
-                    double imageY = drawY + (contentHeight - iconSize) / 2.0;
-
-                    if (message.IsUwpIcon)
-                    {
-                        dc.PushTransform(new ScaleTransform(UwpIconScaleFactor, UwpIconScaleFactor, imageX + iconSize / 2, imageY + iconSize / 2));
-                        dc.DrawImage(message.AppIcon, new Rect(imageX, imageY, iconSize, iconSize));
-                        dc.Pop();
-                    }
-                    else
-                    {
-                        dc.DrawImage(message.AppIcon, new Rect(imageX, imageY, iconSize, iconSize));
-                    }
-
-                    drawX += iconSize + 10;
-                }
-
-                // 3. 文字垂直居中偏移
-                double textY = drawY + (contentHeight - formattedText.Height) / 2.0;
-
-                // 绘制文字阴影（仅在无背景遮罩时生效，避免重复的视觉加深）
-                if (!BarrageSettings.ShowBackground)
-                {
-                    var shadowBrush = Brushes.Black.Clone();
-                    shadowBrush.Opacity = 0.9 * BarrageSettings.TextOpacity; // 阴影不透明度也需要受到全局透明度乘数影响
-                    shadowBrush.Freeze();
-
-#pragma warning disable CS0618 // 阴影文本不需要新版 API 的额外参数
-                    var shadowText = new FormattedText(
-                        fullText,
-                        System.Globalization.CultureInfo.CurrentUICulture,
-                        FlowDirection.LeftToRight,
-                        typeface,
-                        fontSize,
-                        shadowBrush,
-                        pixelsPerDip);
-#pragma warning restore CS0618
-
-                    dc.DrawText(shadowText, new Point(drawX + 1.5, textY + 1.5));
-                }
-
-                // 4. 绘制主文字
-                dc.DrawText(formattedText, new Point(drawX, textY));
-
-                // 5. 下划线
-                if (BarrageSettings.IsUnderlined)
-                {
-                    var pen = new Pen(finalTxtBrush, 2);
-                    pen.Freeze();
-                    // 修复下划线遮挡文字：将其置于整个文本框的高度的底侧而非基准线底侧
-                    dc.DrawLine(pen,
-                        new Point(drawX, textY + formattedText.Height),
-                        new Point(drawX + formattedText.WidthIncludingTrailingWhitespace, textY + formattedText.Height));
-                }
-
-                // 记录总物理宽度（含背景边距），供物理引擎判断越界
-                this.PhysicalWidth = BarrageSettings.ShowBackground ? bgWidth : contentWidth;
+                float cornerRadius = (float)BarrageSettings.BackgroundCornerRadius.TopLeft;
+                session.FillRoundedRectangle(drawX, drawY, (float)_bgWidth, (float)_bgHeight, cornerRadius, cornerRadius, _backgroundColor);
             }
+
+            float contentX = drawX + (BarrageSettings.ShowBackground ? (float)_padH : 0);
+            float contentY = drawY + (BarrageSettings.ShowBackground ? (float)_padV : 0);
+
+            if (_hasIcon && _appIcon != null)
+            {
+                float imageX = contentX;
+                float imageY = contentY + (float)(_contentHeight - _iconSize) / 2.0f;
+
+                if (_isUwpIcon)
+                {
+                    float centerX = imageX + (float)_iconSize / 2.0f;
+                    float centerY = imageY + (float)_iconSize / 2.0f;
+                    var oldTransform = session.Transform;
+                    session.Transform = System.Numerics.Matrix3x2.CreateScale((float)UwpIconScaleFactor, (float)UwpIconScaleFactor, new System.Numerics.Vector2(centerX, centerY)) * oldTransform;
+                    session.DrawImage(_appIcon, new Windows.Foundation.Rect(imageX, imageY, _iconSize, _iconSize));
+                    session.Transform = oldTransform;
+                }
+                else
+                {
+                    session.DrawImage(_appIcon, new Windows.Foundation.Rect(imageX, imageY, _iconSize, _iconSize));
+                }
+
+                contentX += (float)_iconSize + 10f;
+            }
+
+            float textY = contentY + (float)(_contentHeight - _textLayout.LayoutBounds.Height) / 2.0f;
+
+            if (!BarrageSettings.ShowBackground)
+            {
+                Windows.UI.Color shadowColor = Windows.UI.Color.FromArgb((byte)(0.9 * _textColor.A), 0, 0, 0);
+                session.DrawTextLayout(_textLayout, contentX + 1.5f, textY + 1.5f, shadowColor);
+            }
+
+            session.DrawTextLayout(_textLayout, contentX, textY, _textColor);
+
+            if (BarrageSettings.IsUnderlined)
+            {
+                float lineY = textY + (float)_textLayout.LayoutBounds.Height;
+                session.DrawLine(contentX, lineY, contentX + (float)_textLayout.LayoutBounds.Width, lineY, _textColor, 2.0f);
+            }
+        }
+
+        private CanvasBitmap? ConvertToCanvasBitmap(CanvasDevice device, ImageSource source)
+        {
+            if (source is BitmapSource bitmapSource)
+            {
+                try
+                {
+                    var formatted = new FormatConvertedBitmap(bitmapSource, PixelFormats.Pbgra32, null, 0);
+                    int width = formatted.PixelWidth;
+                    int height = formatted.PixelHeight;
+                    if (width == 0 || height == 0) return null;
+
+                    byte[] pixels = new byte[width * height * 4];
+                    formatted.CopyPixels(pixels, width * 4, 0);
+                    return CanvasBitmap.CreateFromBytes(device, pixels, width, height, Windows.Graphics.DirectX.DirectXPixelFormat.B8G8R8A8UIntNormalized, 96, CanvasAlphaMode.Premultiplied);
+                }
+                catch { return null; }
+            }
+            return null;
+        }
+
+        public void Dispose()
+        {
+            _textLayout?.Dispose();
+            _textLayout = null;
+
+            _appIcon?.Dispose();
+            _appIcon = null;
         }
     }
 }

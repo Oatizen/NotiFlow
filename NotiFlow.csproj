@@ -6,10 +6,20 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
+    <UseRidGraph>true</UseRidGraph>
+    <RuntimeIdentifiers>win10-x64</RuntimeIdentifiers>
+    <RuntimeIdentifier>win10-x64</RuntimeIdentifier>
+    <PlatformTarget>x64</PlatformTarget>
+    <Platform>x64</Platform>
+    <Platforms>x64</Platforms>
+    <EnableCoreMrtTooling>false</EnableCoreMrtTooling>
+    <EnableMsixTooling>false</EnableMsixTooling>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <!-- 版本管理 -->
-    <Version>1.0.2</Version>
-    <AssemblyVersion>1.0.2.0</AssemblyVersion>
-    <FileVersion>1.0.2.0</FileVersion>
+    <Version>1.0.5</Version>
+    <AssemblyVersion>1.0.5.0</AssemblyVersion>
+    <FileVersion>1.0.5.0</FileVersion>
     <Company>NotiFlow</Company>
     <Product>NotiFlow</Product>
     <Description>Windows 通知弹幕显示工具</Description>
@@ -18,6 +28,7 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Graphics.Win2D" Version="1.0.5.1" />
     <PackageReference Include="System.Drawing.Common" Version="10.0.5" />
     <PackageReference Include="WPF-UI" Version="4.2.0" />
   </ItemGroup>
