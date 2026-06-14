@@ -346,11 +346,59 @@ namespace NotiFlow
         }
 
         [ComImport]
-        [Guid("29E691FA-4567-4DCA-B319-D0F207EB6807")]
+        [Guid("c37ea93a-e7aa-450d-b16f-9746cb0407f3")]
         [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        public interface ICompositorDesktopInterop
+        public interface IDCompositionDevice
         {
-            void CreateDesktopWindowTarget(IntPtr hwndTarget, bool isTopmost, out IntPtr target);
+            void Commit();
+            void WaitForCommitCompletion();
+            void GetTargetStatistics(IntPtr statistics);
+            void CreateTargetForHwnd(IntPtr hwnd, bool topmost, out IDCompositionTarget target);
+            void CreateVisual(out IDCompositionVisual visual);
         }
+
+        [ComImport]
+        [Guid("eacdd04c-117e-4e17-88f4-d1b12b0e3d89")]
+        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        public interface IDCompositionTarget
+        {
+            void SetRoot(IDCompositionVisual visual);
+        }
+
+        [ComImport]
+        [Guid("4d93059d-097b-4651-9a60-f0f25116e2f3")]
+        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        public interface IDCompositionVisual
+        {
+            void SetOffsetX(float offsetX);
+            void SetOffsetX_Anim(IntPtr animation);
+            void SetOffsetY(float offsetY);
+            void SetOffsetY_Anim(IntPtr animation);
+            void SetTransform(IntPtr transform);
+            void SetTransform_Matrix(IntPtr matrix);
+            void SetTransformParent(IDCompositionVisual visual);
+            void SetClip(IntPtr clip);
+            void SetClip_Rect(IntPtr rect);
+            void SetContent(IntPtr content);
+        }
+
+        [ComImport]
+        [Guid("5F10688D-EA55-4D55-A3B0-4D29881A5322")]
+        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        public interface ICanvasResourceWrapperNative
+        {
+            void GetNativeResource(IntPtr device, float dpi, ref Guid iid, out IntPtr resource);
+        }
+
+        [ComImport]
+        [Guid("A9B3D012-3DF2-4EE3-B8D1-8695F457D3C1")]
+        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        public interface IDirect3DDxgiInterfaceAccess
+        {
+            void GetInterface([In, MarshalAs(UnmanagedType.LPStruct)] Guid iid, out IntPtr p);
+        }
+
+        [DllImport("dcomp.dll", PreserveSig = false)]
+        public static extern void DCompositionCreateDevice(IntPtr dxgiDevice, [In, MarshalAs(UnmanagedType.LPStruct)] Guid iid, out IDCompositionDevice dcompDevice);
     }
 }

@@ -44,6 +44,12 @@ namespace NotiFlow.Models
         private double _padH = 12;
         private double _padV = 6;
 
+        // 精灵图缓存（预渲染结果，避免每帧重复绘制文字）
+        public byte[]? SpritePixels { get; private set; }
+        public int SpriteWidth { get; private set; }
+        public int SpriteHeight { get; private set; }
+        private const int SpriteMargin = 2;
+
         public void Reset()
         {
             IsAlive = true;
@@ -59,6 +65,10 @@ namespace NotiFlow.Models
 
             _appIcon?.Dispose();
             _appIcon = null;
+
+            SpritePixels = null;
+            SpriteWidth = 0;
+            SpriteHeight = 0;
         }
 
         public void BuildVisual(CanvasDevice device, NotificationMessage message, SolidColorBrush textBrush, double fontSize, System.Windows.Media.FontFamily fontFamily, FontStyle fontStyle, FontWeight fontWeight)
@@ -164,6 +174,37 @@ namespace NotiFlow.Models
             this.PhysicalWidth = BarrageSettings.ShowBackground ? _bgWidth : _contentWidth;
         }
 
+        /// <summary>
+        /// 将弹幕内容预渲染为精灵图并缓存像素数据。
+        /// 仅在弹幕创建时调用一次，避免每帧重复绘制文字和图标。
+        /// </summary>
+        public void PreRenderSprite(CanvasDevice device)
+        {
+            double visibleHeight = BarrageSettings.ShowBackground ? _bgHeight : _contentHeight;
+            SpriteWidth = (int)Math.Ceiling(PhysicalWidth) + SpriteMargin * 2;
+            SpriteHeight = (int)Math.Ceiling(visibleHeight) + SpriteMargin * 2;
+
+            if (SpriteWidth <= 0 || SpriteHeight <= 0) return;
+
+            // 临时将位置设为精灵图坐标原点，复用现有 Draw 方法
+            double savedX = CurrentX, savedY = CurrentY;
+            CurrentX = SpriteMargin;
+            CurrentY = SpriteMargin;
+
+            using (var rt = new CanvasRenderTarget(device, SpriteWidth, SpriteHeight, 96))
+            {
+                using (var session = rt.CreateDrawingSession())
+                {
+                    session.Clear(Windows.UI.Color.FromArgb(0, 0, 0, 0));
+                    Draw(session);
+                }
+                SpritePixels = rt.GetPixelBytes();
+            }
+
+            CurrentX = savedX;
+            CurrentY = savedY;
+        }
+
         public void Draw(CanvasDrawingSession session)
         {
             if (_textLayout == null) return;
@@ -246,6 +287,8 @@ namespace NotiFlow.Models
 
             _appIcon?.Dispose();
             _appIcon = null;
+
+            SpritePixels = null;
         }
     }
 }

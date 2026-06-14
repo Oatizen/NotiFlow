@@ -8,10 +8,6 @@ using System.Windows.Media;
 using NotiFlow.Models;
 using NotiFlow.Services;
 using Microsoft.Graphics.Canvas;
-using Windows.System;
-using Windows.UI.Composition;
-using Microsoft.Graphics.Canvas.UI.Composition;
-using WinRT;
 
 namespace NotiFlow.Rendering
 {
@@ -21,12 +17,11 @@ namespace NotiFlow.Rendering
         private NativeMethods.WndProc _wndProcDelegate;
         private bool _disposed;
 
-        // ===== Composition 核心 =====
-        private IntPtr _dispatcherQueueController;
-        private Compositor? _compositor;
-        private Windows.UI.Composition.Desktop.DesktopWindowTarget? _target;
-        private CompositionGraphicsDevice? _compositionGraphicsDevice;
-        private CompositionDrawingSurface? _drawingSurface;
+        // ===== 分层窗口渲染核心 =====
+        private byte[]? _frameBuffer;
+        private IntPtr _memDC;
+        private IntPtr _hBitmap;
+        private IntPtr _bitmapBits;
 
         private int _left;
         private int _top;
@@ -98,8 +93,8 @@ namespace NotiFlow.Rendering
 
             NativeMethods.RegisterClassEx(ref wndClass);
 
-            // 加入 WS_EX_NOREDIRECTIONBITMAP 以配合 DirectComposition
-            int exStyle = NativeMethods.WS_EX_TRANSPARENT | NativeMethods.WS_EX_TOOLWINDOW | NativeMethods.WS_EX_NOACTIVATE | 0x00000008 /* WS_EX_TOPMOST */ | NativeMethods.WS_EX_NOREDIRECTIONBITMAP;
+            // 使用分层窗口实现透明覆盖
+            int exStyle = NativeMethods.WS_EX_LAYERED | NativeMethods.WS_EX_TRANSPARENT | NativeMethods.WS_EX_TOOLWINDOW | NativeMethods.WS_EX_NOACTIVATE | 0x00000008 /* WS_EX_TOPMOST */;
             int style = NativeMethods.WS_POPUP;
 
             _hwnd = NativeMethods.CreateWindowEx(
@@ -110,45 +105,31 @@ namespace NotiFlow.Rendering
                 _left, _top, _width, _height,
                 IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
 
-            InitializeComposition();
+            InitializeRendering();
 
             ApplyCaptureSetting();
             RegisterGlobalHotKey(_hwnd);
         }
 
-        private void InitializeComposition()
+        private void InitializeRendering()
         {
-            // 1. 初始化当前线程的 DispatcherQueue (Compositor 所需)
-            var options = new NativeMethods.DispatcherQueueOptions
-            {
-                dwSize = Marshal.SizeOf(typeof(NativeMethods.DispatcherQueueOptions)),
-                threadType = 2, // DQTYPE_THREAD_CURRENT
-                apartmentType = 2 // DQA_NONE
-            };
-            NativeMethods.CreateDispatcherQueueController(options, out _dispatcherQueueController);
+            // 1. 预分配帧缓冲区（纯 CPU 内存，不涉及 GPU）
+            _frameBuffer = new byte[_width * _height * 4];
 
-            // 2. 创建 Compositor
-            _compositor = new Compositor();
+            // 2. 创建 GDI DIB 位图和内存 DC
+            var bmi = new NativeMethods.BITMAPINFO();
+            bmi.bmiHeader.biSize = (uint)Marshal.SizeOf<NativeMethods.BITMAPINFOHEADER>();
+            bmi.bmiHeader.biWidth = _width;
+            bmi.bmiHeader.biHeight = -_height; // 负数表示自顶向下
+            bmi.bmiHeader.biPlanes = 1;
+            bmi.bmiHeader.biBitCount = 32;
+            bmi.bmiHeader.biCompression = 0; // BI_RGB
 
-            // 3. 将 Compositor 桥接到我们的 Win32 窗口
-            var interop = _compositor.As<NativeMethods.ICompositorDesktopInterop>();
-            interop.CreateDesktopWindowTarget(_hwnd, true, out IntPtr targetPtr);
-            _target = WinRT.MarshalInterface<Windows.UI.Composition.Desktop.DesktopWindowTarget>.FromAbi(targetPtr);
-
-            // 4. 创建 Composition 图形设备与 DrawingSurface
-            _compositionGraphicsDevice = CanvasComposition.CreateCompositionGraphicsDevice(_compositor, _sharedDevice);
-            
-            _drawingSurface = _compositionGraphicsDevice.CreateDrawingSurface(
-                new Windows.Foundation.Size(_width, _height),
-                Windows.Graphics.DirectX.DirectXPixelFormat.B8G8R8A8UIntNormalized,
-                Windows.Graphics.DirectX.DirectXAlphaMode.Premultiplied);
-
-            // 5. 将 DrawingSurface 挂载到视觉树根节点
-            var visual = _compositor.CreateSpriteVisual();
-            visual.Size = new System.Numerics.Vector2(_width, _height);
-            visual.Brush = _compositor.CreateSurfaceBrush(_drawingSurface);
-            
-            _target.Root = visual;
+            IntPtr screenDC = NativeMethods.GetDC(IntPtr.Zero);
+            _memDC = NativeMethods.CreateCompatibleDC(screenDC);
+            _hBitmap = NativeMethods.CreateDIBSection(screenDC, ref bmi, 0, out _bitmapBits, IntPtr.Zero, 0);
+            NativeMethods.SelectObject(_memDC, _hBitmap);
+            NativeMethods.ReleaseDC(IntPtr.Zero, screenDC);
         }
 
         public void Show()
@@ -350,6 +331,7 @@ namespace NotiFlow.Rendering
             double topPosition = TopMargin + track * TrackHeight;
             
             item.BuildVisual(_sharedDevice, message, unFrozenBrush, BarrageSettings.FontSize, fontFamily, BarrageSettings.FontStyle, BarrageSettings.FontWeight);
+            item.PreRenderSprite(_sharedDevice);
 
             item.CurrentX = _width;
             item.CurrentY = topPosition;
@@ -399,12 +381,10 @@ namespace NotiFlow.Rendering
                     Hide();
                 }
 
-                if (!_clearedFrameSubmitted && _drawingSurface != null && IsVisible)
+                if (!_clearedFrameSubmitted && IsVisible)
                 {
-                    using (var session = CanvasComposition.CreateDrawingSession(_drawingSurface)) 
-                    {
-                        session.Clear(Windows.UI.Color.FromArgb(0, 0, 0, 0));
-                    }
+                    // 提交一帧全透明画面清空屏幕
+                    SubmitFrame(clearOnly: true);
                     _clearedFrameSubmitted = true;
                 }
                 return;
@@ -430,16 +410,91 @@ namespace NotiFlow.Rendering
                 }
             }
 
-            if (_drawingSurface != null && IsVisible)
+            if (IsVisible)
             {
-                using (var session = CanvasComposition.CreateDrawingSession(_drawingSurface))
+                SubmitFrame(clearOnly: false);
+            }
+        }
+
+        /// <summary>
+        /// 将当前帧通过 UpdateLayeredWindow 提交到屏幕上。
+        /// 纯 CPU 操作：清空帧缓冲 → 拷贝精灵图 → 更新分层窗口。不涉及任何 GPU 操作。
+        /// </summary>
+        private void SubmitFrame(bool clearOnly)
+        {
+            if (_frameBuffer == null || _bitmapBits == IntPtr.Zero) return;
+
+            // 清空帧缓冲
+            Array.Clear(_frameBuffer, 0, _frameBuffer.Length);
+
+            if (!clearOnly)
+            {
+                // 将每个弹幕的预渲染精灵图拷贝到帧缓冲中
+                foreach (var item in _activeItems)
                 {
-                    session.Clear(Windows.UI.Color.FromArgb(0, 0, 0, 0));
-                    foreach (var item in _activeItems)
-                    {
-                        item.Draw(session);
-                    }
+                    BlitSprite(item);
                 }
+            }
+
+            // 拷贝帧缓冲到 DIB 内存
+            Marshal.Copy(_frameBuffer, 0, _bitmapBits, _frameBuffer.Length);
+
+            // 调用 UpdateLayeredWindow 将画面贴到透明窗口上
+            var ptSrc = new NativeMethods.POINT { x = 0, y = 0 };
+            var ptDst = new NativeMethods.POINT { x = _left, y = _top };
+            var size = new NativeMethods.SIZE { cx = _width, cy = _height };
+            var blend = new NativeMethods.BLENDFUNCTION
+            {
+                BlendOp = 0,   // AC_SRC_OVER
+                BlendFlags = 0,
+                SourceConstantAlpha = 255,
+                AlphaFormat = 1 // AC_SRC_ALPHA
+            };
+
+            NativeMethods.UpdateLayeredWindow(_hwnd, IntPtr.Zero, ref ptDst, ref size,
+                _memDC, ref ptSrc, 0, ref blend, 0x00000002 /* ULW_ALPHA */);
+        }
+
+        /// <summary>
+        /// 将单个弹幕的精灵图像素拷贝到帧缓冲的正确位置，带边界裁剪。
+        /// </summary>
+        private void BlitSprite(BarrageItem item)
+        {
+            if (item.SpritePixels == null || item.SpriteWidth <= 0 || item.SpriteHeight <= 0) return;
+
+            const int margin = 2; // 与 BarrageItem.SpriteMargin 保持一致
+            int startX = (int)item.CurrentX - margin;
+            int startY = (int)item.CurrentY - margin;
+
+            for (int row = 0; row < item.SpriteHeight; row++)
+            {
+                int dstY = startY + row;
+                if (dstY < 0 || dstY >= _height) continue;
+
+                int srcX = 0;
+                int dstX = startX;
+                int copyWidth = item.SpriteWidth;
+
+                // 裁剪左边界
+                if (dstX < 0)
+                {
+                    srcX = -dstX;
+                    copyWidth += dstX;
+                    dstX = 0;
+                }
+
+                // 裁剪右边界
+                if (dstX + copyWidth > _width)
+                {
+                    copyWidth = _width - dstX;
+                }
+
+                if (copyWidth <= 0) continue;
+
+                int srcOffset = (row * item.SpriteWidth + srcX) * 4;
+                int dstOffset = (dstY * _width + dstX) * 4;
+
+                Buffer.BlockCopy(item.SpritePixels, srcOffset, _frameBuffer!, dstOffset, copyWidth * 4);
             }
         }
 
@@ -457,17 +512,21 @@ namespace NotiFlow.Rendering
                 _hwnd = IntPtr.Zero;
             }
 
-            _drawingSurface?.Dispose();
-            _drawingSurface = null;
+            _frameBuffer = null;
 
-            _compositionGraphicsDevice?.Dispose();
-            _compositionGraphicsDevice = null;
+            if (_hBitmap != IntPtr.Zero)
+            {
+                NativeMethods.DeleteObject(_hBitmap);
+                _hBitmap = IntPtr.Zero;
+            }
 
-            _target?.Dispose();
-            _target = null;
+            if (_memDC != IntPtr.Zero)
+            {
+                NativeMethods.DeleteDC(_memDC);
+                _memDC = IntPtr.Zero;
+            }
 
-            _compositor?.Dispose();
-            _compositor = null;
+            _bitmapBits = IntPtr.Zero;
 
             foreach (var item in _activeItems) item.Dispose();
             _activeItems.Clear();
