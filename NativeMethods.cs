@@ -398,6 +398,87 @@ namespace NotiFlow
             void GetInterface([In, MarshalAs(UnmanagedType.LPStruct)] Guid iid, out IntPtr p);
         }
 
+        /// <summary>
+        /// Windows.UI.Composition 的桌面互操作接口。
+        /// 用于将 WinRT Compositor 绑定到原生 Win32 窗口句柄，
+        /// 从而在非 UWP/WinUI 宿主中使用合成视觉树。
+        /// </summary>
+        [ComImport]
+        [Guid("29E691FA-4567-4DCA-B319-D0F207EB6807")]
+        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        public interface ICompositorDesktopInterop
+        {
+            void CreateDesktopWindowTarget(IntPtr hwndTarget, [MarshalAs(UnmanagedType.Bool)] bool isTopmost, out IntPtr result);
+        }
+
+        /// <summary>
+        /// 通过 ICompositorInterop 从 DXGI 设备创建 CompositionGraphicsDevice。
+        /// 替代 CanvasComposition.CreateCompositionGraphicsDevice（仅支持 Microsoft.UI.Composition）。
+        /// </summary>
+        [ComImport]
+        [Guid("25297D5C-3AD4-4C9C-B5CF-E36A38512330")]
+        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        public interface ICompositorInterop
+        {
+            void CreateCompositionSurfaceForHandle(IntPtr swapChain, out IntPtr result);
+            void CreateCompositionSurfaceForSwapChain(IntPtr swapChain, out IntPtr result);
+            void CreateGraphicsDevice(IntPtr renderingDevice, out IntPtr result);
+        }
+
+        /// <summary>
+        /// 在 CompositionDrawingSurface 上执行 Direct2D 绘制。
+        /// BeginDraw 返回底层 DXGI 表面指针，EndDraw 提交绘制结果。
+        /// </summary>
+        [ComImport]
+        [Guid("FD04E6E3-FE0C-4C3C-AB19-A07601A576EE")]
+        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        public interface ICompositionDrawingSurfaceInterop
+        {
+            void BeginDraw(IntPtr updateRect,
+                [In, MarshalAs(UnmanagedType.LPStruct)] Guid iid,
+                out IntPtr updateObject,
+                out POINT updateOffset);
+            void EndDraw();
+            void Resize(long pixelSize);
+            void Scroll(IntPtr scrollRect, IntPtr clipRect, int offsetX, int offsetY);
+            void SuspendDraw();
+            void ResumeDraw();
+        }
+
+
+        /// <summary>
+        /// 将原生 IDXGISurface COM 指针包装为 WinRT IDirect3DSurface，
+        /// 用于桥接 DXGI 和 Win2D 的 CanvasRenderTarget。
+        /// </summary>
+        [DllImport("d3d11.dll", EntryPoint = "CreateDirect3D11SurfaceFromDXGISurface",
+            SetLastError = false, PreserveSig = false)]
+        public static extern void CreateDirect3D11SurfaceFromDXGISurface(
+            IntPtr dxgiSurface, out IntPtr graphicsSurface);
+
+        /// <summary>
+        /// 将 DXGI 设备包装为 WinRT IDirect3DDevice，用于创建 CanvasDevice。
+        /// </summary>
+        [DllImport("d3d11.dll", EntryPoint = "CreateDirect3D11DeviceFromDXGIDevice",
+            SetLastError = false, PreserveSig = false)]
+        public static extern void CreateDirect3D11DeviceFromDXGIDevice(
+            IntPtr dxgiDevice, out IntPtr graphicsDevice);
+
+        /// <summary>
+        /// 创建 D3D11 设备。Flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT (0x20) 是 D2D/Win2D 的必要条件。
+        /// </summary>
+        [DllImport("d3d11.dll", PreserveSig = true)]
+        public static extern int D3D11CreateDevice(
+            IntPtr pAdapter,
+            int driverType,
+            IntPtr software,
+            uint flags,
+            IntPtr pFeatureLevels,
+            uint featureLevels,
+            uint sdkVersion,
+            out IntPtr ppDevice,
+            out int pFeatureLevel,
+            out IntPtr ppImmediateContext);
+
         [DllImport("dcomp.dll", PreserveSig = false)]
         public static extern void DCompositionCreateDevice(IntPtr dxgiDevice, [In, MarshalAs(UnmanagedType.LPStruct)] Guid iid, out IDCompositionDevice dcompDevice);
     }

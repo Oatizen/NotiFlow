@@ -2,12 +2,18 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Media;
 using NotiFlow.Models;
 using NotiFlow.Services;
 using Microsoft.Graphics.Canvas;
+using Windows.UI.Composition;
+using Windows.UI.Composition.Desktop;
+using WinRT;
+// 别名避免与 System.Windows.Media.CompositionTarget 冲突
+using WinCompTarget = System.Windows.Media.CompositionTarget;
 
 namespace NotiFlow.Rendering
 {
@@ -17,11 +23,18 @@ namespace NotiFlow.Rendering
         private NativeMethods.WndProc _wndProcDelegate;
         private bool _disposed;
 
-        // ===== 分层窗口渲染核心 =====
-        private byte[]? _frameBuffer;
-        private IntPtr _memDC;
-        private IntPtr _hBitmap;
-        private IntPtr _bitmapBits;
+        // ===== Windows.UI.Composition 渲染核心 =====
+        private Compositor _compositor;
+        private DesktopWindowTarget _compositionTarget;
+        private Windows.UI.Composition.ContainerVisual _rootContainer;
+        private CompositionGraphicsDevice _graphicsDevice;
+        private CanvasDevice _canvasDevice;
+
+        /// <summary>
+        /// 保持 DispatcherQueueController COM 引用存活，防止 GC 回收。
+        /// Compositor 依赖当前线程的 DispatcherQueue，若控制器被回收则合成器将失效。
+        /// </summary>
+        private IntPtr _dispatcherQueueController;
 
         private int _left;
         private int _top;
@@ -38,13 +51,11 @@ namespace NotiFlow.Rendering
 
         private readonly Queue<NotificationMessage> _pendingMessages = new();
         private readonly ConcurrentQueue<NotificationMessage> _spawnQueue = new();
-        private readonly Queue<BarrageItem> _readyQueue = new();
+        private readonly ConcurrentQueue<BarrageItem> _spriteReadyQueue = new();
         private readonly List<BarrageItem> _activeItems = new();
         private readonly Queue<BarrageItem> _pool = new();
         
         private TimeSpan _lastRenderTime = TimeSpan.Zero;
-        private CanvasDevice _sharedDevice;
-        private bool _clearedFrameSubmitted = false;
 
         public bool IsLoaded => _hwnd != IntPtr.Zero;
         public bool IsVisible { get; private set; }
@@ -52,7 +63,6 @@ namespace NotiFlow.Rendering
         public BarrageOverlayWindow()
         {
             _wndProcDelegate = WndProc;
-            _sharedDevice = CanvasDevice.GetSharedDevice();
             
             CreateWindow();
             InitializeTracks();
@@ -93,8 +103,13 @@ namespace NotiFlow.Rendering
 
             NativeMethods.RegisterClassEx(ref wndClass);
 
-            // 使用分层窗口实现透明覆盖
-            int exStyle = NativeMethods.WS_EX_LAYERED | NativeMethods.WS_EX_TRANSPARENT | NativeMethods.WS_EX_TOOLWINDOW | NativeMethods.WS_EX_NOACTIVATE | 0x00000008 /* WS_EX_TOPMOST */;
+            // 使用 WS_EX_NOREDIRECTIONBITMAP 替代 WS_EX_LAYERED，
+            // 让 DWM 不为此窗口分配重定向位图，而是由 Composition 引擎直接渲染
+            int exStyle = NativeMethods.WS_EX_NOREDIRECTIONBITMAP
+                        | NativeMethods.WS_EX_TRANSPARENT
+                        | NativeMethods.WS_EX_TOOLWINDOW
+                        | NativeMethods.WS_EX_NOACTIVATE
+                        | 0x00000008 /* WS_EX_TOPMOST */;
             int style = NativeMethods.WS_POPUP;
 
             _hwnd = NativeMethods.CreateWindowEx(
@@ -111,25 +126,38 @@ namespace NotiFlow.Rendering
             RegisterGlobalHotKey(_hwnd);
         }
 
+        /// <summary>
+        /// 初始化 Windows.UI.Composition 渲染管线。
+        /// 创建顺序：DispatcherQueue → Compositor → DesktopWindowTarget → 根容器 → Win2D 设备。
+        /// DispatcherQueue 必须在 Compositor 之前创建，否则 Compositor 构造函数会抛出异常。
+        /// </summary>
         private void InitializeRendering()
         {
-            // 1. 预分配帧缓冲区（纯 CPU 内存，不涉及 GPU）
-            _frameBuffer = new byte[_width * _height * 4];
+            // 1. 创建 DispatcherQueueController（Compositor 需要当前线程具备消息泵）
+            var options = new NativeMethods.DispatcherQueueOptions
+            {
+                dwSize = Marshal.SizeOf<NativeMethods.DispatcherQueueOptions>(),
+                threadType = 2,    // DQTYPE_CURRENT_THREAD
+                apartmentType = 2  // DQTAT_COM_STA
+            };
+            NativeMethods.CreateDispatcherQueueController(options, out _dispatcherQueueController);
 
-            // 2. 创建 GDI DIB 位图和内存 DC
-            var bmi = new NativeMethods.BITMAPINFO();
-            bmi.bmiHeader.biSize = (uint)Marshal.SizeOf<NativeMethods.BITMAPINFOHEADER>();
-            bmi.bmiHeader.biWidth = _width;
-            bmi.bmiHeader.biHeight = -_height; // 负数表示自顶向下
-            bmi.bmiHeader.biPlanes = 1;
-            bmi.bmiHeader.biBitCount = 32;
-            bmi.bmiHeader.biCompression = 0; // BI_RGB
+            // 2. 创建 OS 级 Compositor 并通过 ICompositorDesktopInterop 绑定到 HWND
+            _compositor = new Compositor();
+            var interop = _compositor.As<NativeMethods.ICompositorDesktopInterop>();
+            interop.CreateDesktopWindowTarget(_hwnd, false, out var rawTarget);
+            _compositionTarget = MarshalInterface<DesktopWindowTarget>.FromAbi(rawTarget);
+            Marshal.Release(rawTarget);
 
-            IntPtr screenDC = NativeMethods.GetDC(IntPtr.Zero);
-            _memDC = NativeMethods.CreateCompatibleDC(screenDC);
-            _hBitmap = NativeMethods.CreateDIBSection(screenDC, ref bmi, 0, out _bitmapBits, IntPtr.Zero, 0);
-            NativeMethods.SelectObject(_memDC, _hBitmap);
-            NativeMethods.ReleaseDC(IntPtr.Zero, screenDC);
+            // 3. 创建根容器视觉并设为合成目标的根——全部使用 Windows.UI.Composition，无需跨命名空间转换
+            _rootContainer = _compositor.CreateContainerVisual();
+            _rootContainer.Size = new Vector2(_width, _height);
+            _compositionTarget.Root = _rootContainer;
+
+            // 4. 创建 Win2D CanvasDevice 和 CompositionGraphicsDevice
+            //    通过 CompositionHelper 手动桥接（替代 CanvasComposition）
+            _canvasDevice = CanvasDevice.GetSharedDevice();
+            _graphicsDevice = CompositionHelper.CreateGraphicsDevice(_compositor, _canvasDevice);
         }
 
         public void Show()
@@ -309,6 +337,12 @@ namespace NotiFlow.Rendering
             }
         }
 
+        /// <summary>
+        /// 在 UI 线程上提取所有 WPF 依赖的纯值数据，然后将弹幕纹理构建工作
+        /// 通过 Task.Run 移交到后台线程执行。
+        /// 后台线程使用 CompositionGraphicsDevice 创建 SpriteVisual + DrawingSurface，
+        /// 完成后将弹幕推入就绪队列等待合成。
+        /// </summary>
         private void PrepareBarrage(NotificationMessage message, int track)
         {
             BarrageItem item;
@@ -323,43 +357,130 @@ namespace NotiFlow.Rendering
             }
             
             item.TrackIndex = track;
-            
-            SolidColorBrush unFrozenBrush = (SolidColorBrush)BarrageSettings.TextColor.Clone();
-            unFrozenBrush.Freeze();
 
-            System.Windows.Media.FontFamily fontFamily = BarrageSettings.FontFamily;
+            // ===== 在 UI 线程上提取所有 WPF 依赖的纯值数据 =====
+            var textBrush = (SolidColorBrush)BarrageSettings.TextColor.Clone();
+            textBrush.Freeze();
+            var textColor = textBrush.Color;
+
+            string fontFamilyName = BarrageSettings.FontFamily.Source;
+            double fontSize = BarrageSettings.FontSize;
+            var fontStyle = BarrageSettings.FontStyle;
+            var fontWeight = BarrageSettings.FontWeight;
             double topPosition = TopMargin + track * TrackHeight;
-            
-            item.BuildVisual(_sharedDevice, message, unFrozenBrush, BarrageSettings.FontSize, fontFamily, BarrageSettings.FontStyle, BarrageSettings.FontWeight);
-            item.PreRenderSprite(_sharedDevice);
-
-            item.CurrentX = _width;
-            item.CurrentY = topPosition;
-            
-            double speedPixelsPerSec = BarrageSettings.ScrollSpeedCharsPerSec * BarrageSettings.FontSize;
+            double speedPixelsPerSec = BarrageSettings.ScrollSpeedCharsPerSec * fontSize;
             if (speedPixelsPerSec < 10) speedPixelsPerSec = 10;
-            item.SpeedPixelsPerSec = speedPixelsPerSec;
 
-            _readyQueue.Enqueue(item);
+            // 预提取背景设置
+            bool showBackground = BarrageSettings.ShowBackground;
+            var bgBrush = BarrageSettings.BackgroundColor as SolidColorBrush ?? new SolidColorBrush(System.Windows.Media.Colors.Black);
+            var bgColor = bgBrush.Color;
+            double bgOpacity = BarrageSettings.BackgroundOpacity;
+            double textOpacity = BarrageSettings.TextOpacity;
+            var cornerRadius = BarrageSettings.BackgroundCornerRadius;
+
+            // 预提取省略号设置
+            bool highlightEllipsis = BarrageSettings.HighlightEllipsis;
+            var ellBrush = BarrageSettings.EllipsisColor as SolidColorBrush ?? new SolidColorBrush(System.Windows.Media.Colors.White);
+            var ellColor = ellBrush.Color;
+
+            // 预提取文本内容
+            bool showAppName = BarrageSettings.ShowAppName;
+            double maxTextLen = BarrageSettings.MaxTextLength;
+            bool isUnderlined = BarrageSettings.IsUnderlined;
+
+            // 预提取图标像素（WPF 对象只能在 UI 线程访问）
+            bool showAppIcon = BarrageSettings.ShowAppIcon;
+            byte[]? iconPixels = null;
+            int iconWidth = 0, iconHeight = 0;
+            bool isUwpIcon = message.IsUwpIcon;
+            if (showAppIcon && message.AppIcon is System.Windows.Media.Imaging.BitmapSource bmpSrc)
+            {
+                try
+                {
+                    var formatted = new System.Windows.Media.Imaging.FormatConvertedBitmap(
+                        bmpSrc, System.Windows.Media.PixelFormats.Pbgra32, null, 0);
+                    iconWidth = formatted.PixelWidth;
+                    iconHeight = formatted.PixelHeight;
+                    if (iconWidth > 0 && iconHeight > 0)
+                    {
+                        iconPixels = new byte[iconWidth * iconHeight * 4];
+                        formatted.CopyPixels(iconPixels, iconWidth * 4, 0);
+                    }
+                }
+                catch { showAppIcon = false; }
+            }
+
+            string appName = message.AppName ?? "";
+            string title = message.Title ?? "";
+            string body = message.Body ?? "";
+
+            // ===== 纹理构建移到后台线程 =====
+            var compositor = _compositor;
+            var graphicsDevice = _graphicsDevice;
+            var canvasDevice = _canvasDevice;
+            int screenWidth = _width;
+
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    item.BuildVisualForComposition(canvasDevice, compositor, graphicsDevice,
+                        appName, title, body,
+                        textColor, textOpacity, fontSize, fontFamilyName, fontStyle, fontWeight,
+                        showBackground, bgColor, bgOpacity, cornerRadius,
+                        highlightEllipsis, ellColor,
+                        showAppName, maxTextLen, isUnderlined,
+                        showAppIcon, iconPixels, iconWidth, iconHeight, isUwpIcon);
+                    item.CurrentX = screenWidth;
+                    item.CurrentY = topPosition;
+                    item.SpeedPixelsPerSec = speedPixelsPerSec;
+                    item.StartX = screenWidth;
+                }
+                catch { }
+                _spriteReadyQueue.Enqueue(item);
+            });
         }
 
+        /// <summary>
+        /// 将已完成纹理构建的弹幕添加到合成视觉树，并启动滚动动画。
+        /// 动画由 Compositor 在 GPU 端驱动，无需每帧手动更新位置。
+        /// </summary>
         private void CommitBarrage(BarrageItem item)
         {
+            if (item.Visual == null) return;
+
+            // 将弹幕的 SpriteVisual 添加到合成树
+            _rootContainer.Children.InsertAtTop(item.Visual);
+
+            // 创建从屏幕右端到完全离开左端的滚动动画
+            var animation = _compositor.CreateVector3KeyFrameAnimation();
+            animation.InsertKeyFrame(0f, new Vector3((float)item.CurrentX, (float)item.CurrentY, 0f));
+            animation.InsertKeyFrame(1f, new Vector3(-(float)item.PhysicalWidth, (float)item.CurrentY, 0f));
+
+            double totalDistance = item.CurrentX + item.PhysicalWidth;
+            double durationSec = totalDistance / item.SpeedPixelsPerSec;
+            animation.Duration = TimeSpan.FromSeconds(durationSec);
+
+            item.Visual.StartAnimation("Offset", animation);
+            item.AnimationStartTime = DateTime.UtcNow;
+            item.AnimationEndTime = DateTime.UtcNow.AddSeconds(durationSec);
+
             _activeItems.Add(item);
-            _clearedFrameSubmitted = false;
         }
 
+        /// <summary>
+        /// WPF CompositionTarget.Rendering 回调，驱动弹幕生命周期管理。
+        /// 不再执行任何像素操作——滚动动画由合成器自动驱动。
+        /// 此回调仅负责：消息入队、弹幕提交、轨道释放判断、过期弹幕清理。
+        /// </summary>
         private void CompositionTarget_Rendering(object? sender, EventArgs e)
         {
             if (_disposed) return;
 
             var renderingArgs = (RenderingEventArgs)e;
             if (_lastRenderTime == renderingArgs.RenderingTime) return;
-
-            double dt = (_lastRenderTime == TimeSpan.Zero) ? 0 : (renderingArgs.RenderingTime - _lastRenderTime).TotalSeconds;
             _lastRenderTime = renderingArgs.RenderingTime;
-
-            if (dt == 0) return;
 
             if (_spawnQueue.TryDequeue(out var spawnMsg))
             {
@@ -369,132 +490,53 @@ namespace NotiFlow.Rendering
                 }
             }
 
-            if (_readyQueue.Count > 0)
+            // 接收后台线程完成的弹幕视觉
+            while (_spriteReadyQueue.TryDequeue(out var readyItem))
             {
-                CommitBarrage(_readyQueue.Dequeue());
+                CommitBarrage(readyItem);
             }
 
-            if (_activeItems.Count == 0 && _spawnQueue.IsEmpty && _readyQueue.Count == 0 && _pendingMessages.Count == 0)
+            if (_activeItems.Count == 0 && _spawnQueue.IsEmpty && _pendingMessages.Count == 0)
             {
                 if (!BarrageSettings.IsWorking && IsVisible)
                 {
                     Hide();
                 }
-
-                if (!_clearedFrameSubmitted && IsVisible)
-                {
-                    // 提交一帧全透明画面清空屏幕
-                    SubmitFrame(clearOnly: true);
-                    _clearedFrameSubmitted = true;
-                }
                 return;
             }
 
+            // 遍历活跃弹幕，处理轨道释放和生命周期结束
+            var now = DateTime.UtcNow;
             for (int i = _activeItems.Count - 1; i >= 0; i--)
             {
                 var item = _activeItems[i];
-                
-                item.CurrentX -= item.SpeedPixelsPerSec * dt;
-                
-                if (!item.TrackReleased && (item.CurrentX + item.PhysicalWidth < _width - _width / 4.0))
+                double elapsed = (now - item.AnimationStartTime).TotalSeconds;
+                double totalDuration = (item.AnimationEndTime - item.AnimationStartTime).TotalSeconds;
+
+                // 轨道释放判断：根据动画进度推算当前位置，
+                // 当弹幕尾部通过屏幕右侧 3/4 处时释放轨道，允许下一条弹幕进入
+                if (!item.TrackReleased && totalDuration > 0)
                 {
-                    item.TrackReleased = true;
-                    ReleaseTrack(item.TrackIndex);
+                    double progress = elapsed / totalDuration;
+                    double currentX = item.StartX + ((-item.PhysicalWidth) - item.StartX) * progress;
+                    if (currentX + item.PhysicalWidth < _width - _width / 4.0)
+                    {
+                        item.TrackReleased = true;
+                        ReleaseTrack(item.TrackIndex);
+                    }
                 }
 
-                if (item.CurrentX < -item.PhysicalWidth)
+                // 弹幕动画结束，从合成树移除并回收
+                if (now >= item.AnimationEndTime)
                 {
+                    if (item.Visual != null)
+                    {
+                        _rootContainer.Children.Remove(item.Visual);
+                    }
                     item.IsAlive = false;
                     _activeItems.RemoveAt(i);
                     _pool.Enqueue(item);
                 }
-            }
-
-            if (IsVisible)
-            {
-                SubmitFrame(clearOnly: false);
-            }
-        }
-
-        /// <summary>
-        /// 将当前帧通过 UpdateLayeredWindow 提交到屏幕上。
-        /// 纯 CPU 操作：清空帧缓冲 → 拷贝精灵图 → 更新分层窗口。不涉及任何 GPU 操作。
-        /// </summary>
-        private void SubmitFrame(bool clearOnly)
-        {
-            if (_frameBuffer == null || _bitmapBits == IntPtr.Zero) return;
-
-            // 清空帧缓冲
-            Array.Clear(_frameBuffer, 0, _frameBuffer.Length);
-
-            if (!clearOnly)
-            {
-                // 将每个弹幕的预渲染精灵图拷贝到帧缓冲中
-                foreach (var item in _activeItems)
-                {
-                    BlitSprite(item);
-                }
-            }
-
-            // 拷贝帧缓冲到 DIB 内存
-            Marshal.Copy(_frameBuffer, 0, _bitmapBits, _frameBuffer.Length);
-
-            // 调用 UpdateLayeredWindow 将画面贴到透明窗口上
-            var ptSrc = new NativeMethods.POINT { x = 0, y = 0 };
-            var ptDst = new NativeMethods.POINT { x = _left, y = _top };
-            var size = new NativeMethods.SIZE { cx = _width, cy = _height };
-            var blend = new NativeMethods.BLENDFUNCTION
-            {
-                BlendOp = 0,   // AC_SRC_OVER
-                BlendFlags = 0,
-                SourceConstantAlpha = 255,
-                AlphaFormat = 1 // AC_SRC_ALPHA
-            };
-
-            NativeMethods.UpdateLayeredWindow(_hwnd, IntPtr.Zero, ref ptDst, ref size,
-                _memDC, ref ptSrc, 0, ref blend, 0x00000002 /* ULW_ALPHA */);
-        }
-
-        /// <summary>
-        /// 将单个弹幕的精灵图像素拷贝到帧缓冲的正确位置，带边界裁剪。
-        /// </summary>
-        private void BlitSprite(BarrageItem item)
-        {
-            if (item.SpritePixels == null || item.SpriteWidth <= 0 || item.SpriteHeight <= 0) return;
-
-            const int margin = 2; // 与 BarrageItem.SpriteMargin 保持一致
-            int startX = (int)item.CurrentX - margin;
-            int startY = (int)item.CurrentY - margin;
-
-            for (int row = 0; row < item.SpriteHeight; row++)
-            {
-                int dstY = startY + row;
-                if (dstY < 0 || dstY >= _height) continue;
-
-                int srcX = 0;
-                int dstX = startX;
-                int copyWidth = item.SpriteWidth;
-
-                // 裁剪左边界
-                if (dstX < 0)
-                {
-                    srcX = -dstX;
-                    copyWidth += dstX;
-                    dstX = 0;
-                }
-
-                // 裁剪右边界
-                if (dstX + copyWidth > _width)
-                {
-                    copyWidth = _width - dstX;
-                }
-
-                if (copyWidth <= 0) continue;
-
-                int srcOffset = (row * item.SpriteWidth + srcX) * 4;
-                int dstOffset = (dstY * _width + dstX) * 4;
-
-                Buffer.BlockCopy(item.SpritePixels, srcOffset, _frameBuffer!, dstOffset, copyWidth * 4);
             }
         }
 
@@ -512,27 +554,22 @@ namespace NotiFlow.Rendering
                 _hwnd = IntPtr.Zero;
             }
 
-            _frameBuffer = null;
-
-            if (_hBitmap != IntPtr.Zero)
-            {
-                NativeMethods.DeleteObject(_hBitmap);
-                _hBitmap = IntPtr.Zero;
-            }
-
-            if (_memDC != IntPtr.Zero)
-            {
-                NativeMethods.DeleteDC(_memDC);
-                _memDC = IntPtr.Zero;
-            }
-
-            _bitmapBits = IntPtr.Zero;
+            // 清理合成视觉树
+            _rootContainer?.Children.RemoveAll();
 
             foreach (var item in _activeItems) item.Dispose();
             _activeItems.Clear();
 
             while (_pool.Count > 0) _pool.Dequeue().Dispose();
-            while (_readyQueue.Count > 0) _readyQueue.Dequeue().Dispose();
+
+            // 清空异步队列中残留的项目
+            while (_spriteReadyQueue.TryDequeue(out var leftover)) leftover.Dispose();
+
+            // 按逆序释放 Composition 资源
+            _compositionTarget?.Dispose();
+            _graphicsDevice?.Dispose();
+            _canvasDevice?.Dispose();
+            _compositor?.Dispose();
         }
     }
 }
