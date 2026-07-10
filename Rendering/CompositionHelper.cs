@@ -167,12 +167,12 @@ namespace NotiFlow.Rendering
         }
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private delegate int BeginDrawDelegate(
+        internal delegate int BeginDrawDelegate(
             IntPtr @this, IntPtr updateRect, ref Guid iid,
             out IntPtr updateObject, out NativeMethods.POINT updateOffset);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private delegate int EndDrawDelegate(IntPtr @this);
+        internal delegate int EndDrawDelegate(IntPtr @this);
     }
 
     /// <summary>

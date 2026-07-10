@@ -85,6 +85,8 @@ namespace NotiFlow.Rendering
 
             string className = "NotiFlowBarrageOverlayClass";
 
+            IntPtr hInstance = Marshal.GetHINSTANCE(typeof(BarrageOverlayWindow).Module);
+
             var wndClass = new NativeMethods.WNDCLASSEX
             {
                 cbSize = (uint)Marshal.SizeOf(typeof(NativeMethods.WNDCLASSEX)),
@@ -92,7 +94,7 @@ namespace NotiFlow.Rendering
                 lpfnWndProc = _wndProcDelegate,
                 cbClsExtra = 0,
                 cbWndExtra = 0,
-                hInstance = NativeMethods.GetDC(IntPtr.Zero),
+                hInstance = hInstance,
                 hIcon = IntPtr.Zero,
                 hCursor = IntPtr.Zero,
                 hbrBackground = IntPtr.Zero,
@@ -112,13 +114,16 @@ namespace NotiFlow.Rendering
                         | 0x00000008 /* WS_EX_TOPMOST */;
             int style = NativeMethods.WS_POPUP;
 
+            // 创建窗口，故意不传入标题 (string.Empty)，
+            // 因为许多截图工具（如微信、QQ、Snipping Tool）在遍历窗口时，
+            // 会自动过滤掉没有标题的无边框窗口，从而可能绕过“按窗口截图”的捕捉。
             _hwnd = NativeMethods.CreateWindowEx(
                 exStyle,
                 className,
-                "NotiFlow Barrage Overlay",
+                string.Empty,
                 style,
                 _left, _top, _width, _height,
-                IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+                IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
 
             InitializeRendering();
 
@@ -149,15 +154,22 @@ namespace NotiFlow.Rendering
             _compositionTarget = MarshalInterface<DesktopWindowTarget>.FromAbi(rawTarget);
             Marshal.Release(rawTarget);
 
-            // 3. 创建根容器视觉并设为合成目标的根——全部使用 Windows.UI.Composition，无需跨命名空间转换
+            // 3. 创建根容器视觉并设为合成目标的根
             _rootContainer = _compositor.CreateContainerVisual();
             _rootContainer.Size = new Vector2(_width, _height);
             _compositionTarget.Root = _rootContainer;
 
-            // 4. 创建 Win2D CanvasDevice 和 CompositionGraphicsDevice
-            //    通过 CompositionHelper 手动桥接（替代 CanvasComposition）
-            _canvasDevice = CanvasDevice.GetSharedDevice();
-            _graphicsDevice = CompositionHelper.CreateGraphicsDevice(_compositor, _canvasDevice);
+            // 4. 追加 WS_EX_LAYERED 以恢复鼠标穿透。
+            //    WS_EX_TRANSPARENT 的穿透行为依赖 WS_EX_LAYERED。
+            //    WS_EX_NOREDIRECTIONBITMAP + WS_EX_LAYERED 可以共存：
+            //    DWM 由 Composition 引擎提供内容，WS_EX_LAYERED 仅影响命中测试语义。
+            IntPtr curStyle = NativeMethods.GetWindowLongPtr(_hwnd, NativeMethods.GWL_EXSTYLE);
+            NativeMethods.SetWindowLongPtr(_hwnd, NativeMethods.GWL_EXSTYLE,
+                (IntPtr)((long)curStyle | NativeMethods.WS_EX_LAYERED));
+
+            // 4. 创建共享同一 D3D11 设备的 CompositionGraphicsDevice 和 CanvasDevice
+            //    通过 CompositionHelper 从零创建 D3D11 设备（替代 CanvasComposition）
+            (_graphicsDevice, _canvasDevice) = CompositionHelper.CreateSharedDevices(_compositor);
         }
 
         public void Show()
@@ -184,6 +196,7 @@ namespace NotiFlow.Rendering
             double usableHeight = _height - TopMargin - TrackHeight;
             _trackCount = Math.Max(1, (int)(usableHeight / TrackHeight));
             _trackOccupied = new bool[_trackCount];
+            System.IO.File.AppendAllText("barrage_log.txt", $"[{DateTime.Now:HH:mm:ss.fff}] InitializeTracks: Height={_height}, TrackHeight={TrackHeight}, Count={_trackCount}\n");
         }
 
         private int AllocateTrack()
@@ -248,6 +261,7 @@ namespace NotiFlow.Rendering
 
         private void ReleaseTrack(int trackIndex)
         {
+            System.IO.File.AppendAllText("barrage_log.txt", $"[{DateTime.Now:HH:mm:ss.fff}] ReleaseTrack: {trackIndex}\n");
             if (trackIndex >= 0 && trackIndex < _trackCount)
             {
                 _trackOccupied[trackIndex] = false;
@@ -327,6 +341,7 @@ namespace NotiFlow.Rendering
         private void EnqueueBarrage(NotificationMessage msg)
         {
             int track = AllocateTrack();
+            System.IO.File.AppendAllText("barrage_log.txt", $"[{DateTime.Now:HH:mm:ss.fff}] EnqueueBarrage: track={track}, pending={_pendingMessages.Count}\n");
             if (track >= 0)
             {
                 PrepareBarrage(msg, track);
@@ -425,7 +440,7 @@ namespace NotiFlow.Rendering
             {
                 try
                 {
-                    item.BuildVisualForComposition(canvasDevice, compositor, graphicsDevice,
+                    item.PrepareLayout(canvasDevice,
                         appName, title, body,
                         textColor, textOpacity, fontSize, fontFamilyName, fontStyle, fontWeight,
                         showBackground, bgColor, bgOpacity, cornerRadius,
@@ -448,15 +463,26 @@ namespace NotiFlow.Rendering
         /// </summary>
         private void CommitBarrage(BarrageItem item)
         {
-            if (item.Visual == null) return;
+            if (item.Visual == null)
+            {
+                System.IO.File.AppendAllText("barrage_log.txt", $"[{DateTime.Now:HH:mm:ss.fff}] CommitBarrage: Visual is NULL! Track={item.TrackIndex}\n");
+                item.TrackReleased = true;
+                ReleaseTrack(item.TrackIndex);
+                item.IsAlive = false;
+                _pool.Enqueue(item);
+                return;
+            }
+
+            System.IO.File.AppendAllText("barrage_log.txt", $"[{DateTime.Now:HH:mm:ss.fff}] CommitBarrage: Success. Track={item.TrackIndex}, Width={item.PhysicalWidth}, CurrentX={item.CurrentX}\n");
 
             // 将弹幕的 SpriteVisual 添加到合成树
             _rootContainer.Children.InsertAtTop(item.Visual);
 
-            // 创建从屏幕右端到完全离开左端的滚动动画
+            // 创建从屏幕右端到完全离开左端的匀速滚动动画
+            var linear = _compositor.CreateLinearEasingFunction();
             var animation = _compositor.CreateVector3KeyFrameAnimation();
-            animation.InsertKeyFrame(0f, new Vector3((float)item.CurrentX, (float)item.CurrentY, 0f));
-            animation.InsertKeyFrame(1f, new Vector3(-(float)item.PhysicalWidth, (float)item.CurrentY, 0f));
+            animation.InsertKeyFrame(0f, new Vector3((float)item.CurrentX, (float)item.CurrentY, 0f), linear);
+            animation.InsertKeyFrame(1f, new Vector3(-(float)item.PhysicalWidth, (float)item.CurrentY, 0f), linear);
 
             double totalDistance = item.CurrentX + item.PhysicalWidth;
             double durationSec = totalDistance / item.SpeedPixelsPerSec;
@@ -482,7 +508,8 @@ namespace NotiFlow.Rendering
             if (_lastRenderTime == renderingArgs.RenderingTime) return;
             _lastRenderTime = renderingArgs.RenderingTime;
 
-            if (_spawnQueue.TryDequeue(out var spawnMsg))
+            // 每帧处理所有待入队的通知消息（避免 20 条通知只取 1 条的积压问题）
+            while (_spawnQueue.TryDequeue(out var spawnMsg))
             {
                 if (((App)Application.Current).ForegroundMonitor is { } monitor && !monitor.IsSceneSuppressed)
                 {
@@ -490,10 +517,23 @@ namespace NotiFlow.Rendering
                 }
             }
 
-            // 接收后台线程完成的弹幕视觉
-            while (_spriteReadyQueue.TryDequeue(out var readyItem))
+            // 接收后台线程完成的弹幕布局，并在 UI 线程创建 Composition 视觉对象
+            // 限制每帧最多创建 2-3 个纹理，防止单帧内向 DWM 提交过多表面分配请求导致 D3D/DXGI 异常（引发弹幕丢失）
+            int maxCommitsPerFrame = 3;
+            int commitCount = 0;
+            while (commitCount < maxCommitsPerFrame && _spriteReadyQueue.TryDequeue(out var readyItem))
             {
+                try
+                {
+                    readyItem.CreateVisualForComposition(_canvasDevice, _compositor, _graphicsDevice);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"CreateVisualFailed: {ex.Message}");
+                } // 如果抛异常，Visual 会保持为 null，由 CommitBarrage 处理回收
+
                 CommitBarrage(readyItem);
+                commitCount++;
             }
 
             if (_activeItems.Count == 0 && _spawnQueue.IsEmpty && _pendingMessages.Count == 0)

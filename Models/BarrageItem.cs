@@ -116,8 +116,7 @@ namespace NotiFlow.Models
         /// 3. 使用 CanvasComposition.CreateDrawingSession 在纹理上直接绘制文字和图标
         /// 4. 创建 SpriteVisual 并绑定纹理画刷
         /// </summary>
-        public void BuildVisualForComposition(CanvasDevice device, Compositor compositor,
-            CompositionGraphicsDevice graphicsDevice,
+        public void PrepareLayout(CanvasDevice device,
             string appName, string title, string body,
             System.Windows.Media.Color textColor, double textOpacity,
             double fontSize, string fontFamilyName,
@@ -225,7 +224,11 @@ namespace NotiFlow.Models
             _showBackground = showBackground;
             _cornerRadius = (float)cornerRadius.TopLeft;
             _isUnderlined = isUnderlined;
+        }
 
+        public void CreateVisualForComposition(CanvasDevice device, Compositor compositor,
+            CompositionGraphicsDevice graphicsDevice)
+        {
             // ===== 创建 CompositionDrawingSurface 并在其上绘制弹幕内容 =====
             const int spriteMargin = 2;
             double visibleHeight = _showBackground ? _bgHeight : _contentHeight;
@@ -243,7 +246,16 @@ namespace NotiFlow.Models
             using (var wrapper = CompositionHelper.CreateDrawingSession(_surface, device))
             {
                 var session = wrapper.Session;
-                session.Clear(Windows.UI.Color.FromArgb(0, 0, 0, 0));
+                
+                // 【核心修复】CompositionDrawingSurface 可能是大图集的一部分，必须应用 BeginDraw 返回的 offset！
+                var offset = wrapper.Offset;
+                session.Transform = System.Numerics.Matrix3x2.CreateTranslation(offset.x, offset.y);
+
+                // 使用 Copy 混合模式擦除我们分配的区域（绝对不能用 session.Clear()，那会清空整个图集！）
+                var previousBlend = session.Blend;
+                session.Blend = Microsoft.Graphics.Canvas.CanvasBlend.Copy;
+                session.FillRectangle(0, 0, surfaceWidth, surfaceHeight, Windows.UI.Color.FromArgb(0, 0, 0, 0));
+                session.Blend = previousBlend;
 
                 // 临时设置绘制坐标为精灵图原点
                 double savedX = CurrentX, savedY = CurrentY;

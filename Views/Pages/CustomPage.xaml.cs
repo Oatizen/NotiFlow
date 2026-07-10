@@ -47,6 +47,7 @@ namespace NotiFlow.Views.Pages
             {
                 Text = "图标 应用名称：这是一条测试弹幕......",
                 Foreground = BarrageSettings.TextColor,
+                Opacity = BarrageSettings.TextOpacity,
                 FontSize = BarrageSettings.FontSize,
                 FontFamily = BarrageSettings.FontFamily,
                 FontStyle = BarrageSettings.FontStyle,
@@ -54,20 +55,51 @@ namespace NotiFlow.Views.Pages
                 VerticalAlignment = VerticalAlignment.Center
             };
 
-            var bgBrush = BarrageSettings.BackgroundColor as SolidColorBrush ?? new SolidColorBrush(System.Windows.Media.Colors.Black);
+            if (BarrageSettings.IsUnderlined)
+            {
+                textBlock.TextDecorations = TextDecorations.Underline;
+            }
+
+            if (!BarrageSettings.ShowBackground)
+            {
+                var shadowColor = ((SolidColorBrush)BarrageSettings.TextColor).Color;
+                textBlock.Effect = new System.Windows.Media.Effects.DropShadowEffect
+                {
+                    Color = Color.FromArgb((byte)(0.9 * shadowColor.A), 0, 0, 0),
+                    Direction = 315,
+                    ShadowDepth = 1.5,
+                    Opacity = 1,
+                    BlurRadius = 0
+                };
+            }
+
+            var bgBrush = BarrageSettings.BackgroundColor as SolidColorBrush ?? new SolidColorBrush(Colors.Black);
             var border = new Border
             {
-                Background = BarrageSettings.ShowBackground ? new SolidColorBrush(System.Windows.Media.Color.FromArgb(
-                    (byte)(bgBrush.Color.A * BarrageSettings.BackgroundOpacity),
+                Background = BarrageSettings.ShowBackground ? new SolidColorBrush(Color.FromArgb(
+                    (byte)(255 * BarrageSettings.BackgroundOpacity),
                     bgBrush.Color.R, bgBrush.Color.G, bgBrush.Color.B)) : Brushes.Transparent,
                 CornerRadius = BarrageSettings.BackgroundCornerRadius,
                 Padding = new Thickness(12, 6, 12, 6),
                 Child = textBlock
             };
 
-            Canvas.SetLeft(border, 20);
-            Canvas.SetTop(border, Math.Max(0, (200 - BarrageSettings.FontSize * 1.5) / 2.0));
+            border.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            double itemWidth = border.DesiredSize.Width > 0 ? border.DesiredSize.Width : 400;
+
+            Canvas.SetLeft(border, PreviewBorder.ActualWidth);
+            Canvas.SetTop(border, Math.Max(0, (PreviewBorder.ActualHeight - BarrageSettings.FontSize * 1.5) / 2.0));
             PreviewCanvas.Children.Add(border);
+
+            // 添加滚动动画
+            var animation = new System.Windows.Media.Animation.DoubleAnimation
+            {
+                From = PreviewBorder.ActualWidth,
+                To = -itemWidth,
+                Duration = TimeSpan.FromSeconds(Math.Max(3, (PreviewBorder.ActualWidth + itemWidth) / (BarrageSettings.ScrollSpeedCharsPerSec * BarrageSettings.FontSize))),
+                RepeatBehavior = System.Windows.Media.Animation.RepeatBehavior.Forever
+            };
+            border.BeginAnimation(Canvas.LeftProperty, animation);
         }
 
         private void ToggleWorkButton_Click(object sender, System.Windows.RoutedEventArgs e)
