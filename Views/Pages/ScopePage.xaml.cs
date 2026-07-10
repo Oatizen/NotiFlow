@@ -1,5 +1,7 @@
+using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media.Animation;
 using NotiFlow.Models;
 using NotiFlow.Views.Windows;
 
@@ -20,6 +22,9 @@ namespace NotiFlow.Views.Pages
             if (DataContext is ScopeViewModel vm)
             {
                 vm.Initialize();
+                // 确保只订阅一次
+                vm.PropertyChanged -= Vm_PropertyChanged;
+                vm.PropertyChanged += Vm_PropertyChanged;
             }
         }
 
@@ -29,7 +34,88 @@ namespace NotiFlow.Views.Pages
             if (DataContext is ScopeViewModel vm)
             {
                 vm.Deinitialize();
+                vm.PropertyChanged -= Vm_PropertyChanged;
             }
+        }
+
+        private void Vm_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ScopeViewModel.IsSourceTabActive))
+            {
+                PlayTabTransitionAnimation();
+            }
+            else if (e.PropertyName == nameof(ScopeViewModel.CurrentMode))
+            {
+                if (DataContext is ScopeViewModel vm && 
+                   (vm.CurrentMode == "Blacklist" || vm.CurrentMode == "Whitelist"))
+                {
+                    PlayListTransitionAnimation();
+                }
+            }
+        }
+
+        private void PlayTabTransitionAnimation()
+        {
+            var storyboard = new Storyboard();
+            
+            var opacityAnim = new DoubleAnimation
+            {
+                From = 0.0,
+                To = 1.0,
+                Duration = TimeSpan.FromMilliseconds(250),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            
+            var translateAnim = new DoubleAnimation
+            {
+                From = 20.0,
+                To = 0.0,
+                Duration = TimeSpan.FromMilliseconds(250),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            
+            Storyboard.SetTarget(opacityAnim, TabContentPanel);
+            Storyboard.SetTargetProperty(opacityAnim, new PropertyPath(OpacityProperty));
+            
+            Storyboard.SetTarget(translateAnim, TabContentPanel);
+            Storyboard.SetTargetProperty(translateAnim, new PropertyPath("(UIElement.RenderTransform).(TranslateTransform.Y)"));
+            
+            storyboard.Children.Add(opacityAnim);
+            storyboard.Children.Add(translateAnim);
+            
+            storyboard.Begin();
+        }
+
+        private void PlayListTransitionAnimation()
+        {
+            var storyboard = new Storyboard();
+            
+            var opacityAnim = new DoubleAnimation
+            {
+                From = 0.0,
+                To = 1.0,
+                Duration = TimeSpan.FromMilliseconds(250),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            
+            var translateAnim = new DoubleAnimation
+            {
+                From = 20.0,
+                To = 0.0,
+                Duration = TimeSpan.FromMilliseconds(250),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            
+            Storyboard.SetTarget(opacityAnim, ListContentPanel);
+            Storyboard.SetTargetProperty(opacityAnim, new PropertyPath(OpacityProperty));
+            
+            Storyboard.SetTarget(translateAnim, ListContentPanel);
+            Storyboard.SetTargetProperty(translateAnim, new PropertyPath("(UIElement.RenderTransform).(TranslateTransform.Y)"));
+            
+            storyboard.Children.Add(opacityAnim);
+            storyboard.Children.Add(translateAnim);
+            
+            storyboard.Begin();
         }
 
         private void Fab_Click(object sender, RoutedEventArgs e)
@@ -42,6 +128,7 @@ namespace NotiFlow.Views.Pages
                 vm.AddManualRule(dialog.Identifier, dialog.DisplayName);
             }
         }
+
         private void TopHelpButton_Click(object sender, RoutedEventArgs e)
         {
             TopHelpFlyout.IsOpen = true;

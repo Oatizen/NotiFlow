@@ -61,8 +61,14 @@
                     </Grid>
                 </StackPanel>
 
-                <!-- 模式切换区 -->
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,24">
+                <!-- 包裹容器，用于切换动画 -->
+                <StackPanel x:Name="TabContentPanel">
+                    <StackPanel.RenderTransform>
+                        <TranslateTransform Y="0"/>
+                    </StackPanel.RenderTransform>
+
+                    <!-- 模式切换区 -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,24">
                     <ui:Button Content="排除模式" Command="{Binding SetModeCommand}" CommandParameter="Blacklist" Margin="0,0,8,0" Padding="16,6">
                         <ui:Button.Style>
                             <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
@@ -118,7 +124,12 @@
                     </Grid>
                 </StackPanel>
 
-                <!-- 全局显示时的提示文本 -->
+                <StackPanel x:Name="ListContentPanel">
+                    <StackPanel.RenderTransform>
+                        <TranslateTransform Y="0"/>
+                    </StackPanel.RenderTransform>
+
+                    <!-- 全局显示时的提示文本 -->
                 <TextBlock Text="已关闭过滤功能" HorizontalAlignment="Center" Margin="0,150,0,40"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="24" FontWeight="SemiBold">
                     <TextBlock.Style>
@@ -319,48 +330,86 @@
                                     </Grid>
 
                                     <!-- 折叠展开的具体通知缓存列表 -->
-                                    <Grid Margin="0,12,0,0">
+                                    <Grid>
+                                        <Grid.LayoutTransform>
+                                            <ScaleTransform ScaleY="0"/>
+                                        </Grid.LayoutTransform>
                                         <Grid.Style>
                                             <Style TargetType="Grid">
-                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Setter Property="Opacity" Value="0" />
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsExpanded}" Value="True">
-                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <DataTrigger.EnterActions>
+                                                            <BeginStoryboard>
+                                                                <Storyboard>
+                                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.25">
+                                                                        <DoubleAnimation.EasingFunction>
+                                                                            <CubicEase EasingMode="EaseOut"/>
+                                                                        </DoubleAnimation.EasingFunction>
+                                                                    </DoubleAnimation>
+                                                                    <DoubleAnimation Storyboard.TargetProperty="(FrameworkElement.LayoutTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.25">
+                                                                        <DoubleAnimation.EasingFunction>
+                                                                            <CubicEase EasingMode="EaseOut"/>
+                                                                        </DoubleAnimation.EasingFunction>
+                                                                    </DoubleAnimation>
+                                                                </Storyboard>
+                                                            </BeginStoryboard>
+                                                        </DataTrigger.EnterActions>
+                                                        <DataTrigger.ExitActions>
+                                                            <BeginStoryboard>
+                                                                <Storyboard>
+                                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.25">
+                                                                        <DoubleAnimation.EasingFunction>
+                                                                            <CubicEase EasingMode="EaseOut"/>
+                                                                        </DoubleAnimation.EasingFunction>
+                                                                    </DoubleAnimation>
+                                                                    <DoubleAnimation Storyboard.TargetProperty="(FrameworkElement.LayoutTransform).(ScaleTransform.ScaleY)" To="0" Duration="0:0:0.25">
+                                                                        <DoubleAnimation.EasingFunction>
+                                                                            <CubicEase EasingMode="EaseOut"/>
+                                                                        </DoubleAnimation.EasingFunction>
+                                                                    </DoubleAnimation>
+                                                                </Storyboard>
+                                                            </BeginStoryboard>
+                                                        </DataTrigger.ExitActions>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
                                         </Grid.Style>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="36" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
+                                        <Grid Margin="0,12,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="36" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
 
-                                        <!-- 在图标正下方显示提示文字 -->
-                                        <TextBlock Grid.Column="0" Text="历史&#x0a;通知" FontSize="10" TextAlignment="Center" 
-                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Top" Margin="0,6,0,0"/>
+                                            <!-- 在图标正下方显示提示文字 -->
+                                            <TextBlock Grid.Column="0" Text="历史&#x0a;通知" FontSize="10" TextAlignment="Center" 
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Top" Margin="0,6,0,0"/>
 
-                                        <ItemsControl Grid.Column="1" ItemsSource="{Binding RecentMessages}" Margin="8,0,0,0">
-                                         <ItemsControl.ItemTemplate>
-                                             <DataTemplate>
-                                                 <!-- 使用层级感更强的 ControlFillColorSecondaryBrush，并加入细微描边，保证浅色模式下的遮罩质感 -->
-                                                 <Border Background="{DynamicResource ControlFillColorSecondaryBrush}"
-                                                         BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                                                         BorderThickness="1"
-                                                         CornerRadius="6" Padding="8" Margin="0,0,0,4">
-                                                     <TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                                                 </Border>
-                                             </DataTemplate>
-                                         </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
+                                            <ItemsControl Grid.Column="1" ItemsSource="{Binding RecentMessages}" Margin="8,0,0,0">
+                                             <ItemsControl.ItemTemplate>
+                                                 <DataTemplate>
+                                                     <!-- 使用层级感更强的 ControlFillColorSecondaryBrush，并加入细微描边，保证浅色模式下的遮罩质感 -->
+                                                     <Border Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                                             BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                                             BorderThickness="1"
+                                                             CornerRadius="6" Padding="8" Margin="0,0,0,4">
+                                                         <TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                                     </Border>
+                                                 </DataTemplate>
+                                             </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </Grid>
                                     </Grid>
                                 </StackPanel>
                             </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+                    </StackPanel>
                 </StackPanel>
             </StackPanel>
-        </ScrollViewer>
+        </StackPanel>
+    </ScrollViewer>
 
         <!-- 右下角悬浮区 FAB及提示文本 -->
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,32,32">
