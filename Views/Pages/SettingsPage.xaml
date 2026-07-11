@@ -1,4 +1,4 @@
-<Page x:Class="NotiFlow.Views.Pages.SettingsPage"
+﻿<Page x:Class="NotiFlow.Views.Pages.SettingsPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -57,9 +57,9 @@
                         <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ControlFillColorDefaultBrush}" CornerRadius="8" HorizontalAlignment="Left" VerticalAlignment="Center">
                             <ui:SymbolIcon Symbol="LocalLanguage24" FontSize="18"/>
                         </Border>
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <ui:TextBlock Text="语言" FontTypography="BodyStrong"/>
-                            <ui:TextBlock Text="选择您偏好的显示语言" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,16,0" MinWidth="100">
+                            <ui:TextBlock Text="语言" FontTypography="BodyStrong" TextWrapping="Wrap"/>
+                            <ui:TextBlock Text="选择您偏好的显示语言" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                         </StackPanel>
                         <ComboBox Grid.Column="2" SelectedIndex="0" VerticalAlignment="Center" Width="150" HorizontalAlignment="Right">
                             <ComboBoxItem Content="简体中文"/>
@@ -76,9 +76,9 @@
                         <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ControlFillColorDefaultBrush}" CornerRadius="8" HorizontalAlignment="Left" VerticalAlignment="Center">
                             <ui:SymbolIcon Symbol="WeatherMoon24" FontSize="18"/>
                         </Border>
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <ui:TextBlock Text="主题" FontTypography="BodyStrong"/>
-                            <ui:TextBlock Text="个性化您的工作区外观" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,16,0" MinWidth="100">
+                            <ui:TextBlock Text="主题" FontTypography="BodyStrong" TextWrapping="Wrap"/>
+                            <ui:TextBlock Text="个性化您的工作区外观" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                         </StackPanel>
                         <ComboBox x:Name="ThemeComboBox" Grid.Column="2" SelectedIndex="1" VerticalAlignment="Center" Width="150" HorizontalAlignment="Right" SelectionChanged="ThemeComboBox_SelectionChanged">
                             <ComboBoxItem Content="系统默认"/>
@@ -103,7 +103,7 @@
                         <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ControlFillColorDefaultBrush}" CornerRadius="8" HorizontalAlignment="Left" VerticalAlignment="Center">
                             <ui:SymbolIcon Symbol="ArrowSync24" FontSize="18"/>
                         </Border>
-                        <ui:TextBlock Grid.Column="1" Text="启动时自动检测更新" VerticalAlignment="Center"/>
+                        <ui:TextBlock Grid.Column="1" Text="启动时自动检测更新" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,16,0" MinWidth="100"/>
                         <ui:ToggleSwitch Grid.Column="2" IsChecked="{Binding AutoCheckUpdate, Mode=TwoWay}" VerticalAlignment="Center"/>
                     </Grid>
 
@@ -117,7 +117,7 @@
                         <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ControlFillColorDefaultBrush}" CornerRadius="8" HorizontalAlignment="Left" VerticalAlignment="Center">
                             <ui:SymbolIcon Symbol="Globe24" FontSize="18"/>
                         </Border>
-                        <ui:TextBlock Grid.Column="1" Text="选择更新源" VerticalAlignment="Center"/>
+                        <ui:TextBlock Grid.Column="1" Text="选择更新源" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,16,0" MinWidth="100"/>
                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                             <ui:Button Content="自动" Appearance="{Binding IsUpdateSourceAuto, Converter={StaticResource BoolToAppearance}}" Command="{Binding SetUpdateSourceCommand}" CommandParameter="Auto" Margin="0,0,8,0" Padding="16,6"/>
                             <ui:Button Content="Gitee" Appearance="{Binding IsUpdateSourceGitee, Converter={StaticResource BoolToAppearance}}" Command="{Binding SetUpdateSourceCommand}" CommandParameter="Gitee" Margin="0,0,8,0" Padding="16,6"/>
@@ -141,7 +141,7 @@
                         <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ControlFillColorDefaultBrush}" CornerRadius="8" HorizontalAlignment="Left" VerticalAlignment="Center">
                             <ui:SymbolIcon Symbol="Shield24" FontSize="18"/>
                         </Border>
-                        <ui:TextBlock Grid.Column="1" Text="以管理员身份运行" VerticalAlignment="Center"/>
+                        <ui:TextBlock Grid.Column="1" Text="以管理员身份运行" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,16,0" MinWidth="100"/>
                         <ui:ToggleSwitch Grid.Column="2" IsChecked="True" VerticalAlignment="Center"/>
                     </Grid>
 
@@ -155,7 +155,7 @@
                         <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ControlFillColorDefaultBrush}" CornerRadius="8" HorizontalAlignment="Left" VerticalAlignment="Center">
                             <ui:SymbolIcon Symbol="Play24" FontSize="18"/>
                         </Border>
-                        <ui:TextBlock Grid.Column="1" Text="应用启动时自动工作" VerticalAlignment="Center"/>
+                        <ui:TextBlock Grid.Column="1" Text="应用启动时自动工作" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,16,0" MinWidth="100"/>
                         <ui:ToggleSwitch Grid.Column="2" IsChecked="{Binding AutoStartWorking, Mode=TwoWay}" VerticalAlignment="Center"/>
                     </Grid>
 
@@ -169,7 +169,7 @@
                         <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ControlFillColorDefaultBrush}" CornerRadius="8" HorizontalAlignment="Left" VerticalAlignment="Center">
                             <ui:SymbolIcon Symbol="Rocket24" FontSize="18"/>
                         </Border>
-                        <ui:TextBlock Grid.Column="1" Text="开机自启动" VerticalAlignment="Center"/>
+                        <ui:TextBlock Grid.Column="1" Text="开机自启动" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,16,0" MinWidth="100"/>
                         <ui:ToggleSwitch Grid.Column="2" IsChecked="{Binding RunOnStartup, Mode=TwoWay}" VerticalAlignment="Center"/>
                     </Grid>
 
@@ -183,7 +183,7 @@
                         <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ControlFillColorDefaultBrush}" CornerRadius="8" HorizontalAlignment="Left" VerticalAlignment="Center">
                             <ui:SymbolIcon Symbol="ArrowMinimize24" FontSize="18"/>
                         </Border>
-                        <ui:TextBlock Grid.Column="1" Text="最小化到系统托盘" VerticalAlignment="Center"/>
+                        <ui:TextBlock Grid.Column="1" Text="最小化到系统托盘" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,16,0" MinWidth="100"/>
                         <ui:ToggleSwitch Grid.Column="2" IsChecked="{Binding MinimizeToTray, Mode=TwoWay}" VerticalAlignment="Center"/>
                     </Grid>
 
@@ -197,7 +197,7 @@
                         <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ControlFillColorDefaultBrush}" CornerRadius="8" HorizontalAlignment="Left" VerticalAlignment="Center">
                             <ui:SymbolIcon Symbol="DismissSquare24" FontSize="18"/>
                         </Border>
-                        <ui:TextBlock Grid.Column="1" Text="关闭时最小化到托盘" VerticalAlignment="Center"/>
+                        <ui:TextBlock Grid.Column="1" Text="关闭时最小化到托盘" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,16,0" MinWidth="100"/>
                         <ui:ToggleSwitch Grid.Column="2" IsChecked="{Binding CloseToTray, Mode=TwoWay}" VerticalAlignment="Center"/>
                     </Grid>
 
@@ -211,7 +211,7 @@
                         <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource ControlFillColorDefaultBrush}" CornerRadius="8" HorizontalAlignment="Left" VerticalAlignment="Center">
                             <ui:SymbolIcon Symbol="Camera24" FontSize="18"/>
                         </Border>
-                        <ui:TextBlock Grid.Column="1" Text="允许截图工具等应用获取弹幕内容" VerticalAlignment="Center"/>
+                        <ui:TextBlock Grid.Column="1" Text="允许截图工具等应用获取弹幕内容" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,16,0" MinWidth="100"/>
                         <ui:ToggleSwitch Grid.Column="2" IsChecked="{Binding AllowCapture, Mode=TwoWay}" VerticalAlignment="Center"/>
                     </Grid>
                 </StackPanel>
@@ -219,3 +219,4 @@
         </StackPanel>
     </ScrollViewer>
 </Page>
+

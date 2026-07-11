@@ -100,6 +100,9 @@ namespace NotiFlow.Models
         {
             try
             {
+                // 等待过渡动画完成，确保 UI 线程完全空闲
+                await Task.Delay(260);
+
                 // 后台枚举进程，同时得到路径缓存
                 var processes = await Task.Run(() => Services.ProcessEnumerator.EnumerateWindowProcesses());
                 var pathCache = new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -191,6 +194,8 @@ namespace NotiFlow.Models
         {
             try
             {
+                // 寤惰繜鍔犺浇鍥炬爣锛岄伩鍏嶅湪杩?250ms 鍐呬娇鐢?UI 绾跨▼閫犳垚杩囨浮鍔ㄧ敾鎺夊抚
+                await Task.Delay(300);
                 // 1. 尝试从本地缓存加载
                 var cachedIcon = await Services.IconCacheService.GetIconAsync(vm.Identifier);
                 if (cachedIcon != null)

@@ -5,6 +5,7 @@
       xmlns:viewmodels="clr-namespace:NotiFlow.Models"
       xmlns:converters="clr-namespace:NotiFlow.Converters"
       xmlns:rendering="clr-namespace:NotiFlow.Rendering"
+      xmlns:hc="https://handyorg.github.io/handycontrol"
       Title="弹幕设置"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       Background="Transparent"
@@ -142,29 +143,14 @@
                                 </Button>
                                 
                                 <ui:Flyout x:Name="ColorPaletteFlyout" Placement="Bottom">
-                                    <ItemsControl ItemsSource="{Binding PresetColors}" Margin="8,8,0,0" Width="160">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <WrapPanel Orientation="Horizontal" />
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Button Background="{Binding Brush}" 
-                                                        Command="{Binding DataContext.SelectColorCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" 
-                                                        CommandParameter="{Binding Hex}"
-                                                        Width="32" Height="32" 
-                                                        Margin="0,0,8,8" 
-                                                        BorderThickness="0">
-                                                    <Button.Template>
-                                                        <ControlTemplate TargetType="Button">
-                                                            <Border Background="{TemplateBinding Background}" CornerRadius="16" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" Cursor="Hand"/>
-                                                        </ControlTemplate>
-                                                    </Button.Template>
-                                                </Button>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
+                                    <ui:Flyout.Resources>
+                                        <ResourceDictionary>
+                                            <ResourceDictionary.MergedDictionaries>
+                                                <ResourceDictionary Source="pack://application:,,,/HandyControl;component/Themes/Theme.xaml"/>
+                                            </ResourceDictionary.MergedDictionaries>
+                                        </ResourceDictionary>
+                                    </ui:Flyout.Resources>
+                                    <hc:ColorPicker SelectedBrush="{Binding CurrentColorBrush, Mode=TwoWay}" Margin="4"/>
                                 </ui:Flyout>
                             </Grid>
                             

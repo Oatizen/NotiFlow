@@ -1,9 +1,10 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Linq;
 using System.Threading;
 using Microsoft.Win32;
 using Wpf.Ui.Appearance;
 using NotiFlow.Services;
+using CommunityToolkit.Mvvm.Messaging;
 
 namespace NotiFlow
 {
@@ -21,20 +22,20 @@ namespace NotiFlow
         {
             this.DispatcherUnhandledException += (s, e) =>
             {
-                System.IO.File.WriteAllText("crash_dispatcher.log", e.Exception.ToString());
+                System.IO.File.WriteAllText(System.IO.Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "crash_dispatcher.log"), e.Exception.ToString());
                 MessageBox.Show(e.Exception.ToString(), "WPF UI 线程崩溃", MessageBoxButton.OK, MessageBoxImage.Error);
                 e.Handled = true;
             };
 
             System.AppDomain.CurrentDomain.UnhandledException += (s, e) =>
             {
-                System.IO.File.WriteAllText("crash_domain.log", e.ExceptionObject.ToString());
+                System.IO.File.WriteAllText(System.IO.Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "crash_domain.log"), e.ExceptionObject.ToString());
                 MessageBox.Show(e.ExceptionObject.ToString(), "应用程序域致命崩溃", MessageBoxButton.OK, MessageBoxImage.Error);
             };
 
             System.Threading.Tasks.TaskScheduler.UnobservedTaskException += (s, e) =>
             {
-                System.IO.File.WriteAllText("crash_task.log", e.Exception.ToString());
+                System.IO.File.WriteAllText(System.IO.Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "crash_task.log"), e.Exception.ToString());
                 MessageBox.Show(e.Exception.ToString(), "异步任务后台崩溃", MessageBoxButton.OK, MessageBoxImage.Error);
                 e.SetObserved();
             };
@@ -66,6 +67,9 @@ namespace NotiFlow
 
             // 启动时自动尝试导入曾经落盘的配置文件（带安全回落防注入机制）
             BarrageSettings.ImportConfig();
+
+            // 执行防崩溃循环安全模式检查
+            CheckAndApplySafeMode();
 
             // 仅在启动时应用一次默认主题 (根据配置)
             if (BarrageSettings.Theme == "Dark")
@@ -113,6 +117,87 @@ namespace NotiFlow
 
             // 同步一次开机自启状态（防脏数据）
             UpdateStartupShortcut(BarrageSettings.RunOnStartup);
+
+            // 如果触发了安全模式，强制显示警告并等待用户决定是否重新启用
+            if (BarrageSettings.IsSafeMode)
+            {
+                ShowOrActivateSettingsWindow();
+                var dialog = new Views.Windows.SimpleDialogWindow(
+                    "安全模式已启动",
+                    "检测到NotiFlow非正常关闭，已自动关闭弹幕开关，\n点击确定重新启用",
+                    "确定",
+                    "取消")
+                {
+                    Owner = _settingsWindow,
+                    Topmost = true
+                };
+                dialog.ShowDialog();
+                if (dialog.IsConfirmed)
+                {
+                    BarrageSettings.IsWorking = true;
+                    SyncMainWindowVisibility();
+                    CommunityToolkit.Mvvm.Messaging.WeakReferenceMessenger.Default.Send(new Models.WorkStateChangedMessage(true));
+                }
+            }
+        }
+
+        private void CheckAndApplySafeMode()
+        {
+            string lockFilePath = System.IO.Path.Combine(
+                System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData), 
+                "NotiFlow", 
+                "startup.lock");
+
+            try
+            {
+                // 计算当前系统开机时间戳（精确到秒）
+                long currentBootTimeSeconds = (long)(System.DateTime.UtcNow - System.TimeSpan.FromMilliseconds(System.Environment.TickCount64)).Subtract(System.DateTime.UnixEpoch).TotalSeconds;
+
+                if (System.IO.File.Exists(lockFilePath))
+                {
+                    // 上次没有正常关闭
+                    string savedBootTimeStr = System.IO.File.ReadAllText(lockFilePath);
+                    if (long.TryParse(savedBootTimeStr, out long savedBootTimeSeconds))
+                    {
+                        if (System.Math.Abs(currentBootTimeSeconds - savedBootTimeSeconds) > 10)
+                        {
+                            // 设备异常重启
+                            BarrageSettings.DeviceCrashCount++;
+                        }
+                        else
+                        {
+                            // 软件异常关闭
+                            BarrageSettings.SoftwareCrashCount++;
+                        }
+                    }
+
+                    if (BarrageSettings.DeviceCrashCount >= 2 || BarrageSettings.SoftwareCrashCount >= 3)
+                    {
+                        BarrageSettings.DeviceCrashCount = 0;
+                        BarrageSettings.SoftwareCrashCount = 0;
+                        BarrageSettings.IsWorking = false;
+                        BarrageSettings.IsSafeMode = true;
+                    }
+                    
+                    BarrageSettings.ExportConfig();
+                }
+
+                // 写入新的 Lock 文件
+                System.IO.File.WriteAllText(lockFilePath, currentBootTimeSeconds.ToString());
+
+                // 启动 5 分钟稳定期定时器
+                _ = System.Threading.Tasks.Task.Delay(System.TimeSpan.FromMinutes(5)).ContinueWith(t =>
+                {
+                    if (BarrageSettings.DeviceCrashCount > 0 || BarrageSettings.SoftwareCrashCount > 0)
+                    {
+                        BarrageSettings.DeviceCrashCount = 0;
+                        BarrageSettings.SoftwareCrashCount = 0;
+                        BarrageSettings.ExportConfig();
+                        System.Diagnostics.Debug.WriteLine("已度过 5 分钟安全稳定期，崩溃计数已归零。");
+                    }
+                });
+            }
+            catch { }
         }
 
         /// <summary>
@@ -238,13 +323,41 @@ namespace NotiFlow
             _trayIconService?.RefreshWorkingState();
         }
 
+        protected override void OnSessionEnding(SessionEndingCancelEventArgs e)
+        {
+            CleanUpLockFile();
+            base.OnSessionEnding(e);
+        }
+
         protected override void OnExit(ExitEventArgs e)
         {
+            CleanUpLockFile();
             _foregroundMonitorService?.Dispose();
             _trayIconService?.Dispose();
             _mainWindow?.Close();
             _settingsWindow?.Close();
             base.OnExit(e);
+        }
+
+        private void CleanUpLockFile()
+        {
+            string lockFilePath = System.IO.Path.Combine(
+                System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData), 
+                "NotiFlow", 
+                "startup.lock");
+
+            if (System.IO.File.Exists(lockFilePath))
+            {
+                try { System.IO.File.Delete(lockFilePath); } catch { }
+            }
+            
+            // 正常退出，重置所有计数器
+            if (BarrageSettings.DeviceCrashCount > 0 || BarrageSettings.SoftwareCrashCount > 0)
+            {
+                BarrageSettings.DeviceCrashCount = 0;
+                BarrageSettings.SoftwareCrashCount = 0;
+                BarrageSettings.ExportConfig();
+            }
         }
     }
 }

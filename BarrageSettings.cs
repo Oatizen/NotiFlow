@@ -63,6 +63,10 @@ namespace NotiFlow
         public List<Models.ScopeRuleItemDto> SourceBlacklist { get; set; } = new();
         public List<Models.ScopeRuleItemDto> SourceWhitelist { get; set; } = new();
         public List<Models.ScopeRuleItemDto> RecentSourcesCache { get; set; } = new();
+        
+        // 安全模式（防崩溃循环）配置
+        public int DeviceCrashCount { get; set; } = 0;
+        public int SoftwareCrashCount { get; set; } = 0;
     }
 
     /// <summary>
@@ -135,6 +139,11 @@ namespace NotiFlow
         /// </summary>
         public static List<Models.ScopeRuleItemDto> RecentSourcesCache { get; set; } = new();
 
+        // ====== 安全模式（防崩溃循环）配置 ======
+        public static int DeviceCrashCount { get; set; } = 0;
+        public static int SoftwareCrashCount { get; set; } = 0;
+        public static bool IsSafeMode { get; set; } = false;
+
         // ====== 运行时应用状态 ======
         /// <summary>
         /// 指示程序当前是否正处于开启（渲染弹幕）状态。
@@ -195,7 +204,9 @@ namespace NotiFlow
                     SourceFilterMode = SourceFilterMode,
                     SourceBlacklist = SourceBlacklist,
                     SourceWhitelist = SourceWhitelist,
-                    RecentSourcesCache = RecentSourcesCache
+                    RecentSourcesCache = RecentSourcesCache,
+                    DeviceCrashCount = DeviceCrashCount,
+                    SoftwareCrashCount = SoftwareCrashCount
                 };
 
                 // 确保目录存在
@@ -300,6 +311,8 @@ namespace NotiFlow
                 SourceBlacklist = dto.SourceBlacklist ?? new();
                 SourceWhitelist = dto.SourceWhitelist ?? new();
                 RecentSourcesCache = dto.RecentSourcesCache ?? new();
+                DeviceCrashCount = dto.DeviceCrashCount;
+                SoftwareCrashCount = dto.SoftwareCrashCount;
             }
             catch (Exception ex)
             {
@@ -348,6 +361,9 @@ namespace NotiFlow
             SourceBlacklist = new();
             SourceWhitelist = new();
             RecentSourcesCache = new();
+            DeviceCrashCount = 0;
+            SoftwareCrashCount = 0;
+            IsSafeMode = false;
             
             // 重置后立即保存生效
             ExportConfig();

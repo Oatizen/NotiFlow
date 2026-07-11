@@ -69,6 +69,7 @@ namespace NotiFlow.Models
 
             _textColorHex = (BarrageSettings.TextColor is SolidColorBrush brush) ? brush.Color.ToString() : "#FFFFFF";
             _currentColorBrush = BarrageSettings.TextColor;
+            _currentColor = (BarrageSettings.TextColor is SolidColorBrush b) ? b.Color : Colors.White;
 
             PresetColors = new ObservableCollection<ColorPaletteItem>
             {
@@ -141,12 +142,33 @@ namespace NotiFlow.Models
                 var color = (Color)ColorConverter.ConvertFromString(value);
                 CurrentColorBrush = new SolidColorBrush(color);
                 BarrageSettings.TextColor = CurrentColorBrush;
+                if (_currentColor != color)
+                {
+                    _currentColor = color;
+                    OnPropertyChanged(nameof(CurrentColor));
+                }
                 TriggerSaveAndPreview();
             }
             catch
             {
                 // 如果输入不合法，原封不动，防止崩溃
             }
+        }
+
+        [ObservableProperty]
+        private Color _currentColor;
+        partial void OnCurrentColorChanged(Color value)
+        {
+            CurrentColorBrush = new SolidColorBrush(value);
+            BarrageSettings.TextColor = CurrentColorBrush;
+            
+            string newHex = $"#{value.A:X2}{value.R:X2}{value.G:X2}{value.B:X2}";
+            if (_textColorHex != newHex)
+            {
+                _textColorHex = newHex;
+                OnPropertyChanged(nameof(TextColorHex));
+            }
+            TriggerSaveAndPreview();
         }
 
         [RelayCommand]

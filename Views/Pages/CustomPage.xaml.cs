@@ -28,6 +28,15 @@ namespace NotiFlow.Views.Pages
                 SpawnPreviewBarrage();
             });
 
+            WeakReferenceMessenger.Default.Register<WorkStateChangedMessage>(this, (recipient, message) =>
+            {
+                // Ensure UI update happens on the main thread
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    UpdateWorkButtonState();
+                });
+            });
+
             if (PreviewBorder.ActualWidth > 0)
             {
                 SpawnPreviewBarrage();
@@ -37,6 +46,7 @@ namespace NotiFlow.Views.Pages
         private void Page_Unloaded(object sender, RoutedEventArgs e)
         {
             WeakReferenceMessenger.Default.Unregister<BarragePreviewMessage>(this);
+            WeakReferenceMessenger.Default.Unregister<WorkStateChangedMessage>(this);
         }
 
         private void SpawnPreviewBarrage()
