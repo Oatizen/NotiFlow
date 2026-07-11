@@ -5,6 +5,7 @@
       xmlns:viewmodels="clr-namespace:NotiFlow.Models"
       xmlns:converters="clr-namespace:NotiFlow.Converters"
       xmlns:rendering="clr-namespace:NotiFlow.Rendering"
+      xmlns:controls="clr-namespace:NotiFlow.Views.Controls"
       xmlns:hc="https://handyorg.github.io/handycontrol"
       Title="弹幕设置"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
@@ -143,14 +144,7 @@
                                 </Button>
                                 
                                 <ui:Flyout x:Name="ColorPaletteFlyout" Placement="Bottom">
-                                    <ui:Flyout.Resources>
-                                        <ResourceDictionary>
-                                            <ResourceDictionary.MergedDictionaries>
-                                                <ResourceDictionary Source="pack://application:,,,/HandyControl;component/Themes/Theme.xaml"/>
-                                            </ResourceDictionary.MergedDictionaries>
-                                        </ResourceDictionary>
-                                    </ui:Flyout.Resources>
-                                    <hc:ColorPicker SelectedBrush="{Binding CurrentColorBrush, Mode=TwoWay}" Margin="4"/>
+                                    <controls:ModernColorPicker SelectedColor="{Binding CurrentColor, Mode=TwoWay}" PresetColors="{Binding PresetColors}" Margin="4"/>
                                 </ui:Flyout>
                             </Grid>
                             

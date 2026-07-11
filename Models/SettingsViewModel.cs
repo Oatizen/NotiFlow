@@ -71,17 +71,36 @@ namespace NotiFlow.Models
             _currentColorBrush = BarrageSettings.TextColor;
             _currentColor = (BarrageSettings.TextColor is SolidColorBrush b) ? b.Color : Colors.White;
 
-            PresetColors = new ObservableCollection<ColorPaletteItem>
+            var hexColors = new[]
             {
-                new ColorPaletteItem { Name = "纯净白", Hex = "#FFFFFF", Brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFFFFF")) },
-                new ColorPaletteItem { Name = "樱花粉", Hex = "#FFA1C5", Brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFA1C5")) },
-                new ColorPaletteItem { Name = "明媚黄", Hex = "#FFD700", Brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFD700")) },
-                new ColorPaletteItem { Name = "青草绿", Hex = "#98FB98", Brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#98FB98")) },
-                new ColorPaletteItem { Name = "天际蓝", Hex = "#87CEEB", Brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#87CEEB")) },
-                new ColorPaletteItem { Name = "梦幻紫", Hex = "#DDA0DD", Brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#DDA0DD")) },
-                new ColorPaletteItem { Name = "活力橙", Hex = "#FFA500", Brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFA500")) },
-                new ColorPaletteItem { Name = "暗夜黑", Hex = "#000000", Brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#000000")) },
+                // Row 3 (Light)
+                "#EF9A9A", "#FFCC80", "#C5E1A5", "#90CAF9", "#CE93D8", "#E0E0E0",
+                // Row 4
+                "#E57373", "#FFB74D", "#AED581", "#64B5F6", "#BA68C8", "#BDBDBD",
+                // Row 5
+                "#EF5350", "#FFA726", "#9CCC65", "#42A5F5", "#AB47BC", "#9E9E9E",
+                // Row 6
+                "#F44336", "#FF9800", "#8BC34A", "#2196F3", "#9C27B0", "#757575",
+                // Row 7 (Primary)
+                "#E53935", "#F57C00", "#7CB342", "#1E88E5", "#8E24AA", "#616161",
+                // Row 8
+                "#D32F2F", "#EF6C00", "#689F38", "#1976D2", "#7B1FA2", "#424242",
+                // Row 9
+                "#C62828", "#E65100", "#558B2F", "#1565C0", "#6A1B9A", "#212121",
+                // Row 10 (Darkest)
+                "#B71C1C", "#BF360C", "#33691E", "#0D47A1", "#4A148C", "#000000"
             };
+
+            PresetColors = new ObservableCollection<ColorPaletteItem>();
+            foreach (var hex in hexColors)
+            {
+                PresetColors.Add(new ColorPaletteItem 
+                { 
+                    Name = hex, 
+                    Hex = hex, 
+                    Brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex)) 
+                });
+            }
 
             _fontSize = BarrageSettings.FontSize;
             _maxTextLength = BarrageSettings.MaxTextLength;
