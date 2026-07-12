@@ -133,6 +133,10 @@ namespace NotiFlow.Views.Controls
             if (!_isInitialized) return;
             ValueSliderTopColor.Color = ColorHelper.HsvToRgb(_h, _s, 1);
             AlphaSliderTopColor.Color = ColorHelper.HsvToRgb(_h, _s, _v);
+
+            if (SGradStart != null) SGradStart.Color = ColorHelper.HsvToRgb(_h, 0, _v);
+            if (SGradEnd != null) SGradEnd.Color = ColorHelper.HsvToRgb(_h, 1, _v);
+            if (VGradEnd != null) VGradEnd.Color = ColorHelper.HsvToRgb(_h, _s, 1);
         }
 
         private void UpdatePreview()
@@ -158,6 +162,20 @@ namespace NotiFlow.Views.Controls
             GSlider.Value = c.G;
             BSlider.Value = c.B;
             ASlider.Value = c.A;
+            
+            if (RTextBox != null) RTextBox.Text = c.R.ToString();
+            if (GTextBox != null) GTextBox.Text = c.G.ToString();
+            if (BTextBox != null) BTextBox.Text = c.B.ToString();
+            if (ATextBox != null) ATextBox.Text = c.A.ToString();
+            
+            if (HsvHSlider != null) HsvHSlider.Value = _h;
+            if (HsvSSlider != null) HsvSSlider.Value = _s;
+            if (HsvVSlider != null) HsvVSlider.Value = _v;
+
+            if (HTextBox != null) HTextBox.Text = Math.Round(_h).ToString();
+            if (STextBox != null) STextBox.Text = Math.Round(_s * 100).ToString();
+            if (VTextBox != null) VTextBox.Text = Math.Round(_v * 100).ToString();
+
             HexTextBox.Text = $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
         }
 
@@ -178,6 +196,19 @@ namespace NotiFlow.Views.Controls
             ValueSlider.Value = _v;
             AlphaSlider.Value = a;
             
+            if (RTextBox != null) RTextBox.Text = r.ToString();
+            if (GTextBox != null) GTextBox.Text = g.ToString();
+            if (BTextBox != null) BTextBox.Text = b.ToString();
+            if (ATextBox != null) ATextBox.Text = a.ToString();
+            
+            if (HsvHSlider != null) HsvHSlider.Value = _h;
+            if (HsvSSlider != null) HsvSSlider.Value = _s;
+            if (HsvVSlider != null) HsvVSlider.Value = _v;
+
+            if (HTextBox != null) HTextBox.Text = Math.Round(_h).ToString();
+            if (STextBox != null) STextBox.Text = Math.Round(_s * 100).ToString();
+            if (VTextBox != null) VTextBox.Text = Math.Round(_v * 100).ToString();
+            
             UpdateThumbPosition();
             UpdateGradients();
             SelectedColor = c;
@@ -186,6 +217,165 @@ namespace NotiFlow.Views.Controls
             HexTextBox.Text = $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
             
             _isUpdatingInternally = false;
+        }
+
+        private void HsvSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_isUpdatingInternally) return;
+            _isUpdatingInternally = true;
+
+            _h = HsvHSlider.Value;
+            _s = HsvSSlider.Value;
+            _v = HsvVSlider.Value;
+            byte a = (byte)ASlider.Value;
+            
+            var c = ColorHelper.HsvToRgb(_h, _s, _v, a);
+            
+            HueSlider.Value = _h;
+            ValueSlider.Value = _v;
+            AlphaSlider.Value = a;
+            
+            RSlider.Value = c.R;
+            GSlider.Value = c.G;
+            BSlider.Value = c.B;
+            
+            if (RTextBox != null) RTextBox.Text = c.R.ToString();
+            if (GTextBox != null) GTextBox.Text = c.G.ToString();
+            if (BTextBox != null) BTextBox.Text = c.B.ToString();
+            
+            if (HTextBox != null) HTextBox.Text = Math.Round(_h).ToString();
+            if (STextBox != null) STextBox.Text = Math.Round(_s * 100).ToString();
+            if (VTextBox != null) VTextBox.Text = Math.Round(_v * 100).ToString();
+
+            UpdateThumbPosition();
+            UpdateGradients();
+            SelectedColor = c;
+            SelectedColorHex = $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
+            PreviewColorBrush.Color = c;
+            HexTextBox.Text = $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
+            
+            _isUpdatingInternally = false;
+        }
+
+        private void RgbTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (_isUpdatingInternally || RSlider == null || GSlider == null || BSlider == null) return;
+            
+            if (byte.TryParse(RTextBox.Text, out byte r) && 
+                byte.TryParse(GTextBox.Text, out byte g) && 
+                byte.TryParse(BTextBox.Text, out byte b))
+            {
+                _isUpdatingInternally = true;
+                RSlider.Value = r;
+                GSlider.Value = g;
+                BSlider.Value = b;
+                
+                byte a = (byte)ASlider.Value;
+                var c = Color.FromArgb(a, r, g, b);
+                ColorHelper.RgbToHsv(c, out _h, out _s, out _v);
+                
+                HueSlider.Value = _h;
+                ValueSlider.Value = _v;
+                
+                if (HsvHSlider != null) HsvHSlider.Value = _h;
+                if (HsvSSlider != null) HsvSSlider.Value = _s;
+                if (HsvVSlider != null) HsvVSlider.Value = _v;
+
+                if (HTextBox != null) HTextBox.Text = Math.Round(_h).ToString();
+                if (STextBox != null) STextBox.Text = Math.Round(_s * 100).ToString();
+                if (VTextBox != null) VTextBox.Text = Math.Round(_v * 100).ToString();
+                
+                UpdateThumbPosition();
+                UpdateGradients();
+                SelectedColor = c;
+                SelectedColorHex = $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
+                PreviewColorBrush.Color = c;
+                HexTextBox.Text = $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
+                
+                _isUpdatingInternally = false;
+            }
+        }
+
+        private void HsvTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (_isUpdatingInternally || HsvHSlider == null || HsvSSlider == null || HsvVSlider == null) return;
+            
+            if (double.TryParse(HTextBox.Text, out double h) && 
+                double.TryParse(STextBox.Text, out double s) && 
+                double.TryParse(VTextBox.Text, out double v))
+            {
+                _isUpdatingInternally = true;
+                _h = Math.Max(0, Math.Min(360, h));
+                _s = Math.Max(0, Math.Min(100, s)) / 100.0;
+                _v = Math.Max(0, Math.Min(100, v)) / 100.0;
+                
+                HsvHSlider.Value = _h;
+                HsvSSlider.Value = _s;
+                HsvVSlider.Value = _v;
+                
+                byte a = (byte)ASlider.Value;
+                var c = ColorHelper.HsvToRgb(_h, _s, _v, a);
+                
+                HueSlider.Value = _h;
+                ValueSlider.Value = _v;
+                
+                RSlider.Value = c.R;
+                GSlider.Value = c.G;
+                BSlider.Value = c.B;
+                
+                if (RTextBox != null) RTextBox.Text = c.R.ToString();
+                if (GTextBox != null) GTextBox.Text = c.G.ToString();
+                if (BTextBox != null) BTextBox.Text = c.B.ToString();
+
+                UpdateThumbPosition();
+                UpdateGradients();
+                SelectedColor = c;
+                SelectedColorHex = $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
+                PreviewColorBrush.Color = c;
+                HexTextBox.Text = $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
+                
+                _isUpdatingInternally = false;
+            }
+        }
+
+        private void ATextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (_isUpdatingInternally || ASlider == null) return;
+            
+            if (byte.TryParse(ATextBox.Text, out byte a))
+            {
+                _isUpdatingInternally = true;
+                ASlider.Value = a;
+                AlphaSlider.Value = a;
+                
+                var c = Color.FromArgb(a, (byte)RSlider.Value, (byte)GSlider.Value, (byte)BSlider.Value);
+                SelectedColor = c;
+                SelectedColorHex = $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
+                PreviewColorBrush.Color = c;
+                HexTextBox.Text = $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
+                
+                _isUpdatingInternally = false;
+            }
+        }
+
+        private void TabButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender == RgbTabButton)
+            {
+                RgbTabButton.Appearance = Wpf.Ui.Controls.ControlAppearance.Primary;
+                HsvTabButton.Appearance = Wpf.Ui.Controls.ControlAppearance.Transparent;
+
+                if (RgbSlidersPanel != null) RgbSlidersPanel.Visibility = Visibility.Visible;
+                if (HsvSlidersPanel != null) HsvSlidersPanel.Visibility = Visibility.Collapsed;
+            }
+            else if (sender == HsvTabButton)
+            {
+                HsvTabButton.Appearance = Wpf.Ui.Controls.ControlAppearance.Primary;
+                RgbTabButton.Appearance = Wpf.Ui.Controls.ControlAppearance.Transparent;
+
+                if (RgbSlidersPanel != null) RgbSlidersPanel.Visibility = Visibility.Collapsed;
+                if (HsvSlidersPanel != null) HsvSlidersPanel.Visibility = Visibility.Visible;
+            }
         }
 
         private void HexTextBox_TextChanged(object sender, TextChangedEventArgs e)

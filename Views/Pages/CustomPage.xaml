@@ -21,6 +21,7 @@
     <Page.Resources>
         <converters:BooleanToAppearanceConverter x:Key="BoolToAppearance" />
         <converters:BooleanToAppearanceConverter x:Key="InverseBoolToAppearance" Invert="True"/>
+        <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
     </Page.Resources>
 
     <ScrollViewer x:Name="MainScrollViewer" VerticalScrollBarVisibility="Auto" CanContentScroll="False" Background="Transparent">
@@ -96,8 +97,30 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <ui:Button Grid.Row="0" Content="常规" Appearance="{Binding IsFontWeightBold, Converter={StaticResource InverseBoolToAppearance}}" Command="{Binding SetFontWeightCommand}" CommandParameter="False" HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
-                            <ui:Button Grid.Row="1" Content="加粗" Appearance="{Binding IsFontWeightBold, Converter={StaticResource BoolToAppearance}}" Command="{Binding SetFontWeightCommand}" CommandParameter="True" HorizontalAlignment="Stretch"/>
+                            <ui:Button Grid.Row="0" Content="常规" Command="{Binding SetFontWeightCommand}" CommandParameter="False" HorizontalAlignment="Stretch" Margin="0,0,0,8">
+                                <ui:Button.Style>
+                                    <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                        <Setter Property="Appearance" Value="Secondary" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsFontWeightBold}" Value="False">
+                                                <Setter Property="Appearance" Value="Primary" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:Button.Style>
+                            </ui:Button>
+                            <ui:Button Grid.Row="1" Content="加粗" Command="{Binding SetFontWeightCommand}" CommandParameter="True" HorizontalAlignment="Stretch">
+                                <ui:Button.Style>
+                                    <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                        <Setter Property="Appearance" Value="Secondary" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsFontWeightBold}" Value="True">
+                                                <Setter Property="Appearance" Value="Primary" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:Button.Style>
+                            </ui:Button>
                         </Grid>
 
                         <ui:TextBlock Text="字体样式" Margin="0,0,0,8"/>
@@ -107,15 +130,37 @@
                                 <ColumnDefinition Width="8"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <ui:Button Grid.Column="0" Content="斜体" Appearance="{Binding IsFontStyleItalic, Converter={StaticResource BoolToAppearance}}" Command="{Binding ToggleFontStyleCommand}" HorizontalAlignment="Stretch"/>
-                            <ui:Button Grid.Column="2" Content="下划线" Appearance="{Binding IsUnderline, Converter={StaticResource BoolToAppearance}}" Command="{Binding ToggleUnderlineCommand}" HorizontalAlignment="Stretch"/>
+                            <ui:Button Grid.Column="0" Content="斜体" Command="{Binding ToggleFontStyleCommand}" HorizontalAlignment="Stretch">
+                                <ui:Button.Style>
+                                    <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                        <Setter Property="Appearance" Value="Secondary" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsFontStyleItalic}" Value="True">
+                                                <Setter Property="Appearance" Value="Primary" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:Button.Style>
+                            </ui:Button>
+                            <ui:Button Grid.Column="2" Content="下划线" Command="{Binding ToggleUnderlineCommand}" HorizontalAlignment="Stretch">
+                                <ui:Button.Style>
+                                    <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                        <Setter Property="Appearance" Value="Secondary" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsUnderline}" Value="True">
+                                                <Setter Property="Appearance" Value="Primary" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:Button.Style>
+                            </ui:Button>
                         </Grid>
 
                         <Grid Margin="0,18,0,8">
                             <ui:TextBlock Text="弹幕最大长度"/>
                             <ui:TextBlock Text="{Binding MaxLengthDisplay}" HorizontalAlignment="Right" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold"/>
                         </Grid>
-                        <Slider Minimum="5" Maximum="50" Value="{Binding MaxTextLength, Mode=TwoWay}" Margin="0,0,0,0" />
+                        <Slider Minimum="10" Maximum="100" Value="{Binding MaxTextLength, Mode=TwoWay}" Margin="0,0,0,18" />
                     </StackPanel>
                 </Border>
 
@@ -163,7 +208,7 @@
                         </Grid>
                         <Slider Minimum="0" Maximum="100" Value="{Binding BackgroundOpacityPercentage, Mode=TwoWay}" Margin="0,0,0,22" />
 
-                        <Grid Margin="0,0,0,22">
+                        <Grid Margin="0,0,0,8">
                             <StackPanel>
                                 <ui:TextBlock Text="显示应用图标"/>
                                 <ui:TextBlock Text="弹幕前显示应用图标" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
@@ -171,7 +216,7 @@
                             <ui:ToggleSwitch HorizontalAlignment="Right" VerticalAlignment="Center" IsChecked="{Binding ShowAppIcon, Mode=TwoWay}"/>
                         </Grid>
 
-                        <Grid Margin="0,0,0,22">
+                        <Grid Margin="0,0,0,8">
                             <StackPanel>
                                 <ui:TextBlock Text="显示应用名称"/>
                                 <ui:TextBlock Text="弹幕前显示应用名称" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
@@ -232,9 +277,42 @@
                                 <ColumnDefinition Width="8"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <ui:Button Grid.Column="0" Content="居中偏上" Appearance="{Binding IsTrackUpperCenter, Converter={StaticResource BoolToAppearance}}" Command="{Binding SetTrackStrategyCommand}" CommandParameter="UpperCenter" HorizontalAlignment="Stretch" Padding="4,6"/>
-                            <ui:Button Grid.Column="2" Content="顶部优先" Appearance="{Binding IsTrackTopFirst, Converter={StaticResource BoolToAppearance}}" Command="{Binding SetTrackStrategyCommand}" CommandParameter="TopFirst" HorizontalAlignment="Stretch" Padding="4,6"/>
-                            <ui:Button Grid.Column="4" Content="底部优先" Appearance="{Binding IsTrackBottomFirst, Converter={StaticResource BoolToAppearance}}" Command="{Binding SetTrackStrategyCommand}" CommandParameter="BottomFirst" HorizontalAlignment="Stretch" Padding="4,6"/>
+                            <ui:Button Grid.Column="0" Content="居中偏上" Command="{Binding SetTrackStrategyCommand}" CommandParameter="UpperCenter" HorizontalAlignment="Stretch" Padding="4,6">
+                                <ui:Button.Style>
+                                    <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                        <Setter Property="Appearance" Value="Secondary" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsTrackUpperCenter}" Value="True">
+                                                <Setter Property="Appearance" Value="Primary" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:Button.Style>
+                            </ui:Button>
+                            <ui:Button Grid.Column="2" Content="顶部优先" Command="{Binding SetTrackStrategyCommand}" CommandParameter="TopFirst" HorizontalAlignment="Stretch" Padding="4,6">
+                                <ui:Button.Style>
+                                    <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                        <Setter Property="Appearance" Value="Secondary" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsTrackTopFirst}" Value="True">
+                                                <Setter Property="Appearance" Value="Primary" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:Button.Style>
+                            </ui:Button>
+                            <ui:Button Grid.Column="4" Content="底部优先" Command="{Binding SetTrackStrategyCommand}" CommandParameter="BottomFirst" HorizontalAlignment="Stretch" Padding="4,6">
+                                <ui:Button.Style>
+                                    <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                        <Setter Property="Appearance" Value="Secondary" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsTrackBottomFirst}" Value="True">
+                                                <Setter Property="Appearance" Value="Primary" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:Button.Style>
+                            </ui:Button>
                         </Grid>
                     </StackPanel>
                 </Border>
