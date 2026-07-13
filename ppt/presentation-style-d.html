@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NotiFlow 宣传展示 - Huashu Design (Black Big-Number Stage)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Palette (Steve Jobs / Zen Style) */
+            --bg-pure-black: #000000;
+            --text-pure-white: #FFFFFF;
+            --text-gray: #86868B;
+            --accent-blue: #2997FF; /* Apple Keynote Blue */
+            
+            /* Typography */
+            --font-main: 'Noto Sans SC', sans-serif;
+            
+            /* Base */
+            --stage-bg: #111111;
+            --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+            --duration-normal: 0.8s;
+        }
+
+        /* viewport-base.css */
+        html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--stage-bg); font-family: var(--font-main); }
+        .deck-viewport { position: fixed; inset: 0; overflow: hidden; background: var(--stage-bg); }
+        .deck-stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; transform-origin: 0 0; background: var(--bg-pure-black); color: var(--text-pure-white); }
+        .slide { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; visibility: hidden; opacity: 0; pointer-events: none; }
+        .slide.active, .slide.visible { visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; }
+        
+        .reveal { opacity: 0; transform: translateY(40px) scale(0.95); transition: opacity var(--duration-normal) var(--ease-out-expo), transform var(--duration-normal) var(--ease-out-expo); }
+        .slide.visible .reveal { opacity: 1; transform: translateY(0) scale(1); }
+        .reveal:nth-child(1) { transition-delay: 0.1s; }
+        .reveal:nth-child(2) { transition-delay: 0.3s; }
+        .reveal:nth-child(3) { transition-delay: 0.5s; }
+
+        /* Typography Styles */
+        .zen-title { font-weight: 900; font-size: 240px; line-height: 1; margin: 0; letter-spacing: -0.02em; }
+        .zen-number { font-weight: 900; font-size: 400px; line-height: 1; margin: 0; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+        .zen-subtitle { font-weight: 700; font-size: 80px; margin: 20px 0 0 0; color: var(--text-gray); }
+        .zen-caption { font-weight: 400; font-size: 40px; margin: 40px 0 0 0; color: var(--text-gray); max-width: 1200px; line-height: 1.5; }
+        
+        .highlight { color: var(--accent-blue); }
+
+        /* Layouts */
+        .split-layout { display: flex; flex-direction: row; justify-content: center; align-items: center; width: 100%; padding: 0 100px; gap: 100px; }
+        .split-left { text-align: right; flex: 1; }
+        .split-right { text-align: left; flex: 1; }
+
+        /* Edit toggle */
+        .edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
+        .edit-toggle { position: fixed; top: 20px; left: 20px; padding: 10px; background: white; color: black; border-radius: 8px; border: 1px solid #ccc; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 10001; }
+        .edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
+        [contenteditable]:hover { outline: 2px dashed rgba(255,255,255,0.3); background: rgba(255,255,255,0.05); }
+    </style>
+</head>
+<body>
+    <div class="edit-hotzone"></div>
+    <button class="edit-toggle" id="editToggle" title="Edit mode (E)">✏️ Edit text</button>
+
+    <div class="deck-viewport">
+        <main class="deck-stage" id="deckStage">
+            
+            <!-- === 1. COVER === -->
+            <section class="slide active">
+                <h1 class="zen-title reveal" data-edit="true">NotiFlow</h1>
+                <p class="zen-subtitle reveal" data-edit="true">通知的终极形态。</p>
+            </section>
+
+            <!-- === 2. 沉浸体验 === -->
+            <section class="slide">
+                <div class="reveal">
+                    <h2 class="zen-number highlight" data-edit="true">0</h2>
+                </div>
+                <h3 class="zen-subtitle reveal" data-edit="true" style="color: var(--text-pure-white)">打扰。</h3>
+                <p class="zen-caption reveal" data-edit="true">全神贯注时，重要通知化作弹幕划过。<br>无需低头，无需切屏。</p>
+            </section>
+
+            <!-- === 3. 鼠标穿透 === -->
+            <section class="slide">
+                <div class="reveal">
+                    <h2 class="zen-number" data-edit="true">100<span style="font-size: 200px">%</span></h2>
+                </div>
+                <h3 class="zen-subtitle highlight reveal" data-edit="true">鼠标穿透</h3>
+                <p class="zen-caption reveal" data-edit="true">弹幕完全无视点击，确保办公与娱乐不受任何阻碍。</p>
+            </section>
+
+            <!-- === 4. 硬件加速 === -->
+            <section class="slide">
+                <h2 class="zen-title highlight reveal" data-edit="true">GPU</h2>
+                <h3 class="zen-subtitle reveal" data-edit="true" style="color: var(--text-pure-white)">硬件级直渲</h3>
+                <p class="zen-caption reveal" data-edit="true">接入 Windows.UI.Composition 原生图形 API。<br>丝滑如水，近乎零开销。</p>
+            </section>
+
+            <!-- === 5. 自定义选项 === -->
+            <section class="slide">
+                <div class="split-layout">
+                    <div class="split-left reveal">
+                        <h2 class="zen-number highlight" data-edit="true">16</h2>
+                        <h3 class="zen-subtitle" data-edit="true" style="color: var(--text-pure-white)">种样式设置</h3>
+                    </div>
+                    <div class="split-right reveal" style="transition-delay: 0.3s;">
+                        <h2 class="zen-number highlight" data-edit="true" style="color: var(--text-pure-white)">11</h2>
+                        <h3 class="zen-subtitle" data-edit="true">种行为设置</h3>
+                    </div>
+                </div>
+                <p class="zen-caption reveal" data-edit="true" style="margin-top: 80px; transition-delay: 0.5s;">丰富的自定义美学，打造你的专属视觉。</p>
+            </section>
+
+            <!-- === 6. 现代化界面 === -->
+            <section class="slide">
+                <h2 class="zen-title reveal" data-edit="true">Fluent</h2>
+                <h3 class="zen-subtitle highlight reveal" data-edit="true">Design</h3>
+                <p class="zen-caption reveal" data-edit="true">告别简陋 Win32。融入微软最新原生组件质感与流畅动画。</p>
+            </section>
+
+            <!-- === 7. 智能过滤 === -->
+            <section class="slide">
+                <h2 class="zen-number highlight reveal" data-edit="true">双重</h2>
+                <h3 class="zen-subtitle reveal" data-edit="true" style="color: var(--text-pure-white)">智能过滤</h3>
+                <div class="split-layout reveal" style="margin-top: 60px; gap: 40px;">
+                    <div style="flex:1; background:#111; padding: 60px; border-radius: 40px;">
+                        <h4 style="font-size: 40px; margin:0 0 20px 0; color:var(--accent-blue);" data-edit="true">来源级</h4>
+                        <p style="font-size: 24px; color:var(--text-gray); margin:0;" data-edit="true">精准黑白名单</p>
+                    </div>
+                    <div style="flex:1; background:#111; padding: 60px; border-radius: 40px;">
+                        <h4 style="font-size: 40px; margin:0 0 20px 0; color:var(--text-pure-white);" data-edit="true">场景级</h4>
+                        <p style="font-size: 24px; color:var(--text-gray); margin:0;" data-edit="true">全屏静默暂停</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- === 8. 纯净 === -->
+            <section class="slide">
+                <div class="reveal">
+                    <h2 class="zen-number highlight" data-edit="true">1</h2>
+                </div>
+                <h3 class="zen-subtitle reveal" data-edit="true" style="color: var(--text-pure-white)">个文件</h3>
+                <p class="zen-caption reveal" data-edit="true">独立打包，双击即启，免安装。<br>完全本地开源运行，无隐私泄漏风险。</p>
+            </section>
+            
+            <!-- === 9. CLOSING === -->
+            <section class="slide">
+                <h1 class="zen-title highlight reveal" data-edit="true" style="font-size: 160px; margin-bottom: 40px;">NotiFlow</h1>
+                <p class="zen-subtitle reveal" data-edit="true" style="color: var(--text-pure-white)">改变你看待通知的方式。</p>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        class SlidePresentation {
+            constructor() {
+                this.slides = document.querySelectorAll('.slide');
+                this.currentSlide = 0;
+                this.stage = document.getElementById('deckStage');
+                this.setupStageScale();
+                this.setupKeyboardNav();
+                this.showSlide(0);
+            }
+
+            setupStageScale() {
+                const scale = () => {
+                    const factor = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+                    const x = (window.innerWidth - 1920 * factor) / 2;
+                    const y = (window.innerHeight - 1080 * factor) / 2;
+                    this.stage.style.transform = `translate(${x}px, ${y}px) scale(${factor})`;
+                };
+                scale();
+                window.addEventListener('resize', scale);
+            }
+
+            setupKeyboardNav() {
+                document.addEventListener('keydown', (e) => {
+                    if (e.target.getAttribute('contenteditable')) return; 
+                    if (e.key === 'ArrowRight' || e.key === 'Space' || e.key === 'PageDown') {
+                        this.next();
+                    } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+                        this.prev();
+                    }
+                });
+            }
+
+            next() { if (this.currentSlide < this.slides.length - 1) this.showSlide(this.currentSlide + 1); }
+            prev() { if (this.currentSlide > 0) this.showSlide(this.currentSlide - 1); }
+
+            showSlide(index) {
+                this.currentSlide = Math.max(0, Math.min(index, this.slides.length - 1));
+                this.slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === this.currentSlide);
+                    slide.classList.toggle('visible', i === this.currentSlide);
+                });
+            }
+        }
+
+        const app = new SlidePresentation();
+
+        // Inline Editor
+        const editor = {
+            isActive: false,
+            toggleEditMode: function() {
+                this.isActive = !this.isActive;
+                const toggle = document.getElementById('editToggle');
+                toggle.classList.toggle('active', this.isActive);
+                toggle.textContent = this.isActive ? '✅ Exit Edit Mode' : '✏️ Edit text';
+                
+                document.querySelectorAll('[data-edit="true"]').forEach(el => {
+                    el.setAttribute('contenteditable', this.isActive);
+                });
+            }
+        };
+
+        const hotzone = document.querySelector('.edit-hotzone');
+        const editToggle = document.getElementById('editToggle');
+        let hideTimeout = null;
+
+        hotzone.addEventListener('mouseenter', () => { clearTimeout(hideTimeout); editToggle.classList.add('show'); });
+        hotzone.addEventListener('mouseleave', () => { hideTimeout = setTimeout(() => { if (!editor.isActive) editToggle.classList.remove('show'); }, 400); });
+        editToggle.addEventListener('mouseenter', () => { clearTimeout(hideTimeout); });
+        editToggle.addEventListener('mouseleave', () => { hideTimeout = setTimeout(() => { if (!editor.isActive) editToggle.classList.remove('show'); }, 400); });
+        
+        editToggle.addEventListener('click', () => editor.toggleEditMode());
+        hotzone.addEventListener('click', () => editor.toggleEditMode());
+
+        document.addEventListener('keydown', (e) => {
+            if ((e.key === 'e' || e.key === 'E') && !e.target.getAttribute('contenteditable')) {
+                editor.toggleEditMode();
+            }
+        });
+    </script>
+</body>
+</html>

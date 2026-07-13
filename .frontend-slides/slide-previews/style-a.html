@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Style A - Electric Studio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0a0a; --bg-white: #ffffff; --accent-blue: #4361ee; --text-dark: #0a0a0a; --text-light: #ffffff;
+            --font-display: 'Manrope', sans-serif; --font-body: 'Manrope', sans-serif;
+            --bg-primary: var(--bg-dark); --card-bg: var(--bg-white);
+        }
+        
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--bg-primary, #000); }
+.deck-viewport { position: fixed; inset: 0; overflow: hidden; background: var(--bg-primary, #000); }
+.deck-stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; transform-origin: 0 0; background: var(--card-bg, #fff); }
+.slide { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden; display: block; visibility: hidden; opacity: 0; pointer-events: none; background: var(--slide-bg, transparent); }
+.slide.active, .slide.visible { visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; }
+.reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+.slide.visible .reveal { opacity: 1; transform: translateY(0); }
+.reveal:nth-child(1) { transition-delay: 0.1s; }
+.reveal:nth-child(2) { transition-delay: 0.2s; }
+.reveal:nth-child(3) { transition-delay: 0.3s; }
+.reveal:nth-child(4) { transition-delay: 0.4s; }
+
+        .slide-content { display: flex; flex-direction: column; height: 100%; }
+        .top-panel { flex: 1; background: var(--bg-white); color: var(--text-dark); padding: 120px 100px; display: flex; flex-direction: column; justify-content: center; position: relative; }
+        .bottom-panel { height: 320px; background: var(--accent-blue); color: var(--text-light); padding: 60px 100px; display: flex; align-items: flex-end; justify-content: space-between; }
+        h1 { font-family: var(--font-display); font-weight: 800; font-size: 130px; line-height: 1.05; letter-spacing: -0.03em; margin-bottom: 40px; max-width: 1400px; }
+        p.subtitle { font-family: var(--font-body); font-weight: 500; font-size: 40px; opacity: 0.8; max-width: 800px; line-height: 1.4; }
+        .brand-mark { position: absolute; top: 80px; right: 100px; font-weight: 800; font-size: 24px; letter-spacing: 0.1em; color: var(--accent-blue); text-transform: uppercase; }
+        .meta { font-family: var(--font-body); font-size: 24px; font-weight: 500; opacity: 0.9; letter-spacing: 0.05em; text-transform: uppercase; }
+        .accent-bar { position: absolute; bottom: 0; left: 100px; width: 150px; height: 8px; background: var(--accent-blue); }
+    </style>
+</head>
+<body>
+    <div class="deck-viewport">
+        <main class="deck-stage" id="deckStage">
+            <section class="slide active visible">
+                <div class="slide-content">
+                    <div class="top-panel">
+                        <div class="brand-mark reveal">NotiFlow</div>
+                        <h1 class="reveal">让通知以<br>弹幕之姿呈现</h1>
+                        <p class="subtitle reveal">工作、游戏，消息通知不再是负担。一切尽收眼底。</p>
+                        <div class="accent-bar reveal"></div>
+                    </div>
+                    <div class="bottom-panel">
+                        <div class="meta reveal">PRODUCT INTRODUCTION</div>
+                        <div class="meta reveal">2026</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+<script>
+class SlidePresentation {
+    constructor() {
+        this.slides = document.querySelectorAll('.slide');
+        this.stage = document.getElementById('deckStage');
+        this.setupStageScale();
+        this.showSlide(0);
+    }
+    setupStageScale() {
+        const scale = () => {
+            const factor = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+            const x = (window.innerWidth - 1920 * factor) / 2;
+            const y = (window.innerHeight - 1080 * factor) / 2;
+            this.stage.style.transform = `translate(${x}px, ${y}px) scale(${factor})`;
+        };
+        scale();
+        window.addEventListener('resize', scale);
+    }
+    showSlide(index) {
+        this.slides.forEach((slide, i) => {
+            slide.classList.toggle('active', i === index);
+            slide.classList.toggle('visible', i === index);
+        });
+    }
+}
+new SlidePresentation();
+</script>
+
+</body>
+</html>

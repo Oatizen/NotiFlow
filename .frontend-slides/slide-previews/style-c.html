@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Style C - Creative Voltage</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&family=Caveat:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-blue: #0066ff; --bg-dark: #1a1a2e; --accent-neon: #d4ff00; --text-light: #ffffff;
+            --font-display: 'Syne', sans-serif; --font-mono: 'Space Mono', monospace; --font-script: 'Caveat', cursive;
+            --bg-primary: var(--bg-dark); --card-bg: var(--bg-dark);
+        }
+        
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--bg-primary, #000); }
+.deck-viewport { position: fixed; inset: 0; overflow: hidden; background: var(--bg-primary, #000); }
+.deck-stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; transform-origin: 0 0; background: var(--card-bg, #fff); }
+.slide { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden; display: block; visibility: hidden; opacity: 0; pointer-events: none; background: var(--slide-bg, transparent); }
+.slide.active, .slide.visible { visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; }
+.reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+.slide.visible .reveal { opacity: 1; transform: translateY(0); }
+.reveal:nth-child(1) { transition-delay: 0.1s; }
+.reveal:nth-child(2) { transition-delay: 0.2s; }
+.reveal:nth-child(3) { transition-delay: 0.3s; }
+.reveal:nth-child(4) { transition-delay: 0.4s; }
+
+        .deck-stage { background: var(--bg-dark); display: flex; color: var(--text-light); }
+        .left-panel { flex: 0 0 45%; background: var(--bg-blue); padding: 100px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
+        .right-panel { flex: 1; padding: 120px; display: flex; flex-direction: column; justify-content: center; position: relative; }
+        .halftone { position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,0.2) 2px, transparent 2px); background-size: 20px 20px; pointer-events: none; opacity: 0.5; }
+        .badge { display: inline-block; background: var(--accent-neon); color: var(--bg-dark); font-family: var(--font-mono); font-weight: 700; font-size: 20px; padding: 12px 24px; border-radius: 100px; text-transform: uppercase; margin-bottom: 40px; align-self: flex-start; transform: rotate(-3deg); }
+        h1 { font-family: var(--font-display); font-weight: 800; font-size: 120px; line-height: 0.95; letter-spacing: -0.04em; margin-bottom: 40px; }
+        p.subtitle { font-family: var(--font-mono); font-size: 32px; opacity: 0.9; max-width: 800px; line-height: 1.5; }
+        .script-note { font-family: var(--font-script); font-size: 64px; color: var(--accent-neon); position: absolute; right: 100px; top: 160px; transform: rotate(10deg); }
+        .meta { font-family: var(--font-mono); font-size: 24px; text-transform: uppercase; letter-spacing: 2px; }
+    </style>
+</head>
+<body>
+    <div class="deck-viewport">
+        <main class="deck-stage" id="deckStage">
+            <section class="slide active visible" style="display:flex;">
+                <div class="left-panel">
+                    <div class="halftone"></div>
+                    <div class="meta reveal">PRODUCT PITCH</div>
+                    <h1 class="reveal" style="font-size: 160px; word-break: break-all; opacity: 0.1; line-height: 0.8; margin: 0; padding-top: 100px;">NOTI<br>FLOW</h1>
+                </div>
+                <div class="right-panel">
+                    <div class="script-note reveal">No interruptions!</div>
+                    <div class="badge reveal">New Paradigm</div>
+                    <h1 class="reveal">让通知以<br>弹幕之姿呈现</h1>
+                    <p class="subtitle reveal">工作、游戏，消息通知不再是负担。<br>一切尽收眼底。</p>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+<script>
+class SlidePresentation {
+    constructor() {
+        this.slides = document.querySelectorAll('.slide');
+        this.stage = document.getElementById('deckStage');
+        this.setupStageScale();
+        this.showSlide(0);
+    }
+    setupStageScale() {
+        const scale = () => {
+            const factor = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+            const x = (window.innerWidth - 1920 * factor) / 2;
+            const y = (window.innerHeight - 1080 * factor) / 2;
+            this.stage.style.transform = `translate(${x}px, ${y}px) scale(${factor})`;
+        };
+        scale();
+        window.addEventListener('resize', scale);
+    }
+    showSlide(index) {
+        this.slides.forEach((slide, i) => {
+            slide.classList.toggle('active', i === index);
+            slide.classList.toggle('visible', i === index);
+        });
+    }
+}
+new SlidePresentation();
+</script>
+
+</body>
+</html>

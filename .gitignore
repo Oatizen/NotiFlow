@@ -379,5 +379,9 @@ BarrageConfig.json
 /AI_CONTEXT_SUMMARY.md
 /BARRAGE_ENGINE_ARCHITECTURE.md
 /overlay_tech_research.md
-/inspect_wpfui.ps1
-/NotiFlow-v1.0.5-Standalone.exe
+/cp.md
+*.exe
+*.ps1
+*.py
+nuget.config
+[Dd]ocs/

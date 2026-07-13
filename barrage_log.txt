@@ -1,1 +1,0 @@
-[15:41:50.427] InitializeTracks: Height=1079, TrackHeight=41.647058823529406, Count=24

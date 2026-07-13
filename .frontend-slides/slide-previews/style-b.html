@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Style B - 8-Bit Orbit</title>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&family=Space+Mono:wght@400;700&family=Tektur:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --dark-void: #0A0E27; --deep-navy: #0F1B3D; --neon-cyan: #5EDCF4; --neon-pink: #F0A6CA; --neon-yellow: #F4D03F; --soft-lavender: #E2D5F2;
+            --font-display: 'Tektur', sans-serif; --font-body: 'Chakra Petch', sans-serif; --font-mono: 'Space Mono', monospace;
+            --bg-primary: var(--dark-void); --card-bg: var(--dark-void);
+        }
+        
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--bg-primary, #000); }
+.deck-viewport { position: fixed; inset: 0; overflow: hidden; background: var(--bg-primary, #000); }
+.deck-stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; transform-origin: 0 0; background: var(--card-bg, #fff); }
+.slide { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden; display: block; visibility: hidden; opacity: 0; pointer-events: none; background: var(--slide-bg, transparent); }
+.slide.active, .slide.visible { visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; }
+.reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+.slide.visible .reveal { opacity: 1; transform: translateY(0); }
+.reveal:nth-child(1) { transition-delay: 0.1s; }
+.reveal:nth-child(2) { transition-delay: 0.2s; }
+.reveal:nth-child(3) { transition-delay: 0.3s; }
+.reveal:nth-child(4) { transition-delay: 0.4s; }
+
+        .deck-stage { background: var(--dark-void); color: #fff; background-image: radial-gradient(circle at 50% 50%, var(--deep-navy) 0%, var(--dark-void) 100%); }
+        .grid-overlay { position: absolute; inset: 0; background-image: linear-gradient(rgba(94, 220, 244, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(94, 220, 244, 0.05) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; }
+        .scanlines { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1)); background-size: 100% 4px; pointer-events: none; z-index: 10; }
+        .slide-content { padding: 120px; height: 100%; display: flex; flex-direction: column; justify-content: center; position: relative; }
+        .hud-top { position: absolute; top: 60px; left: 80px; right: 80px; display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 20px; color: var(--neon-cyan); text-transform: uppercase; letter-spacing: 2px; }
+        .hud-corner { position: absolute; width: 24px; height: 24px; border: 4px solid var(--neon-pink); }
+        .tl { top: 40px; left: 40px; border-right: none; border-bottom: none; }
+        .tr { top: 40px; right: 40px; border-left: none; border-bottom: none; }
+        .bl { bottom: 40px; left: 40px; border-right: none; border-top: none; }
+        .br { bottom: 40px; right: 40px; border-left: none; border-top: none; }
+        h1 { font-family: var(--font-display); font-weight: 900; font-size: 140px; line-height: 1; color: #fff; text-shadow: 4px 4px 0px var(--neon-pink), 8px 8px 0px var(--neon-cyan); margin-bottom: 60px; text-transform: uppercase; }
+        p.subtitle { font-family: var(--font-body); font-size: 36px; color: var(--soft-lavender); max-width: 900px; line-height: 1.5; border-left: 4px solid var(--neon-yellow); padding-left: 32px; background: rgba(244, 208, 63, 0.05); padding-top: 16px; padding-bottom: 16px; }
+    </style>
+</head>
+<body>
+    <div class="deck-viewport">
+        <main class="deck-stage" id="deckStage">
+            <div class="grid-overlay"></div>
+            <div class="scanlines"></div>
+            <section class="slide active visible">
+                <div class="hud-corner tl"></div><div class="hud-corner tr"></div>
+                <div class="hud-corner bl"></div><div class="hud-corner br"></div>
+                <div class="hud-top">
+                    <span class="reveal">SYS.NOTIFLOW</span>
+                    <span class="reveal">v1.0.0 // ONLINE</span>
+                </div>
+                <div class="slide-content">
+                    <h1 class="reveal">让通知以<br>弹幕之姿呈现</h1>
+                    <p class="subtitle reveal">工作、游戏，消息通知不再是负担。一切尽收眼底。</p>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+<script>
+class SlidePresentation {
+    constructor() {
+        this.slides = document.querySelectorAll('.slide');
+        this.stage = document.getElementById('deckStage');
+        this.setupStageScale();
+        this.showSlide(0);
+    }
+    setupStageScale() {
+        const scale = () => {
+            const factor = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+            const x = (window.innerWidth - 1920 * factor) / 2;
+            const y = (window.innerHeight - 1080 * factor) / 2;
+            this.stage.style.transform = `translate(${x}px, ${y}px) scale(${factor})`;
+        };
+        scale();
+        window.addEventListener('resize', scale);
+    }
+    showSlide(index) {
+        this.slides.forEach((slide, i) => {
+            slide.classList.toggle('active', i === index);
+            slide.classList.toggle('visible', i === index);
+        });
+    }
+}
+new SlidePresentation();
+</script>
+
+</body>
+</html>
