@@ -10,7 +10,7 @@
 
   <!-- 徽章区 -->
   <p>
-    <a href="/Oatizen/NotiFlow/releases"><img src="https://img.shields.io/github/v/release/Oatizen/NotiFlow?color=0078D7&style=for-the-badge" alt="Release"></a>
+    <a href="https://github.com/Oatizen/NotiFlow/releases"><img src="https://img.shields.io/github/v/release/Oatizen/NotiFlow?color=0078D7&style=for-the-badge" alt="Release"></a>
     <img src="https://img.shields.io/badge/Platform-Windows_10%20%7C%2011-blue?style=for-the-badge&logo=windows" alt="Windows">
     <img src="https://img.shields.io/badge/.NET-8.0-512BD4?style=for-the-badge&logo=dotnet" alt=".NET">
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-success?style=for-the-badge" alt="License"></a>
@@ -38,14 +38,14 @@ https://github.com/user-attachments/assets/d6c6ac91-e404-48e4-8109-85fa61497eff
 
 ## 📥 如何安装？
 
-### 方式一：【推荐】微软商店版本
+### 方式一：【首选推荐】微软商店版本（静默自动更新）
 通过微软商店安装是获取 NotiFlow 最简单、最安全的方式。
-- **🌐 网页版商店**：点击进入 [NotiFlow 微软商店页面](https://apps.microsoft.com/detail/9PGZ5PVTMG0P?hl=zh-cn&gl=CN&ocid=pdpshare) ，点击“在Microsoft Store中查看”或是“下载”。
-- **🚀 一键引导安装**：点击下载[NotiFlow_Store_Installer.exe](https://github.com/Oatizen/NotiFlow/releases/latest/download/NotiFlow_Store_Installer.exe)或前往[Releases 页面](/Oatizen/NotiFlow/releases)，在最新版本的附件中下载 `NotiFlow_Store_Installer.exe`，运行后将自动唤起微软商店安装最新版本。
-- **🔍 手动搜索**：打开系统自带的 `Microsoft Store`，搜索 `NotiFlow` 进入商店页面，点击安装。
+- **🌐 网页版商店**：点击进入 [NotiFlow 微软商店页面](https://apps.microsoft.com/detail/9PGZ5PVTMG0P?hl=zh-cn&gl=CN&ocid=pdpshare)，点击“在Microsoft Store中查看”或是“下载”。
+- **🚀 一键引导安装**：前往 Releases 页面（[GitHub](https://github.com/Oatizen/NotiFlow/releases) 或 [Gitee](https://gitee.com/Oatizen/NotiFlow/releases)）下载并运行 `NotiFlow_Store_Installer.exe`，将自动唤起微软商店安装最新版本。
+- **🔍 手动搜索**：打开系统自带的 Microsoft Store，搜索 `NotiFlow` 进入商店页面，点击安装。
 
 ### 方式二：免安装便携版（绿色免安装）
-1. 前往 [Releases 页面](/Oatizen/NotiFlow/releases) 下载最新版本的 `NotiFlow.zip`。
+1. 前往 Releases 页面（[GitHub](https://github.com/Oatizen/NotiFlow/releases) 或 [Gitee](https://gitee.com/Oatizen/NotiFlow/releases)）下载最新版本附件中的 `NotiFlow.zip`。
 2. 解压后直接双击运行 `NotiFlow.exe`（内置所需环境，开箱即用）。
 3. 在桌面右下角系统托盘中找到 NotiFlow 图标，左键单击或通过右键菜单进入“设置”界面。
 
