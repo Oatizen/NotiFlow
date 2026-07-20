@@ -386,3 +386,11 @@ BarrageConfig.json
 nuget.config
 [Dd]ocs/
 [Pp]pt/
+
+# 生成的安装包/便携版文件夹
+1.1.0-Portable/
+PublishSFX/
+
+# 缓存与调试追踪文件
+scratch/
+sxstrace.*
