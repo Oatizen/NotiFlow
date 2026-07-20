@@ -385,3 +385,4 @@ BarrageConfig.json
 *.py
 nuget.config
 [Dd]ocs/
+[Pp]pt/

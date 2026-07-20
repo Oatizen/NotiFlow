@@ -13,13 +13,18 @@
     <Platform>x64</Platform>
     <Platforms>x64</Platforms>
     <EnableCoreMrtTooling>false</EnableCoreMrtTooling>
-    <EnableMsixTooling>false</EnableMsixTooling>
-    <WindowsPackageType>None</WindowsPackageType>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <WindowsPackageType Condition="'$(WindowsPackageType)' == ''">None</WindowsPackageType>
+    <GenerateAppxPackageOnBuild>false</GenerateAppxPackageOnBuild>
+    <DefineConstants Condition="'$(WindowsPackageType)' == 'MSIX'">$(DefineConstants);STORE</DefineConstants>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <WindowsAppSdkManifest>false</WindowsAppSdkManifest>
+    <!-- 只打包中文资源，排除框架自带的 100+ 语言文件夹 -->
+    <SatelliteResourceLanguages>zh-Hans;zh-Hant</SatelliteResourceLanguages>
     <!-- 版本管理 -->
-    <Version>1.0.5</Version>
-    <AssemblyVersion>1.0.5.0</AssemblyVersion>
-    <FileVersion>1.0.5.0</FileVersion>
+    <Version>1.1.0</Version>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
+    <FileVersion>1.1.0.0</FileVersion>
     <Company>NotiFlow</Company>
     <Product>NotiFlow</Product>
     <Description>Windows 通知弹幕显示工具</Description>
@@ -38,6 +43,9 @@
 
   <ItemGroup>
     <Resource Include="NotiFlow Icon.png" />
+    <Content Include="Images\*.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <!-- 排除非项目相关的子目录 -->

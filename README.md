@@ -10,7 +10,7 @@
 
   <!-- 徽章区 -->
   <p>
-    <a href="https://github.com/Oatizen/NotiFlow/releases"><img src="https://img.shields.io/github/v/release/Oatizen/NotiFlow?color=0078D7&style=for-the-badge" alt="Release"></a>
+    <a href="/Oatizen/NotiFlow/releases"><img src="https://img.shields.io/github/v/release/Oatizen/NotiFlow?color=0078D7&style=for-the-badge" alt="Release"></a>
     <img src="https://img.shields.io/badge/Platform-Windows_10%20%7C%2011-blue?style=for-the-badge&logo=windows" alt="Windows">
     <img src="https://img.shields.io/badge/.NET-8.0-512BD4?style=for-the-badge&logo=dotnet" alt=".NET">
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-success?style=for-the-badge" alt="License"></a>
@@ -20,25 +20,34 @@
 <br/>
 
 > 打团听到消息提示，不想立即查看但又担心错过重要通知？
-> **NotiFlow** 可以拦截 Windows 原生通知，并将其转化为全透明、鼠标穿透的“弹幕”从屏幕上方飘过。**不错过重要信息，也不打断专注心流。**
+> **NotiFlow** 可以拦截 Windows 原生通知，并将其转化为全透明、鼠标穿透的“弹幕”从屏幕上方飘过。**工作、游戏，消息通知不再是负担。一切尽收眼底。**
 
 https://github.com/user-attachments/assets/d6c6ac91-e404-48e4-8109-85fa61497eff
 
 ## ✨ 功能介绍
 
-- 👻 **鼠标穿透**：弹幕处于置顶状态，但鼠标点击会直接穿透到下层游戏/网页，避免干扰操作。
-- 🎨 **丰富的自定义选项**：字体、字号、文字颜色、透明度、弹幕速度乃至弹幕最大长度，都可自定义
-- 🥷 **防截图保护**：采用 `DisplayAffinity` 技术，只需开启设置开关，使用系统截图或 OBS 等软件录屏时，弹幕会在捕捉画面中自动隐藏，保护隐私。
-- ⭕ **快捷开关弹幕显示**：可自定义快捷键，随时开关弹幕显示
+- 🖱️ **鼠标穿透**：弹幕处于置顶状态，但鼠标点击会直接穿透到下层游戏/网页，避免干扰操作。
+- ⚡ **硬件性能0负担**：接入 `Windows.UI.Composition API`，弹幕由GPU直接渲染，最大化保留设备性能，不干扰工作娱乐。
+- 🎨 **丰富的自定义选项**：共16种弹幕字体、字号、文字颜色、透明度、弹幕速度乃至弹幕最大长度，都可自定义
+- 🎯 **作用域设置**：在哪些界面上方显示弹幕，显示哪些应用的通知，NotiFlow都可实现，黑/白名单模式，设置更自由。
+- 🛡️ **防截图保护**：采用 `DisplayAffinity` 技术，只需开启设置开关，使用系统截图或 OBS 等软件录屏时，弹幕会在捕捉画面中自动隐藏，保护隐私。
+- ⌨️ **快捷开关弹幕显示**：可自定义快捷键，随时开关弹幕显示
 - ⚙️ **开机自启**：可自定义是否开机自启，无需每次手动启动
 
 ---
 
-## 📥 快速开始
+## 📥 如何安装？
 
-1. 前往 [Releases 页面](https://github.com/Oatizen/NotiFlow/releases) 下载最新版本的 `NotiFlow.zip`。
-2. 解压后双击运行 `NotiFlow.exe`。
-3. 在系统托盘中找到 NotiFlow，左键单击或是右键菜单进入“设置”界面。
+### 方式一：【推荐】微软商店版本
+通过微软商店安装是获取 NotiFlow 最简单、最安全的方式。
+- **🌐 网页版商店**：点击进入 [NotiFlow 微软商店页面](https://apps.microsoft.com/detail/9PGZ5PVTMG0P?hl=zh-cn&gl=CN&ocid=pdpshare) ，点击“在Microsoft Store中查看”或是“下载”。
+- **🚀 一键引导安装**：点击下载[NotiFlow_Store_Installer.exe](https://github.com/Oatizen/NotiFlow/releases/latest/download/NotiFlow_Store_Installer.exe)或前往[Releases 页面](/Oatizen/NotiFlow/releases)，在最新版本的附件中下载 `NotiFlow_Store_Installer.exe`，运行后将自动唤起微软商店安装最新版本。
+- **🔍 手动搜索**：打开系统自带的 `Microsoft Store`，搜索 `NotiFlow` 进入商店页面，点击安装。
+
+### 方式二：免安装便携版（绿色免安装）
+1. 前往 [Releases 页面](/Oatizen/NotiFlow/releases) 下载最新版本的 `NotiFlow.zip`。
+2. 解压后直接双击运行 `NotiFlow.exe`（内置所需环境，开箱即用）。
+3. 在桌面右下角系统托盘中找到 NotiFlow 图标，左键单击或通过右键菜单进入“设置”界面。
 
 *注：弹幕不支持在以全屏模式运行的程序上方显示，请尝试使用无边框窗口模式*
 - ❓为什么不会显示我的微信通知？

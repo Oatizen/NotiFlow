@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Linq;
 using System.Threading;
 using Microsoft.Win32;
@@ -39,6 +39,17 @@ namespace NotiFlow
                 MessageBox.Show(e.Exception.ToString(), "异步任务后台崩溃", MessageBoxButton.OK, MessageBoxImage.Error);
                 e.SetObserved();
             };
+
+            System.Windows.Forms.Application.ThreadException += (s, e) =>
+            {
+                System.IO.File.WriteAllText(System.IO.Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "crash_winforms.log"), e.Exception.ToString());
+                MessageBox.Show(e.Exception.ToString(), "系统托盘异常崩溃", MessageBoxButton.OK, MessageBoxImage.Error);
+            };
+            // 设置 WinForms 不使用默认错误弹窗，而是抛出上面的事件
+            System.Windows.Forms.Application.SetUnhandledExceptionMode(System.Windows.Forms.UnhandledExceptionMode.CatchException);
+            
+            // 强制编译器不裁剪 EventBasedAsync
+            _ = typeof(System.ComponentModel.AsyncCompletedEventArgs);
         }
 
         protected override void OnStartup(StartupEventArgs e)
@@ -109,11 +120,13 @@ namespace NotiFlow
             }
 
             // 自动检查更新 (静默进行)
+#if !STORE
             if (BarrageSettings.AutoCheckUpdate)
             {
                 // 不要 await 阻塞启动流程，让它在后台静默执行
                 _ = UpdateService.CheckForUpdatesAsync(isManualCheck: false);
             }
+#endif
 
             // 同步一次开机自启状态（防脏数据）
             UpdateStartupShortcut(BarrageSettings.RunOnStartup);

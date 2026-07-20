@@ -27,6 +27,10 @@ namespace NotiFlow.Views.Pages
             }
 
             _initialized = true;
+
+#if STORE
+            UpdateSectionContainer.Visibility = System.Windows.Visibility.Collapsed;
+#endif
         }
 
         private void ThemeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)

@@ -11,6 +11,10 @@ namespace NotiFlow.Views.Pages
             // 动态设置版本号
             var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
             VersionTextBase.Text = $"V{version?.Major}.{version?.Minor}.{version?.Build}";
+
+#if STORE
+            BtnCheckUpdate.Visibility = System.Windows.Visibility.Collapsed;
+#endif
         }
 
         private void ApplyUniformBackground(Wpf.Ui.Controls.MessageBox mb)
