@@ -39,12 +39,17 @@
                                       TextWrapping="Wrap" 
                                       Margin="0,0,0,16"/>
                                       
-                        <WrapPanel Orientation="Horizontal">
-                            <ui:Button Appearance="Primary" Content="GitHub 仓库" Icon="{ui:SymbolIcon Branch24}" Margin="0,0,12,12" Click="GitHubGo_Click"/>
-                            <ui:Button x:Name="BtnCheckUpdate" Appearance="Primary" Content="检查更新" Icon="{ui:SymbolIcon ArrowSync24}" Margin="0,0,12,12" Click="CheckUpdate_Click"/>
-                            <ui:Button Appearance="Secondary" Content="许可证" Icon="{ui:SymbolIcon Document24}" Margin="0,0,12,12" Click="LicenseGo_Click"/>
-                            <ui:Button Appearance="Secondary" Content="Gitee仓库" Icon="{ui:SymbolIcon Globe24}" Margin="0,0,0,12" Click="GiteeGo_Click"/>
-                        </WrapPanel>
+                        <StackPanel Orientation="Vertical">
+                            <WrapPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <ui:Button Appearance="Primary" Content="GitHub 仓库" Icon="{ui:SymbolIcon Branch24}" Margin="0,0,12,0" Click="GitHubGo_Click"/>
+                                <ui:Button Appearance="Primary" Content="Microsoft Store" Icon="{ui:SymbolIcon StoreMicrosoft24}" Margin="0,0,12,0" Click="StoreGo_Click"/>
+                                <ui:Button x:Name="BtnCheckUpdate" Appearance="Primary" Content="检查更新" Icon="{ui:SymbolIcon ArrowSync24}" Margin="0,0,12,0" Click="CheckUpdate_Click"/>
+                            </WrapPanel>
+                            <WrapPanel Orientation="Horizontal">
+                                <ui:Button Appearance="Secondary" Content="许可证" Icon="{ui:SymbolIcon Document24}" Margin="0,0,12,0" Click="LicenseGo_Click"/>
+                                <ui:Button Appearance="Secondary" Content="Gitee仓库" Icon="{ui:SymbolIcon Globe24}" Margin="0,0,0,0" Click="GiteeGo_Click"/>
+                            </WrapPanel>
+                        </StackPanel>
                     </StackPanel>
                 </Grid>
             </Border>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1200" height="160" viewBox="0 0 1200 160"
+     role="img" aria-labelledby="title desc">
+  <title id="title">Features Section Header</title>
+  <desc id="desc">Header for the features section.</desc>
+
+  <rect width="1200" height="160" fill="#111111" />
+  
+  <g transform="translate(64 80)">
+    <rect x="0" y="-36" width="6" height="48" rx="3" fill="#0078D7" />
+    <text x="24" y="0" font-family="-apple-system, Segoe UI, sans-serif" font-weight="700" font-size="40" fill="#ffffff" letter-spacing="-0.5">核心特性</text>
+    <text x="24" y="32" font-family="-apple-system, Segoe UI, sans-serif" font-weight="600" font-size="16" fill="#0078D7" letter-spacing="1">KEY FEATURES</text>
+  </g>
+  
+  <g transform="translate(800 30)" opacity="0.6">
+    <circle cx="80" cy="50" r="100" fill="#0078D7" opacity="0.05" />
+    <path d="M 60 40 L 100 40 L 100 80 L 60 80 Z" fill="none" stroke="#333333" stroke-width="2" />
+    <path d="M 70 30 L 110 30 L 110 70" fill="none" stroke="#444444" stroke-width="2" />
+  </g>
+</svg>

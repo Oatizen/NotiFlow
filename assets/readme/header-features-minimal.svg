@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1200" height="120" viewBox="0 0 1200 120"
+     role="img" aria-labelledby="title desc">
+  <title id="title">Features Header - Minimal</title>
+  
+  <rect width="1200" height="120" fill="#f8f9fa" />
+  
+  <g transform="translate(80 60)">
+    <rect x="0" y="-30" width="8" height="60" fill="#111111" />
+    <text x="32" y="0" font-family="-apple-system, Helvetica Neue, sans-serif" font-weight="800" font-size="36" fill="#111111">FEATURES</text>
+    <text x="220" y="0" font-family="-apple-system, Helvetica Neue, sans-serif" font-weight="500" font-size="20" fill="#888888">核心特性展示</text>
+  </g>
+  
+  <path d="M 80 118 L 1120 118" fill="none" stroke="#e0e0e0" stroke-width="2" />
+</svg>

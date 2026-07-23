@@ -11,10 +11,6 @@ namespace NotiFlow.Views.Pages
             // 动态设置版本号
             var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
             VersionTextBase.Text = $"V{version?.Major}.{version?.Minor}.{version?.Build}";
-
-#if STORE
-            BtnCheckUpdate.Visibility = System.Windows.Visibility.Collapsed;
-#endif
         }
 
         private void ApplyUniformBackground(Wpf.Ui.Controls.MessageBox mb)
@@ -147,6 +143,11 @@ namespace NotiFlow.Views.Pages
         private void GitHubGo_Click(object sender, System.Windows.RoutedEventArgs e)
         {
             Services.UpdateService.OpenUrl("https://github.com/Oatizen/NotiFlow");
+        }
+
+        private void StoreGo_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            Services.UpdateService.OpenUrl("ms-windows-store://pdp/?productid=9PGZ5PVTMG0P");
         }
 
         private void LicenseGo_Click(object sender, System.Windows.RoutedEventArgs e)

@@ -1,8 +1,5 @@
 <div align="center">
-  
-  <img src="NotiFlow Icon.png" alt="NotiFlow Logo" width="120" height="120">
-
-  <h1> NotiFlow (弹幕通知)</h1>
+  <img src="assets/readme/ppt-theme/hero.gif" alt="NotiFlow Hero Banner" width="100%">
 
   <p>
     <b>在Windows端上实现“弹幕通知”功能</b>
@@ -24,7 +21,11 @@
 
 https://github.com/user-attachments/assets/d6c6ac91-e404-48e4-8109-85fa61497eff
 
-## ✨ 功能介绍
+<br/>
+
+<div align="center">
+  <img src="assets/readme/ppt-theme/header-features.svg" alt="功能介绍 Features" width="100%">
+</div>
 
 - 🖱️ **鼠标穿透**：弹幕处于置顶状态，但鼠标点击会直接穿透到下层游戏/网页，避免干扰操作。
 - ⚡ **硬件性能0负担**：接入 `Windows.UI.Composition API`，弹幕由GPU直接渲染，最大化保留设备性能，不干扰工作娱乐。
@@ -36,7 +37,11 @@ https://github.com/user-attachments/assets/d6c6ac91-e404-48e4-8109-85fa61497eff
 
 ---
 
-## 📥 如何安装？
+<br/>
+
+<div align="center">
+  <img src="assets/readme/ppt-theme/header-install.svg" alt="如何安装 Install" width="100%">
+</div>
 
 ### 方式一：【首选推荐】微软商店版本（静默自动更新）
 通过微软商店安装是获取 NotiFlow 最简单、最安全的方式。

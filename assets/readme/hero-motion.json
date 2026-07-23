@@ -1,0 +1,27 @@
+{
+  "width": 1200,
+  "fps": 30,
+  "duration": 5.0,
+  "colors": 256,
+  "dither": "none",
+  "clip_to_base_alpha": false,
+  "max_size_mb": 5.0,
+  "transparent_color": "#ff00ff",
+  "layers": [
+    {
+      "id": "danmaku-1",
+      "enter": {"start": 0.4, "end": 1.4, "from": [80, 0]},
+      "exit": {"start": 4.0, "end": 4.8, "to": [-40, 0]}
+    },
+    {
+      "id": "danmaku-2",
+      "enter": {"start": 1.2, "end": 2.2, "from": [80, 0]},
+      "exit": {"start": 4.2, "end": 4.9, "to": [-40, 0]}
+    },
+    {
+      "id": "danmaku-3",
+      "enter": {"start": 2.0, "end": 3.0, "from": [80, 0]},
+      "exit": {"start": 4.4, "end": 5.0, "to": [-40, 0]}
+    }
+  ]
+}

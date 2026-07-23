@@ -79,8 +79,13 @@ namespace NotiFlow.Services
                     }
                 }
 
+#if STORE
+                var mode = isManualCheck ? Views.Windows.UpdateDialogMode.ManualStoreUpdate : Views.Windows.UpdateDialogMode.AutoStoreUpdate;
+                ShowUpdateDialog($"发现新版本 {result.Version} !", $"更新说明：\n{result.Notes}\n\n是否立即前往 Microsoft Store 下载更新？", mode, result.Version);
+#else
                 var mode = isManualCheck ? Views.Windows.UpdateDialogMode.ManualUpdate : Views.Windows.UpdateDialogMode.AutoUpdate;
                 ShowUpdateDialog($"发现新版本 {result.Version} !", $"更新说明：\n{result.Notes}\n\n是否立即前往仓库下载更新？", mode, result.Version);
+#endif
             }
             else if (isManualCheck)
             {
@@ -133,7 +138,8 @@ namespace NotiFlow.Services
                 }
                 else
                 {
-                    if (tag_name != currentVersionStr) return (true, true, tag_name, body, "");
+                    bool hasUpdate = true;
+                    if (hasUpdate) return (true, true, tag_name, body, "");
                     else return (true, false, currentVersionStr, "", "");
                 }
             }
@@ -166,6 +172,9 @@ namespace NotiFlow.Services
                         break;
                     case Views.Windows.UpdateDialogResult.Gitee:
                         OpenUrl(GiteeReleaseUrl);
+                        break;
+                    case Views.Windows.UpdateDialogResult.Store:
+                        OpenUrl("ms-windows-store://pdp/?productid=9PGZ5PVTMG0P");
                         break;
                     case Views.Windows.UpdateDialogResult.Skip:
                         if (!string.IsNullOrEmpty(targetVersion))

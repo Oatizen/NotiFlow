@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1200" height="200" viewBox="0 0 1200 200"
+     role="img">
+  <!-- Solid Off-White Background (PPT Content Slide) -->
+  <rect width="1200" height="200" fill="#fafaf8" />
+  
+  <!-- Top Meta / Chrome (Monospace, Grey) -->
+  <text x="64" y="48" font-family="'JetBrains Mono', 'IBM Plex Mono', monospace" font-size="14" font-weight="500" fill="#737373" letter-spacing="2">INSTALLATION</text>
+
+  <!-- Horizontal Rule (Accent IKB Blue) -->
+  <path d="M 64 72 L 1136 72" stroke="#002FA7" stroke-width="2" />
+
+  <!-- Main Title (Baseline 150, Center ~126) -->
+  <text x="64" y="150" font-family="'Inter', 'Noto Sans SC', sans-serif" font-weight="200" font-size="64" fill="#0a0a0a" letter-spacing="-1">下载与安装</text>
+
+  <!-- Large Number (Baseline 154, Center ~126. Flush right with the blue line at 1136) -->
+  <text x="1136" y="154" font-family="'JetBrains Mono', 'IBM Plex Mono', monospace" font-weight="700" font-size="80" fill="#e0e2df" text-anchor="end" letter-spacing="-2">02</text>
+  
+  <!-- Decorative Element (Terminal / Download) (Height 40, y=106 gives Center 126) -->
+  <g transform="translate(860, 106)">
+    <rect x="0" y="0" width="56" height="40" rx="8" fill="#1a1a1a" />
+    <text x="12" y="24" font-family="'JetBrains Mono', monospace" font-size="18" font-weight="bold" fill="#a0d468">>_</text>
+    
+    <rect x="72" y="0" width="56" height="40" rx="8" fill="#ffffff" stroke="#dcdfe6" stroke-width="2" />
+    <path d="M 100 12 L 100 24 M 94 18 L 100 24 L 106 18 M 92 28 L 108 28" stroke="#002FA7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+  </g>
+</svg>

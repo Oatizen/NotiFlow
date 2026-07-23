@@ -14,6 +14,8 @@ namespace NotiFlow.Views.Windows
         GitHub,
         /// <summary>用户点击了"Gitee仓库"按钮</summary>
         Gitee,
+        /// <summary>用户点击了"前往 Microsoft Store 更新"按钮</summary>
+        Store,
         /// <summary>用户点击了"跳过该版本"按钮</summary>
         Skip
     }
@@ -25,7 +27,11 @@ namespace NotiFlow.Views.Windows
         /// <summary>用户手动检查且有更新：显示蓝色的"GitHub仓库"和"Gitee仓库"。</summary>
         ManualUpdate,
         /// <summary>后台自动检查且有更新：显示白色的"跳过该版本"以及蓝色的"GitHub仓库"和"Gitee仓库"。</summary>
-        AutoUpdate
+        AutoUpdate,
+        /// <summary>商店版用户手动检查且有更新：显示"前往 Microsoft Store 更新"按钮。</summary>
+        ManualStoreUpdate,
+        /// <summary>商店版后台自动检查且有更新：显示"跳过该版本"以及"前往 Microsoft Store 更新"按钮。</summary>
+        AutoStoreUpdate
     }
 
     /// <summary>
@@ -56,6 +62,20 @@ namespace NotiFlow.Views.Windows
                     ActionButton.Appearance = Wpf.Ui.Controls.ControlAppearance.Secondary;
                     GitHubButton.Appearance = Wpf.Ui.Controls.ControlAppearance.Primary;
                     GiteeButton.Appearance = Wpf.Ui.Controls.ControlAppearance.Primary;
+                    break;
+                case UpdateDialogMode.ManualStoreUpdate:
+                    ActionButton.Visibility = Visibility.Collapsed;
+                    GitHubButton.Visibility = Visibility.Collapsed;
+                    GiteeButton.Visibility = Visibility.Collapsed;
+                    StoreButton.Visibility = Visibility.Visible;
+                    break;
+                case UpdateDialogMode.AutoStoreUpdate:
+                    ActionButton.Visibility = Visibility.Visible;
+                    ActionButton.Content = "跳过该版本";
+                    ActionButton.Appearance = Wpf.Ui.Controls.ControlAppearance.Secondary;
+                    GitHubButton.Visibility = Visibility.Collapsed;
+                    GiteeButton.Visibility = Visibility.Collapsed;
+                    StoreButton.Visibility = Visibility.Visible;
                     break;
                 case UpdateDialogMode.Info:
                 default:
@@ -91,6 +111,12 @@ namespace NotiFlow.Views.Windows
         private void GiteeButton_Click(object sender, RoutedEventArgs e)
         {
             UserResult = UpdateDialogResult.Gitee;
+            Close();
+        }
+
+        private void StoreButton_Click(object sender, RoutedEventArgs e)
+        {
+            UserResult = UpdateDialogResult.Store;
             Close();
         }
     }

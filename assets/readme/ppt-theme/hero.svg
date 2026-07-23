@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1200" height="540" viewBox="0 0 1200 540"
+     role="img">
+  <defs>
+    <!-- Fine Grid Lines -->
+    <pattern id="bg-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 40 40 M 0 40 L 40 40" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1" />
+    </pattern>
+    <!-- Accent Dot Matrix (Top Right) -->
+    <pattern id="dot-matrix" width="12" height="12" patternUnits="userSpaceOnUse">
+      <circle cx="6" cy="6" r="1.5" fill="rgba(255,255,255,0.15)" />
+    </pattern>
+  </defs>
+
+  <!-- Solid IKB Blue Background -->
+  <rect width="1200" height="540" fill="#002FA7" />
+  
+  <!-- Grid -->
+  <rect width="1200" height="540" fill="url(#bg-grid)" />
+
+  <!-- Accent Dot Matrix (Right Side) -->
+  <rect x="900" y="150" width="144" height="144" fill="url(#dot-matrix)" />
+
+  <!-- Fine Horizontal/Vertical Guide Lines -->
+  <path d="M 64 64 L 1136 64" stroke="#ffffff" stroke-width="1" opacity="0.6" />
+  <path d="M 64 476 L 1136 476" stroke="#ffffff" stroke-width="1" opacity="0.6" />
+
+  <!-- Top Meta / Chrome -->
+  <text x="64" y="56" font-family="'JetBrains Mono', 'IBM Plex Mono', monospace" font-size="12" font-weight="600" fill="rgba(255,255,255,0.6)" letter-spacing="3">NOTIFLOW</text>
+  <text x="1136" y="56" font-family="'JetBrains Mono', 'IBM Plex Mono', monospace" font-size="12" font-weight="600" fill="rgba(255,255,255,0.6)" letter-spacing="3" text-anchor="end">01 / 01</text>
+
+  <!-- Kicker -->
+  <g transform="translate(64 120)">
+    <rect x="0" y="-6" width="16" height="2" fill="rgba(255,255,255,0.6)" />
+    <text x="24" y="0" font-family="'JetBrains Mono', 'IBM Plex Mono', monospace" font-size="12" font-weight="600" fill="rgba(255,255,255,0.6)" letter-spacing="3">PRODUCT INTRODUCTION</text>
+  </g>
+
+  <!-- Main Hero Typography (Tighter spacing & Corrected Baseline) -->
+  <g transform="translate(64 210)">
+    <!-- English Name -->
+    <text x="0" y="0" font-family="'Inter', 'Helvetica Neue', sans-serif" font-weight="200" font-size="100" font-style="italic" fill="#ffffff" letter-spacing="-2">NotiFlow</text>
+    
+    <!-- Chinese Part 1 -->
+    <text x="-6" y="80" font-family="'Inter', 'Noto Sans SC', sans-serif" font-weight="200" font-size="64" fill="#ffffff" letter-spacing="2">让通知以</text>
+    
+    <!-- Chinese Part 2 -->
+    <text x="-8" y="176" font-family="'Inter', 'Noto Sans SC', sans-serif" font-weight="200" font-size="96" fill="#ffffff" letter-spacing="2">弹幕之姿呈现</text>
+  </g>
+
+  <!-- Bottom Details -->
+  <text x="64" y="440" font-family="'Inter', 'Noto Sans SC', sans-serif" font-weight="400" font-size="16" fill="rgba(255,255,255,0.8)">工作、游戏，消息通知不再是负担。一切尽收眼底。</text>
+  
+  <text x="64" y="496" font-family="'JetBrains Mono', 'IBM Plex Mono', monospace" font-size="12" font-weight="600" fill="rgba(255,255,255,0.6)" letter-spacing="3">NOTIFLOW PROJECT</text>
+  <text x="1136" y="496" font-family="'JetBrains Mono', 'IBM Plex Mono', monospace" font-size="12" font-weight="600" fill="rgba(255,255,255,0.6)" letter-spacing="3" text-anchor="end">→ SWIPE / ARROW KEYS</text>
+
+  <!-- Danmaku Layers (for animation) -->
+  <g id="danmaku-1" transform="translate(0 230)">
+    <rect x="0" y="0" width="260" height="36" rx="4" fill="rgba(0,0,0,0.6)" />
+    <rect x="8" y="8" width="20" height="20" fill="#0078d7" />
+    <rect x="14" y="14" width="8" height="8" fill="#ffffff" />
+    <text x="36" y="24" font-family="'Microsoft YaHei', 'Inter', 'Noto Sans SC', sans-serif" font-weight="400" font-size="18" fill="#ffffff">QQ 小李：今晚去哪吃饭？</text>
+  </g>
+  <g id="danmaku-2" transform="translate(0 320)">
+    <rect x="0" y="0" width="310" height="36" rx="4" fill="rgba(0,0,0,0.6)" />
+    <rect x="8" y="8" width="20" height="20" fill="#0078d7" />
+    <rect x="14" y="14" width="8" height="8" fill="#ffffff" />
+    <text x="36" y="24" font-family="'Microsoft YaHei', 'Inter', 'Noto Sans SC', sans-serif" font-weight="400" font-size="18" fill="#ffffff">飞书 王总：整理一下这份文件。</text>
+  </g>
+  <g id="danmaku-3" transform="translate(0 140)">
+    <rect x="0" y="0" width="340" height="36" rx="4" fill="rgba(0,0,0,0.6)" />
+    <rect x="8" y="8" width="20" height="20" fill="#0078d7" />
+    <rect x="14" y="14" width="8" height="8" fill="#ffffff" />
+    <text x="36" y="24" font-family="'Microsoft YaHei', 'Inter', 'Noto Sans SC', sans-serif" font-weight="400" font-size="18" fill="#ffffff">Microsoft Store：NotiFlow已安装。</text>
+  </g>
+</svg>
