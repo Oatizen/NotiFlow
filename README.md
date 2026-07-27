@@ -24,7 +24,7 @@ https://github.com/user-attachments/assets/d6c6ac91-e404-48e4-8109-85fa61497eff
 <br/>
 
 <div align="center">
-  <img src="assets/readme/ppt-theme/header-features.svg" alt="功能介绍 Features" width="100%">
+  <img src="assets/readme/ppt-theme/header-features.png" alt="功能介绍 Features" width="100%">
 </div>
 
 - 🖱️ **鼠标穿透**：弹幕处于置顶状态，但鼠标点击会直接穿透到下层游戏/网页，避免干扰操作。
@@ -40,7 +40,7 @@ https://github.com/user-attachments/assets/d6c6ac91-e404-48e4-8109-85fa61497eff
 <br/>
 
 <div align="center">
-  <img src="assets/readme/ppt-theme/header-install.svg" alt="如何安装 Install" width="100%">
+  <img src="assets/readme/ppt-theme/header-install.png" alt="如何安装 Install" width="100%">
 </div>
 
 ### 方式一：【首选推荐】微软商店版本（静默自动更新）
