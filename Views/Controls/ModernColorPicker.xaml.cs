@@ -84,8 +84,8 @@ namespace NotiFlow.Views.Controls
             picker._isUpdatingInternally = true;
             picker.SelectedColorHex = $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
             picker.HueSlider.Value = picker._h;
+            picker.HueSlider.Value = picker._h;
             picker.ValueSlider.Value = picker._v;
-            picker.AlphaSlider.Value = c.A;
             picker.UpdateThumbPosition();
             picker.UpdateGradients();
             picker.UpdatePreview();
@@ -108,8 +108,8 @@ namespace NotiFlow.Views.Controls
                     picker.SelectedColor = c;
                     ColorHelper.RgbToHsv(c, out picker._h, out picker._s, out picker._v);
                     picker.HueSlider.Value = picker._h;
+                    picker.HueSlider.Value = picker._h;
                     picker.ValueSlider.Value = picker._v;
-                    picker.AlphaSlider.Value = c.A;
                     picker.UpdateThumbPosition();
                     picker.UpdateGradients();
                     picker.UpdatePreview();
@@ -132,7 +132,7 @@ namespace NotiFlow.Views.Controls
         {
             if (!_isInitialized) return;
             ValueSliderTopColor.Color = ColorHelper.HsvToRgb(_h, _s, 1);
-            AlphaSliderTopColor.Color = ColorHelper.HsvToRgb(_h, _s, _v);
+            ValueSliderTopColor.Color = ColorHelper.HsvToRgb(_h, _s, 1);
 
             if (SGradStart != null) SGradStart.Color = ColorHelper.HsvToRgb(_h, 0, _v);
             if (SGradEnd != null) SGradEnd.Color = ColorHelper.HsvToRgb(_h, 1, _v);
@@ -142,7 +142,7 @@ namespace NotiFlow.Views.Controls
         private void UpdatePreview()
         {
             if (!_isInitialized) return;
-            var c = ColorHelper.HsvToRgb(_h, _s, _v, (byte)AlphaSlider.Value);
+            var c = ColorHelper.HsvToRgb(_h, _s, _v, 255);
             PreviewColorBrush.Color = c;
             
             if (!_isUpdatingInternally)
@@ -160,13 +160,12 @@ namespace NotiFlow.Views.Controls
             if (!_isInitialized) return;
             RSlider.Value = c.R;
             GSlider.Value = c.G;
+            GSlider.Value = c.G;
             BSlider.Value = c.B;
-            ASlider.Value = c.A;
             
             if (RTextBox != null) RTextBox.Text = c.R.ToString();
             if (GTextBox != null) GTextBox.Text = c.G.ToString();
             if (BTextBox != null) BTextBox.Text = c.B.ToString();
-            if (ATextBox != null) ATextBox.Text = c.A.ToString();
             
             if (HsvHSlider != null) HsvHSlider.Value = _h;
             if (HsvSSlider != null) HsvSSlider.Value = _s;
@@ -183,8 +182,9 @@ namespace NotiFlow.Views.Controls
         {
             if (_isUpdatingInternally) return;
             _isUpdatingInternally = true;
+            _isUpdatingInternally = true;
 
-            byte a = (byte)ASlider.Value;
+            byte a = 255;
             byte r = (byte)RSlider.Value;
             byte g = (byte)GSlider.Value;
             byte b = (byte)BSlider.Value;
@@ -193,13 +193,13 @@ namespace NotiFlow.Views.Controls
             ColorHelper.RgbToHsv(c, out _h, out _s, out _v);
             
             HueSlider.Value = _h;
+            HueSlider.Value = _h;
             ValueSlider.Value = _v;
-            AlphaSlider.Value = a;
             
+            if (RTextBox != null) RTextBox.Text = r.ToString();
             if (RTextBox != null) RTextBox.Text = r.ToString();
             if (GTextBox != null) GTextBox.Text = g.ToString();
             if (BTextBox != null) BTextBox.Text = b.ToString();
-            if (ATextBox != null) ATextBox.Text = a.ToString();
             
             if (HsvHSlider != null) HsvHSlider.Value = _h;
             if (HsvSSlider != null) HsvSSlider.Value = _s;
@@ -227,13 +227,13 @@ namespace NotiFlow.Views.Controls
             _h = HsvHSlider.Value;
             _s = HsvSSlider.Value;
             _v = HsvVSlider.Value;
-            byte a = (byte)ASlider.Value;
+            byte a = 255;
             
             var c = ColorHelper.HsvToRgb(_h, _s, _v, a);
             
             HueSlider.Value = _h;
+            HueSlider.Value = _h;
             ValueSlider.Value = _v;
-            AlphaSlider.Value = a;
             
             RSlider.Value = c.R;
             GSlider.Value = c.G;
@@ -269,8 +269,9 @@ namespace NotiFlow.Views.Controls
                 RSlider.Value = r;
                 GSlider.Value = g;
                 BSlider.Value = b;
+                BSlider.Value = b;
                 
-                byte a = (byte)ASlider.Value;
+                byte a = 255;
                 var c = Color.FromArgb(a, r, g, b);
                 ColorHelper.RgbToHsv(c, out _h, out _s, out _v);
                 
@@ -312,8 +313,9 @@ namespace NotiFlow.Views.Controls
                 HsvHSlider.Value = _h;
                 HsvSSlider.Value = _s;
                 HsvVSlider.Value = _v;
+                HsvVSlider.Value = _v;
                 
-                byte a = (byte)ASlider.Value;
+                byte a = 255;
                 var c = ColorHelper.HsvToRgb(_h, _s, _v, a);
                 
                 HueSlider.Value = _h;
@@ -333,26 +335,9 @@ namespace NotiFlow.Views.Controls
                 SelectedColorHex = $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
                 PreviewColorBrush.Color = c;
                 HexTextBox.Text = $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
-                
-                _isUpdatingInternally = false;
-            }
-        }
-
-        private void ATextBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            if (_isUpdatingInternally || ASlider == null) return;
-            
-            if (byte.TryParse(ATextBox.Text, out byte a))
-            {
-                _isUpdatingInternally = true;
-                ASlider.Value = a;
-                AlphaSlider.Value = a;
-                
-                var c = Color.FromArgb(a, (byte)RSlider.Value, (byte)GSlider.Value, (byte)BSlider.Value);
-                SelectedColor = c;
-                SelectedColorHex = $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
+                SelectedColorHex = $"#{c.R:X2}{c.G:X2}{c.B:X2}";
                 PreviewColorBrush.Color = c;
-                HexTextBox.Text = $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
+                HexTextBox.Text = $"#{c.R:X2}{c.G:X2}{c.B:X2}";
                 
                 _isUpdatingInternally = false;
             }
@@ -410,13 +395,12 @@ namespace NotiFlow.Views.Controls
                     
                     ColorHelper.RgbToHsv(c, out _h, out _s, out _v);
                     HueSlider.Value = _h;
+                    HueSlider.Value = _h;
                     ValueSlider.Value = _v;
-                    AlphaSlider.Value = a;
                     
                     RSlider.Value = r;
                     GSlider.Value = g;
                     BSlider.Value = b;
-                    ASlider.Value = a;
 
                     UpdateThumbPosition();
                     UpdateGradients();

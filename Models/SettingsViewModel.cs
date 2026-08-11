@@ -71,6 +71,10 @@ namespace NotiFlow.Models
             _currentColorBrush = BarrageSettings.TextColor;
             _currentColor = (BarrageSettings.TextColor is SolidColorBrush b) ? b.Color : Colors.White;
 
+            _backgroundColorHex = (BarrageSettings.BackgroundColor is SolidColorBrush bgBrush) ? bgBrush.Color.ToString() : "#000000";
+            _currentBackgroundColorBrush = BarrageSettings.BackgroundColor;
+            _currentBackgroundColor = (BarrageSettings.BackgroundColor is SolidColorBrush bgB) ? bgB.Color : Colors.Black;
+
             var hexColors = new[]
             {
                 // Row 3 (Light)
@@ -103,12 +107,26 @@ namespace NotiFlow.Models
             }
 
             _fontSize = BarrageSettings.FontSize;
+            _letterSpacing = BarrageSettings.LetterSpacing;
             _maxTextLength = BarrageSettings.MaxTextLength;
             _textOpacityPercentage = BarrageSettings.TextOpacity * 100;
             _backgroundOpacityPercentage = BarrageSettings.BackgroundOpacity * 100;
+            
+            _showTextStroke = BarrageSettings.ShowTextStroke;
+            _textStrokeThickness = BarrageSettings.TextStrokeThickness;
+            _currentTextStrokeColorBrush = BarrageSettings.TextStrokeColor;
+            _currentTextStrokeColor = (BarrageSettings.TextStrokeColor is SolidColorBrush stb) ? stb.Color : Colors.Black;
             _showAppIcon = BarrageSettings.ShowAppIcon;
             _showAppName = BarrageSettings.ShowAppName;
             _highlightEllipsis = BarrageSettings.HighlightEllipsis;
+            _showBackgroundImage = BarrageSettings.ShowBackgroundImage;
+            _backgroundImagePath = BarrageSettings.BackgroundImagePath;
+            _backgroundImageAnchor = BarrageSettings.BackgroundImageAnchor;
+            _backgroundImageOffsetX = BarrageSettings.BackgroundImageOffsetX;
+            _backgroundImageOffsetY = BarrageSettings.BackgroundImageOffsetY;
+            _backgroundImageScale = BarrageSettings.BackgroundImageScale;
+            _backgroundImageOpacity = BarrageSettings.BackgroundImageOpacity;
+
             _scrollSpeedCharsPerSec = BarrageSettings.ScrollSpeedCharsPerSec;
             _trackStrategy = BarrageSettings.TrackStrategy;
             
@@ -190,10 +208,88 @@ namespace NotiFlow.Models
             TriggerSaveAndPreview();
         }
 
+        [ObservableProperty]
+        private bool _showTextStroke;
+        partial void OnShowTextStrokeChanged(bool value)
+        {
+            BarrageSettings.ShowTextStroke = value;
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        private Brush _currentTextStrokeColorBrush;
+
+        [ObservableProperty]
+        private Color _currentTextStrokeColor;
+        partial void OnCurrentTextStrokeColorChanged(Color value)
+        {
+            CurrentTextStrokeColorBrush = new SolidColorBrush(value);
+            BarrageSettings.TextStrokeColor = CurrentTextStrokeColorBrush;
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(TextStrokeThicknessDisplay))]
+        private double _textStrokeThickness;
+        partial void OnTextStrokeThicknessChanged(double value)
+        {
+            BarrageSettings.TextStrokeThickness = value;
+            TriggerSaveAndPreview();
+        }
+        public string TextStrokeThicknessDisplay => $"{TextStrokeThickness:F1}px";
+
         [RelayCommand]
         private void SelectColor(string hex)
         {
             TextColorHex = hex;
+        }
+
+        [ObservableProperty]
+        private Brush _currentBackgroundColorBrush;
+
+        [ObservableProperty]
+        private string _backgroundColorHex;
+        partial void OnBackgroundColorHexChanged(string value)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(value)) return;
+                var color = (Color)ColorConverter.ConvertFromString(value);
+                CurrentBackgroundColorBrush = new SolidColorBrush(color);
+                BarrageSettings.BackgroundColor = CurrentBackgroundColorBrush;
+                if (_currentBackgroundColor != color)
+                {
+                    _currentBackgroundColor = color;
+                    OnPropertyChanged(nameof(CurrentBackgroundColor));
+                }
+                TriggerSaveAndPreview();
+            }
+            catch
+            {
+                // 如果输入不合法，原封不动，防止崩溃
+            }
+        }
+
+        [ObservableProperty]
+        private Color _currentBackgroundColor;
+        partial void OnCurrentBackgroundColorChanged(Color value)
+        {
+            CurrentBackgroundColorBrush = new SolidColorBrush(value);
+            BarrageSettings.BackgroundColor = CurrentBackgroundColorBrush;
+            
+            string newHex = $"#{value.A:X2}{value.R:X2}{value.G:X2}{value.B:X2}";
+            if (_backgroundColorHex != newHex)
+            {
+                _backgroundColorHex = newHex;
+                OnPropertyChanged(nameof(BackgroundColorHex));
+            }
+            TriggerSaveAndPreview();
+        }
+
+        [RelayCommand]
+        private void SelectBackgroundColor(string hex)
+        {
+            BackgroundColorHex = hex;
         }
 
         [ObservableProperty]
@@ -205,6 +301,16 @@ namespace NotiFlow.Models
             TriggerSaveAndPreview();
         }
         public string FontSizeDisplay => $"{(int)FontSize}px";
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(LetterSpacingDisplay))]
+        private double _letterSpacing;
+        partial void OnLetterSpacingChanged(double value)
+        {
+            BarrageSettings.LetterSpacing = value;
+            TriggerSaveAndPreview();
+        }
+        public string LetterSpacingDisplay => $"{(int)LetterSpacing}px";
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(MaxLengthDisplay))]
@@ -258,6 +364,70 @@ namespace NotiFlow.Models
         {
             BarrageSettings.HighlightEllipsis = value;
             TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        private bool _showBackgroundImage;
+        partial void OnShowBackgroundImageChanged(bool value)
+        {
+            BarrageSettings.ShowBackgroundImage = value;
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        private string _backgroundImagePath;
+        partial void OnBackgroundImagePathChanged(string value)
+        {
+            BarrageSettings.BackgroundImagePath = value;
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        private ImageAnchor _backgroundImageAnchor;
+        partial void OnBackgroundImageAnchorChanged(ImageAnchor value)
+        {
+            BarrageSettings.BackgroundImageAnchor = value;
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        private double _backgroundImageOffsetX;
+        partial void OnBackgroundImageOffsetXChanged(double value)
+        {
+            BarrageSettings.BackgroundImageOffsetX = value;
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        private double _backgroundImageOffsetY;
+        partial void OnBackgroundImageOffsetYChanged(double value)
+        {
+            BarrageSettings.BackgroundImageOffsetY = value;
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        private double _backgroundImageScale;
+        partial void OnBackgroundImageScaleChanged(double value)
+        {
+            BarrageSettings.BackgroundImageScale = value;
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(BackgroundImageOpacityDisplay))]
+        private double _backgroundImageOpacity;
+        partial void OnBackgroundImageOpacityChanged(double value)
+        {
+            BarrageSettings.BackgroundImageOpacity = value;
+            TriggerSaveAndPreview();
+        }
+
+        public string BackgroundImageOpacityDisplay => $"{BackgroundImageOpacity * 100:0}%";
+        public double BackgroundImageOpacityPercentage
+        {
+            get => BackgroundImageOpacity * 100;
+            set => BackgroundImageOpacity = value / 100.0;
         }
 
         [ObservableProperty]

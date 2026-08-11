@@ -70,7 +70,19 @@ namespace NotiFlow.Views.Pages
                 textBlock.TextDecorations = TextDecorations.Underline;
             }
 
-            if (!BarrageSettings.ShowBackground)
+            if (BarrageSettings.ShowTextStroke && BarrageSettings.TextStrokeThickness > 0)
+            {
+                var strokeColor = ((SolidColorBrush)BarrageSettings.TextStrokeColor).Color;
+                textBlock.Effect = new System.Windows.Media.Effects.DropShadowEffect
+                {
+                    Color = strokeColor,
+                    Direction = 0,
+                    ShadowDepth = 0,
+                    Opacity = 1,
+                    BlurRadius = BarrageSettings.TextStrokeThickness * 2
+                };
+            }
+            else if (!BarrageSettings.ShowBackground)
             {
                 var shadowColor = ((SolidColorBrush)BarrageSettings.TextColor).Color;
                 textBlock.Effect = new System.Windows.Media.Effects.DropShadowEffect
@@ -84,14 +96,124 @@ namespace NotiFlow.Views.Pages
             }
 
             var bgBrush = BarrageSettings.BackgroundColor as SolidColorBrush ?? new SolidColorBrush(Colors.Black);
-            var border = new Border
+            Brush baseBgBrush = BarrageSettings.ShowBackground ? new SolidColorBrush(Color.FromArgb(
+                (byte)(255 * BarrageSettings.BackgroundOpacity),
+                bgBrush.Color.R, bgBrush.Color.G, bgBrush.Color.B)) : Brushes.Transparent;
+
+            var containerGrid = new Grid();
+
+            if (BarrageSettings.ShowBackground)
             {
-                Background = BarrageSettings.ShowBackground ? new SolidColorBrush(Color.FromArgb(
-                    (byte)(255 * BarrageSettings.BackgroundOpacity),
-                    bgBrush.Color.R, bgBrush.Color.G, bgBrush.Color.B)) : Brushes.Transparent,
-                CornerRadius = BarrageSettings.BackgroundCornerRadius,
+                if (!BarrageSettings.ShowBackgroundImage || BarrageSettings.BackgroundImageKeepBaseColor)
+                {
+                    containerGrid.Children.Add(new Border
+                    {
+                        Background = baseBgBrush,
+                        CornerRadius = BarrageSettings.BackgroundCornerRadius
+                    });
+                }
+            }
+
+            if (BarrageSettings.ShowBackgroundImage && System.IO.File.Exists(BarrageSettings.BackgroundImagePath))
+            {
+                try
+                {
+                    var bmp = new System.Windows.Media.Imaging.BitmapImage();
+                    bmp.BeginInit();
+                    bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                    using (var stream = new System.IO.FileStream(BarrageSettings.BackgroundImagePath, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite))
+                    {
+                        bmp.StreamSource = stream;
+                        bmp.EndInit();
+                    }
+                    bmp.Freeze();
+
+                    var canvas = new System.Windows.Controls.Canvas { ClipToBounds = true };
+                    var img = new System.Windows.Controls.Image
+                    {
+                        Source = bmp,
+                        Stretch = System.Windows.Media.Stretch.Fill,
+                        Width = bmp.PixelWidth * (BarrageSettings.BackgroundImageScale > 0 ? BarrageSettings.BackgroundImageScale : 1.0),
+                        Height = bmp.PixelHeight * (BarrageSettings.BackgroundImageScale > 0 ? BarrageSettings.BackgroundImageScale : 1.0)
+                    };
+                    canvas.Children.Add(img);
+
+                    containerGrid.SizeChanged += (s, e) =>
+                    {
+                        double w = e.NewSize.Width;
+                        double h = e.NewSize.Height;
+                        double scaledW = img.Width;
+                        double scaledH = img.Height;
+                        double x = 0, y = 0;
+
+                        // Apply rounded corner clipping perfectly!
+                        containerGrid.Clip = new System.Windows.Media.RectangleGeometry(
+                            new System.Windows.Rect(0, 0, w, h), 
+                            BarrageSettings.BackgroundCornerRadius.TopLeft, 
+                            BarrageSettings.BackgroundCornerRadius.TopLeft);
+
+                        switch (BarrageSettings.BackgroundImageAnchor)
+                        {
+                            case ImageAnchor.TopLeft:
+                            case ImageAnchor.MiddleLeft:
+                            case ImageAnchor.BottomLeft:
+                                x += BarrageSettings.BackgroundImageOffsetX;
+                                break;
+                            case ImageAnchor.TopCenter:
+                            case ImageAnchor.MiddleCenter:
+                            case ImageAnchor.BottomCenter:
+                                x += (w - scaledW) / 2 + BarrageSettings.BackgroundImageOffsetX;
+                                break;
+                            case ImageAnchor.TopRight:
+                            case ImageAnchor.MiddleRight:
+                            case ImageAnchor.BottomRight:
+                                x += w - scaledW - BarrageSettings.BackgroundImageOffsetX;
+                                break;
+                        }
+
+                        switch (BarrageSettings.BackgroundImageAnchor)
+                        {
+                            case ImageAnchor.TopLeft:
+                            case ImageAnchor.TopCenter:
+                            case ImageAnchor.TopRight:
+                                y += BarrageSettings.BackgroundImageOffsetY;
+                                break;
+                            case ImageAnchor.MiddleLeft:
+                            case ImageAnchor.MiddleCenter:
+                            case ImageAnchor.MiddleRight:
+                                y += (h - scaledH) / 2 + BarrageSettings.BackgroundImageOffsetY;
+                                break;
+                            case ImageAnchor.BottomLeft:
+                            case ImageAnchor.BottomCenter:
+                            case ImageAnchor.BottomRight:
+                                y += h - scaledH - BarrageSettings.BackgroundImageOffsetY;
+                                break;
+                        }
+
+                        System.Windows.Controls.Canvas.SetLeft(img, x);
+                        System.Windows.Controls.Canvas.SetTop(img, y);
+                    };
+
+                    // Put canvas in a border to apply CornerRadius clip visually using OpacityMask
+                    // or simply add the canvas. Corner clipping is a bit complex for canvas, 
+                    // we'll just add it to containerGrid.
+                    containerGrid.Children.Add(canvas);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine("Preview image load failed: " + ex.Message);
+                }
+            }
+
+            containerGrid.Children.Add(new Border
+            {
                 Padding = new Thickness(12, 6, 12, 6),
                 Child = textBlock
+            });
+
+            var border = new Border
+            {
+                Child = containerGrid
             };
 
             border.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
@@ -147,6 +269,28 @@ namespace NotiFlow.Views.Pages
         private void ColorPickerButton_Click(object sender, System.Windows.RoutedEventArgs e)
         {
             ColorPaletteFlyout.Show();
+        }
+
+        private void TextStrokeColorPickerButton_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            TextStrokeColorPaletteFlyout.Show();
+        }
+
+        private void BackgroundColorPickerButton_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            BackgroundColorPaletteFlyout.Show();
+        }
+
+        private void OpenBackgroundImageEditor_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            var editor = new Windows.BackgroundImageEditorWindow();
+            editor.ShowDialog();
+            
+            // 刷新预览图以应用背景图设置
+            if (PreviewBorder.ActualWidth > 0)
+            {
+                SpawnPreviewBarrage();
+            }
         }
 
         /// <summary>

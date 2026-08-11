@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -375,6 +375,10 @@ namespace NotiFlow.Rendering
             textBrush.Freeze();
             var textColor = textBrush.Color;
 
+            var textStrokeBrush = (SolidColorBrush)BarrageSettings.TextStrokeColor.Clone();
+            textStrokeBrush.Freeze();
+            var textStrokeColor = textStrokeBrush.Color;
+
             string fontFamilyName = BarrageSettings.FontFamily.Source;
             double fontSize = BarrageSettings.FontSize;
             var fontStyle = BarrageSettings.FontStyle;
@@ -396,12 +400,22 @@ namespace NotiFlow.Rendering
             var ellBrush = BarrageSettings.EllipsisColor as SolidColorBrush ?? new SolidColorBrush(System.Windows.Media.Colors.White);
             var ellColor = ellBrush.Color;
 
-            // 预提取文本内�?
+            // 预提取文本内?
             bool showAppName = BarrageSettings.ShowAppName;
             double maxTextLen = BarrageSettings.MaxTextLength;
             bool isUnderlined = BarrageSettings.IsUnderlined;
+            double letterSpacing = BarrageSettings.LetterSpacing;
+            
+            // 预提取背景图片设置
+            bool showBgImage = BarrageSettings.ShowBackgroundImage;
+            string bgImagePath = BarrageSettings.BackgroundImagePath;
+            NotiFlow.Models.ImageAnchor bgAnchor = BarrageSettings.BackgroundImageAnchor;
+            double bgOffsetX = BarrageSettings.BackgroundImageOffsetX;
+            double bgOffsetY = BarrageSettings.BackgroundImageOffsetY;
+            double bgScale = BarrageSettings.BackgroundImageScale;
+            bool bgKeepBaseColor = BarrageSettings.BackgroundImageKeepBaseColor;
 
-            // 预提取图标像素（WPF 对象只能�?UI 线程访问�?
+            // 预提取图标像素（WPF 对象只能?UI 线程访问?
             bool showAppIcon = BarrageSettings.ShowAppIcon;
             byte[]? iconPixels = null;
             int iconWidth = 0, iconHeight = 0;
@@ -439,8 +453,10 @@ namespace NotiFlow.Rendering
                 {
                     item.PrepareLayout(canvasDevice,
                         appName, title, body,
-                        textColor, textOpacity, fontSize, fontFamilyName, fontStyle, fontWeight,
+                        textColor, textOpacity, fontSize, letterSpacing, fontFamilyName, fontStyle, fontWeight,
                         showBackground, bgColor, bgOpacity, cornerRadius,
+                        showBgImage, bgImagePath, bgAnchor, bgOffsetX, bgOffsetY, bgScale, bgKeepBaseColor, BarrageSettings.BackgroundImageOpacity,
+                        BarrageSettings.ShowTextStroke, textStrokeColor, BarrageSettings.TextStrokeThickness,
                         highlightEllipsis, ellColor,
                         showAppName, maxTextLen, isUnderlined,
                         showAppIcon, iconPixels, iconWidth, iconHeight, isUwpIcon);

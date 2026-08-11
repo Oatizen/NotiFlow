@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Windows;
 using System.Windows.Media;
+using NotiFlow.Models;
 
 namespace NotiFlow
 {
@@ -21,7 +23,11 @@ namespace NotiFlow
         public bool IsUnderlined { get; set; } = false;
         
         public string TextColorHex { get; set; } = "#FFFFFF"; // 默认白色
+        public bool ShowTextStroke { get; set; } = false;
+        public string TextStrokeColorHex { get; set; } = "#000000"; // 默认黑色
+        public double TextStrokeThickness { get; set; } = 1.0;
         public double TextOpacity { get; set; } = 1.0;
+        public double LetterSpacing { get; set; } = 0; // 字间距弹幕文字间距
         
         public bool ShowAppIcon { get; set; } = true;
         public bool ShowAppName { get; set; } = true;
@@ -30,6 +36,14 @@ namespace NotiFlow
         public string BackgroundColorHex { get; set; } = "#000000"; // 默认黑色
         public double BackgroundOpacity { get; set; } = 0.4;
         public double BackgroundCornerRadius { get; set; } = 8;
+        public bool ShowBackgroundImage { get; set; } = false;
+        public string BackgroundImagePath { get; set; } = "";
+        public ImageAnchor BackgroundImageAnchor { get; set; } = ImageAnchor.MiddleLeft;
+        public double BackgroundImageOffsetX { get; set; } = 0;
+        public double BackgroundImageOffsetY { get; set; } = 0;
+        public double BackgroundImageScale { get; set; } = 1.0;
+        public bool BackgroundImageKeepBaseColor { get; set; } = true;
+        public double BackgroundImageOpacity { get; set; } = 1.0;
         
         public int MaxTextLength { get; set; } = 50;
         public bool HighlightEllipsis { get; set; } = true;
@@ -83,7 +97,11 @@ namespace NotiFlow
         public static bool IsUnderlined { get; set; } = false;
         
         public static Brush TextColor { get; set; } = Brushes.White;
+        public static bool ShowTextStroke { get; set; } = false;
+        public static Brush TextStrokeColor { get; set; } = Brushes.Black;
+        public static double TextStrokeThickness { get; set; } = 1.0;
         public static double TextOpacity { get; set; } = 1.0;
+        public static double LetterSpacing { get; set; } = 0;
         
         public static bool ShowAppIcon { get; set; } = true;
         public static bool ShowAppName { get; set; } = true;
@@ -91,7 +109,15 @@ namespace NotiFlow
         public static bool ShowBackground { get; set; } = true;
         public static Brush BackgroundColor { get; set; } = Brushes.Black;
         public static double BackgroundOpacity { get; set; } = 0.4;
-        public static CornerRadius BackgroundCornerRadius { get; set; } = new CornerRadius(8);
+        public static CornerRadius BackgroundCornerRadius { get; set; } = new CornerRadius(12);
+        public static bool ShowBackgroundImage { get; set; } = false;
+        public static string BackgroundImagePath { get; set; } = "";
+        public static ImageAnchor BackgroundImageAnchor { get; set; } = ImageAnchor.MiddleLeft;
+        public static double BackgroundImageOffsetX { get; set; } = 0;
+        public static double BackgroundImageOffsetY { get; set; } = 0;
+        public static double BackgroundImageScale { get; set; } = 1.0;
+        public static bool BackgroundImageKeepBaseColor { get; set; } = true;
+        public static double BackgroundImageOpacity { get; set; } = 1.0;
 
         // ====== 截断与速度设定 ======
         public static int MaxTextLength { get; set; } = 50;
@@ -145,23 +171,14 @@ namespace NotiFlow
         public static bool IsSafeMode { get; set; } = false;
 
         // ====== 运行时应用状态 ======
-        /// <summary>
-        /// 指示程序当前是否正处于开启（渲染弹幕）状态。
-        /// 不进行落盘持久化，每次启动由 AutoStartWorking 赋值。
-        /// 使用 volatile 保证跨线程可见性（防止 CPU/编译器缓存优化导致读到旧值）。
-        /// </summary>
         private static volatile bool _isWorking;
         public static bool IsWorking { get => _isWorking; set => _isWorking = value; }
 
-        // 默认配置文件保存路径（迁移至用户 AppData 目录以防止覆盖安装丢失设置）
         private static readonly string DefaultConfigPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), 
             "NotiFlow", 
             "BarrageConfig.json");
 
-        /// <summary>
-        /// 将当前内存中的配置导出到指定文件路径。如果为空则导出到默认路径。
-        /// </summary>
         public static void ExportConfig(string? filePath = null)
         {
             try
@@ -174,13 +191,26 @@ namespace NotiFlow
                     FontStyle = FontStyle.ToString(),
                     IsUnderlined = IsUnderlined,
                     TextColorHex = (TextColor is SolidColorBrush textBrush) ? textBrush.Color.ToString() : "#FFFFFF",
+                    ShowTextStroke = ShowTextStroke,
+                    TextStrokeColorHex = (TextStrokeColor is SolidColorBrush strokeBrush) ? strokeBrush.Color.ToString() : "#000000",
+                    TextStrokeThickness = TextStrokeThickness,
                     TextOpacity = TextOpacity,
+                    LetterSpacing = LetterSpacing,
                     ShowAppIcon = ShowAppIcon,
                     ShowAppName = ShowAppName,
                     ShowBackground = ShowBackground,
-                    BackgroundColorHex = (BackgroundColor is SolidColorBrush solidBrush) ? solidBrush.Color.ToString() : "#000000",
+                    BackgroundColorHex = (BackgroundColor is SolidColorBrush bgBrush) ? bgBrush.Color.ToString() : "#000000",
                     BackgroundOpacity = BackgroundOpacity,
-                    BackgroundCornerRadius = BackgroundCornerRadius.TopLeft, // 简化为统一圆角数值进行保存
+                    BackgroundCornerRadius = BackgroundCornerRadius.TopLeft,
+                    ShowBackgroundImage = ShowBackgroundImage,
+                    BackgroundImagePath = BackgroundImagePath,
+                    BackgroundImageAnchor = BackgroundImageAnchor,
+                    BackgroundImageOffsetX = BackgroundImageOffsetX,
+                    BackgroundImageOffsetY = BackgroundImageOffsetY,
+                    BackgroundImageScale = BackgroundImageScale,
+                    BackgroundImageKeepBaseColor = BackgroundImageKeepBaseColor,
+                    BackgroundImageOpacity = BackgroundImageOpacity,
+
                     MaxTextLength = MaxTextLength,
                     HighlightEllipsis = HighlightEllipsis,
                     EllipsisColorHex = (EllipsisColor is SolidColorBrush ellBrush) ? ellBrush.Color.ToString() : "#32CD32",
@@ -209,7 +239,6 @@ namespace NotiFlow
                     SoftwareCrashCount = SoftwareCrashCount
                 };
 
-                // 确保目录存在
                 string? dir = Path.GetDirectoryName(filePath ?? DefaultConfigPath);
                 if (dir != null && !Directory.Exists(dir))
                 {
@@ -226,14 +255,10 @@ namespace NotiFlow
             }
         }
 
-        /// <summary>
-        /// 从指定文件路径导入配置。如果发现异常或字体缺失，会自动执行强容错的安全回落机制。
-        /// </summary>
         public static void ImportConfig(string? filePath = null)
         {
             string targetPath = filePath ?? DefaultConfigPath;
             
-            // 一次性无缝迁移：如果 AppData 中尚未有配置文件，但旧的安装目录中有，自动拷贝过来
             if (!File.Exists(targetPath) && filePath == null)
             {
                 string legacyPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BarrageConfig.json");
@@ -245,7 +270,6 @@ namespace NotiFlow
                 }
             }
 
-            // 没有配置文件时（初次运行），直接保留初始设置
             if (!File.Exists(targetPath)) return;
 
             try
@@ -254,45 +278,52 @@ namespace NotiFlow
                 var dto = JsonSerializer.Deserialize<BarrageConfigDto>(json);
                 if (dto == null) return;
 
-                // 1. 安全解析字体 (防灾核心设计点：应对不同 PC 未安装某个特殊字体发生活生生崩溃的 Bug)
-                // 原理就是通过系统字库查询比对，如果找得到它，就用它的，找不到就回退为系统最万能的雅黑。
                 bool fontExists = Fonts.SystemFontFamilies.Any(f => f.Source.Equals(dto.FontFamilyName, StringComparison.OrdinalIgnoreCase));
                 FontFamily = fontExists ? new FontFamily(dto.FontFamilyName) : new FontFamily("Microsoft YaHei");
 
-                // 2. 防御性解析极值数据：对于跨端的极端尺寸和透明度进行物理拦截，防止 UI 直接变不可见或撑爆显存
                 FontSize = Math.Clamp(dto.FontSize, 12, 200);
                 TextOpacity = Math.Clamp(dto.TextOpacity, 0.1, 1.0);
+                LetterSpacing = Math.Clamp(dto.LetterSpacing, 0, 100);
                 BackgroundOpacity = Math.Clamp(dto.BackgroundOpacity, 0.0, 1.0);
                 BackgroundCornerRadius = new CornerRadius(Math.Clamp(dto.BackgroundCornerRadius, 0, 100));
-
-                // 3. 布尔值类型（安全），直接覆盖
                 IsUnderlined = dto.IsUnderlined;
                 ShowAppIcon = dto.ShowAppIcon;
                 ShowAppName = dto.ShowAppName;
                 ShowBackground = dto.ShowBackground;
 
-                // 4. 解析复杂枚举与结构 (字重/斜体)，一旦手改 json 引入非法字串就原路捕获
                 try { FontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(dto.FontWeight)!; } catch { FontWeight = FontWeights.Normal; }
                 try { FontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(dto.FontStyle)!; } catch { FontStyle = FontStyles.Normal; }
 
-                // 5. 解析系统颜色（HexString 转换到 Brush 画刷模型）
                 try { TextColor = new SolidColorBrush((Color)ColorConverter.ConvertFromString(dto.TextColorHex)); } catch { TextColor = Brushes.White; }
-                try { BackgroundColor = new SolidColorBrush((Color)ColorConverter.ConvertFromString(dto.BackgroundColorHex)); } catch { BackgroundColor = Brushes.Black; }
-                try { EllipsisColor = new SolidColorBrush((Color)ColorConverter.ConvertFromString(dto.EllipsisColorHex)); } catch { EllipsisColor = Brushes.LimeGreen; }
+                
+                ShowTextStroke = dto.ShowTextStroke;
+                try { TextStrokeColor = new SolidColorBrush((Color)ColorConverter.ConvertFromString(dto.TextStrokeColorHex)); } catch { TextStrokeColor = Brushes.Black; }
+                TextStrokeThickness = Math.Clamp(dto.TextStrokeThickness, 0.0, 10.0);
 
-                // 6. 新增功能安全回落
-                MaxTextLength = Math.Clamp(dto.MaxTextLength, 5, 500);
+                if (!string.IsNullOrWhiteSpace(dto.BackgroundColorHex))
+                {
+                    try { BackgroundColor = new SolidColorBrush((Color)ColorConverter.ConvertFromString(dto.BackgroundColorHex)); } catch { }
+                }
+                
+                ShowBackgroundImage = dto.ShowBackgroundImage;
+                BackgroundImagePath = dto.BackgroundImagePath;
+                BackgroundImageAnchor = dto.BackgroundImageAnchor;
+                BackgroundImageOffsetX = dto.BackgroundImageOffsetX;
+                BackgroundImageOffsetY = dto.BackgroundImageOffsetY;
+                BackgroundImageScale = dto.BackgroundImageScale;
+                BackgroundImageKeepBaseColor = dto.BackgroundImageKeepBaseColor;
+                BackgroundImageOpacity = Math.Clamp(dto.BackgroundImageOpacity, 0.0, 1.0);
+
+                MaxTextLength = Math.Clamp(dto.MaxTextLength, 10, 500);
                 ScrollSpeedCharsPerSec = Math.Clamp(dto.ScrollSpeedCharsPerSec, 5.0, 100.0);
                 TrackStrategy = (dto.TrackStrategy == "TopFirst" || dto.TrackStrategy == "BottomFirst") ? dto.TrackStrategy : "UpperCenter";
                 HighlightEllipsis = dto.HighlightEllipsis;
                 AutoStartWorking = dto.AutoStartWorking;
                 IsWorking = AutoStartWorking;
 
-                // 7. 快捷键加载
                 HotKeyModifier = dto.HotKeyModifier;
                 HotKey = dto.HotKey;
                 
-                // 8. 其他行为设置
                 AutoCheckUpdate = dto.AutoCheckUpdate;
                 UpdateSource = dto.UpdateSource ?? "Auto";
                 SkippedVersion = dto.SkippedVersion ?? "";
@@ -302,7 +333,6 @@ namespace NotiFlow
                 CloseToTray = dto.CloseToTray;
                 RunOnStartup = dto.RunOnStartup;
                 
-                // 9. 作用域配置（安全回落：非法模式值退化为 Disabled）
                 SceneFilterMode = (dto.SceneFilterMode == "Whitelist" || dto.SceneFilterMode == "Blacklist") ? dto.SceneFilterMode : "Disabled";
                 SceneBlacklist = dto.SceneBlacklist ?? new();
                 SceneWhitelist = dto.SceneWhitelist ?? new();
@@ -320,9 +350,6 @@ namespace NotiFlow
             }
         }
 
-        /// <summary>
-        /// 将所有设置重置为系统出厂默认值。
-        /// </summary>
         public static void ResetToDefault()
         {
             FontFamily = new FontFamily("Microsoft YaHei");
@@ -331,14 +358,27 @@ namespace NotiFlow
             FontStyle = FontStyles.Normal;
             IsUnderlined = false;
             TextColor = Brushes.White;
+            ShowTextStroke = false;
+            TextStrokeColor = Brushes.Black;
+            TextStrokeThickness = 1.0;
             TextOpacity = 1.0;
+            LetterSpacing = 0;
             ShowAppIcon = true;
             ShowAppName = true;
             ShowBackground = true;
             BackgroundColor = Brushes.Black;
-            BackgroundOpacity = 0.4;
-            BackgroundCornerRadius = new CornerRadius(8);
-            MaxTextLength = 50;
+            BackgroundOpacity = 0.5;
+            BackgroundCornerRadius = new CornerRadius(12);
+            ShowBackgroundImage = false;
+            BackgroundImagePath = "";
+            BackgroundImageAnchor = ImageAnchor.MiddleLeft;
+            BackgroundImageOffsetX = 0;
+            BackgroundImageOffsetY = 0;
+            BackgroundImageScale = 1.0;
+            BackgroundImageKeepBaseColor = true;
+            BackgroundImageOpacity = 1.0;
+
+            MaxTextLength = 40;
             HighlightEllipsis = true;
             EllipsisColor = Brushes.LimeGreen;
             ScrollSpeedCharsPerSec = 12.0;

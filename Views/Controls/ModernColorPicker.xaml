@@ -83,8 +83,6 @@
                     <ColumnDefinition Width="32" />
                     <ColumnDefinition Width="12" />
                     <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="12" />
-                    <ColumnDefinition Width="32" />
                 </Grid.ColumnDefinitions>
                 
                 <!-- 亮度滑块 (Value) -->
@@ -138,23 +136,10 @@
                     </Canvas>
                 </Grid>
 
-                <!-- 透明度滑块 (Alpha) -->
-                <Grid Grid.Column="4">
-                    <Border CornerRadius="8" Background="{DynamicResource CheckerboardBrush}" />
-                    <Border CornerRadius="8">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                <GradientStop x:Name="AlphaSliderTopColor" Color="Red" Offset="0" />
-                                <GradientStop Color="Transparent" Offset="1" />
-                            </LinearGradientBrush>
-                        </Border.Background>
-                    </Border>
-                    <Slider x:Name="AlphaSlider" Orientation="Vertical" Minimum="0" Maximum="255" Value="255" 
-                            Style="{DynamicResource ColorSliderStyle}" ValueChanged="SpectrumSlider_ValueChanged" />
-                </Grid>
+
                 
                 <!-- 色相滑块 (Hue) 放到底部 -->
-                <Grid Grid.Column="0" Grid.ColumnSpan="5" VerticalAlignment="Bottom" Height="24" Margin="0,0,0,-36">
+                <Grid Grid.Column="0" Grid.ColumnSpan="3" VerticalAlignment="Bottom" Height="24" Margin="0,0,0,-36">
                     <Border CornerRadius="12">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
@@ -412,37 +397,7 @@
                             </Grid>
                         </StackPanel>
 
-                        <!-- A Slider -->
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-                            <Border Grid.Row="0" Width="90" HorizontalAlignment="Left" Margin="0,0,0,4" CornerRadius="4" Background="{DynamicResource ControlFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" Height="26">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="32" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <Border Background="{DynamicResource ControlFillColorSecondaryBrush}" CornerRadius="4,0,0,4">
-                                        <TextBlock Text="A" VerticalAlignment="Center" HorizontalAlignment="Center" FontWeight="Bold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                    </Border>
-                                    <TextBox x:Name="ATextBox" Grid.Column="1" Text="255" BorderThickness="0" Background="Transparent" VerticalAlignment="Stretch" VerticalContentAlignment="Center" Padding="8,0,0,0" Foreground="{DynamicResource TextFillColorPrimaryBrush}" TextChanged="ATextBox_TextChanged" />
-                                </Grid>
-                            </Border>
-                            <Grid Grid.Row="1" Height="20" VerticalAlignment="Center">
-                                <Border CornerRadius="10" Background="{DynamicResource CheckerboardBrush}" />
-                                <Border CornerRadius="10">
-                                    <Border.Background>
-                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                            <GradientStop Color="Transparent" Offset="0" />
-                                            <GradientStop Color="Black" Offset="1" />
-                                        </LinearGradientBrush>
-                                    </Border.Background>
-                                </Border>
-                                <Slider x:Name="ASlider" Minimum="0" Maximum="255" Style="{DynamicResource ColorSliderStyle}" ValueChanged="RgbSlider_ValueChanged" />
-                            </Grid>
-                        </Grid>
+
                     </StackPanel>
                 </ScrollViewer>
             </Grid>

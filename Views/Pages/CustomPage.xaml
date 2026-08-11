@@ -13,7 +13,6 @@
       SizeChanged="Page_SizeChanged"
       Loaded="Page_Loaded"
       Unloaded="Page_Unloaded">
-
     <Page.DataContext>
         <viewmodels:SettingsViewModel />
     </Page.DataContext>
@@ -22,6 +21,7 @@
         <converters:BooleanToAppearanceConverter x:Key="BoolToAppearance" />
         <converters:BooleanToAppearanceConverter x:Key="InverseBoolToAppearance" Invert="True"/>
         <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     </Page.Resources>
 
     <ScrollViewer x:Name="MainScrollViewer" VerticalScrollBarVisibility="Auto" CanContentScroll="False" Background="Transparent">
@@ -90,6 +90,12 @@
                             <ui:TextBlock Text="{Binding FontSizeDisplay}" HorizontalAlignment="Right" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold"/>
                         </Grid>
                         <Slider Minimum="12" Maximum="64" Value="{Binding FontSize, Mode=TwoWay}" Margin="0,0,0,18" />
+                        
+                        <Grid Margin="0,0,0,8">
+                            <ui:TextBlock Text="文字间距"/>
+                            <ui:TextBlock Text="{Binding LetterSpacingDisplay}" HorizontalAlignment="Right" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold"/>
+                        </Grid>
+                        <Slider Minimum="0" Maximum="20" Value="{Binding LetterSpacing, Mode=TwoWay}" Margin="0,0,0,18" />
 
                         <ui:TextBlock Text="字重" Margin="0,0,0,8"/>
                         <Grid Margin="0,0,0,18">
@@ -173,10 +179,9 @@
                             <ui:TextBlock FontTypography="BodyStrong" Text="外观" FontSize="16"/>
                         </StackPanel>
 
+                        <!-- 文本颜色 -->
                         <ui:TextBlock Text="文字颜色" Margin="0,0,0,0"/>
                         <ui:TextBlock Text="点击方框或输入16进制色号改变颜色" Margin="0,4,0,8" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-
-                        <!-- 取色弹窗与 HEX 手动输入 -->
                         <Grid Margin="0,0,0,22">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
@@ -202,12 +207,89 @@
                         </Grid>
                         <Slider Minimum="0" Maximum="100" Value="{Binding TextOpacityPercentage, Mode=TwoWay}" Margin="0,0,0,22" />
 
+                        <!-- 文字描边 -->
+                        <Grid Margin="0,0,0,8">
+                            <StackPanel>
+                                <ui:TextBlock Text="显示文字描边"/>
+                                <ui:TextBlock Text="在复杂背景下提高文字可读性" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                            </StackPanel>
+                            <ui:ToggleSwitch IsChecked="{Binding ShowTextStroke, Mode=TwoWay}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <StackPanel Visibility="{Binding ShowTextStroke, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ui:TextBlock Text="描边颜色" Margin="0,0,0,4"/>
+                            <Grid Margin="0,0,0,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid Grid.Column="0" Margin="0,0,12,0">
+                                    <Button Padding="0" BorderThickness="0" Background="Transparent" Click="TextStrokeColorPickerButton_Click" Cursor="Hand">
+                                        <Border Width="40" Height="40" Background="{Binding CurrentTextStrokeColorBrush}" CornerRadius="8" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
+                                    </Button>
+                                    
+                                    <ui:Flyout x:Name="TextStrokeColorPaletteFlyout" Placement="Bottom">
+                                        <controls:ModernColorPicker SelectedColor="{Binding CurrentTextStrokeColor, Mode=TwoWay}" PresetColors="{Binding PresetColors}" Margin="4"/>
+                                    </ui:Flyout>
+                                </Grid>
+                                <ui:TextBox Grid.Column="1" Text="{Binding TextStrokeColorHex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="HEX (例: #000000)" VerticalAlignment="Center"/>
+                            </Grid>
+                            
+                            <Grid Margin="0,0,0,8">
+                                <ui:TextBlock Text="描边粗细"/>
+                                <ui:TextBlock Text="{Binding TextStrokeThicknessDisplay}" HorizontalAlignment="Right" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold"/>
+                            </Grid>
+                            <Slider Minimum="0.1" Maximum="5" Value="{Binding TextStrokeThickness, Mode=TwoWay}" TickFrequency="0.1" IsSnapToTickEnabled="True" Margin="0,0,0,22" />
+                        </StackPanel>
+
+                        <!-- 背景颜色 -->
+                        <ui:TextBlock Text="背景遮罩颜色" Margin="0,0,0,0"/>
+                        <ui:TextBlock Text="自定义弹幕背景色的颜色值" Margin="0,4,0,8" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                        <Grid Margin="0,0,0,22">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <Grid Grid.Column="0" Margin="0,0,12,0">
+                                <Button Padding="0" BorderThickness="0" Background="Transparent" Click="BackgroundColorPickerButton_Click" Cursor="Hand">
+                                    <Border Width="40" Height="40" Background="{Binding CurrentBackgroundColorBrush}" CornerRadius="8" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
+                                </Button>
+                                
+                                <ui:Flyout x:Name="BackgroundColorPaletteFlyout" Placement="Bottom">
+                                    <controls:ModernColorPicker SelectedColor="{Binding CurrentBackgroundColor, Mode=TwoWay}" PresetColors="{Binding PresetColors}" Margin="4"/>
+                                </ui:Flyout>
+                            </Grid>
+                            
+                            <ui:TextBox Grid.Column="1" Text="{Binding BackgroundColorHex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="HEX (例如: #000000)" VerticalAlignment="Center"/>
+                        </Grid>
+
                         <Grid Margin="0,0,0,8">
                             <ui:TextBlock Text="背景不透明度"/>
                             <ui:TextBlock Text="{Binding BackgroundOpacityDisplay}" HorizontalAlignment="Right" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold"/>
                         </Grid>
                         <Slider Minimum="0" Maximum="100" Value="{Binding BackgroundOpacityPercentage, Mode=TwoWay}" Margin="0,0,0,22" />
-
+                        
+                        <!-- 背景图设置 -->
+                        <Grid Margin="0,0,0,16">
+                            <StackPanel>
+                                <ui:TextBlock Text="自定义背景图"/>
+                                <ui:TextBlock Text="使用图片作为弹幕背景装饰" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                            </StackPanel>
+                            <ui:ToggleSwitch IsChecked="{Binding ShowBackgroundImage, Mode=TwoWay}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                        </Grid>
+                        
+                        <Button Content="打开画板设置背景图..." HorizontalAlignment="Stretch" Margin="0,0,0,22" 
+                                Click="OpenBackgroundImageEditor_Click" 
+                                Visibility="{Binding ShowBackgroundImage, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        
+                        <StackPanel Visibility="{Binding ShowBackgroundImage, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Grid Margin="0,0,0,8">
+                                <ui:TextBlock Text="图片不透明度"/>
+                                <ui:TextBlock Text="{Binding BackgroundImageOpacityDisplay}" HorizontalAlignment="Right" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold"/>
+                            </Grid>
+                            <Slider Minimum="0" Maximum="100" Value="{Binding BackgroundImageOpacityPercentage, Mode=TwoWay}" Margin="0,0,0,22" />
+                        </StackPanel>
                         <Grid Margin="0,0,0,8">
                             <StackPanel>
                                 <ui:TextBlock Text="显示应用图标"/>

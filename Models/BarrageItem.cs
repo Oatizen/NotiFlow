@@ -9,6 +9,7 @@ using Windows.Graphics.DirectX;
 using Windows.UI;
 using Windows.UI.Composition;
 using NotiFlow.Rendering;
+using Microsoft.Graphics.Canvas.Effects;
 
 namespace NotiFlow.Models
 {
@@ -44,7 +45,7 @@ namespace NotiFlow.Models
         /// 弹幕的合成视觉对象，持有 GPU 纹理并参与合成器动画。
         /// 由 BuildVisualForComposition 在后台线程创建。
         /// </summary>
-        public SpriteVisual? Visual { get; private set; }
+        public Windows.UI.Composition.ContainerVisual? Visual { get; private set; }
 
         /// <summary>
         /// 弹幕纹理对应的 CompositionDrawingSurface，
@@ -62,6 +63,11 @@ namespace NotiFlow.Models
         /// </summary>
         public DateTime AnimationEndTime { get; set; }
 
+        // 背景图缓存 (静态复用，避免每条弹幕重复加载)
+        private static string _cachedBgImagePath = "";
+        private static CanvasBitmap? _cachedBgImage = null;
+        private static readonly object _bgImageLock = new object();
+
         // Win2D 资源缓存
         private CanvasTextLayout? _textLayout;
         private CanvasBitmap? _appIcon;
@@ -77,10 +83,21 @@ namespace NotiFlow.Models
         private double _padH = 12;
         private double _padV = 6;
 
-        // 构建时缓存的设置值（后台线程安全）
         private bool _showBackground;
         private float _cornerRadius;
         private bool _isUnderlined;
+        
+        // 渲染时使用的背景图设置
+        private bool _showBgImage;
+        private ImageAnchor _bgAnchor;
+        private double _bgOffsetX;
+        private double _bgOffsetY;
+        private double _bgScale;
+        private bool _bgKeepBaseColor;
+        private double _bgImageOpacity;
+        private bool _showTextStroke;
+        private Windows.UI.Color _textStrokeColor;
+        private double _textStrokeThickness;
 
         public void Reset()
         {
@@ -119,10 +136,12 @@ namespace NotiFlow.Models
         public void PrepareLayout(CanvasDevice device,
             string appName, string title, string body,
             System.Windows.Media.Color textColor, double textOpacity,
-            double fontSize, string fontFamilyName,
+            double fontSize, double letterSpacing, string fontFamilyName,
             FontStyle fontStyle, FontWeight fontWeight,
             bool showBackground, System.Windows.Media.Color bgColor, double bgOpacity,
             CornerRadius cornerRadius,
+            bool showBgImage, string bgImagePath, ImageAnchor bgAnchor, double bgOffsetX, double bgOffsetY, double bgScale, bool bgKeepBaseColor, double bgImageOpacity,
+            bool showTextStroke, System.Windows.Media.Color textStrokeColor, double textStrokeThickness,
             bool highlightEllipsis, System.Windows.Media.Color ellColor,
             bool showAppName, double maxTextLen, bool isUnderlined,
             bool showAppIcon, byte[]? iconPixels, int iconWidth, int iconHeight, bool isUwpIcon)
@@ -201,6 +220,12 @@ namespace NotiFlow.Models
             }
 
             _textLayout = new CanvasTextLayout(device, fullText, textFormat, 0.0f, 0.0f);
+            
+            if (letterSpacing > 0 && fullText.Length > 0)
+            {
+                // The parameters are: start index, length, leading spacing, trailing spacing, minimum advance.
+                _textLayout.SetCharacterSpacing(0, fullText.Length, 0, (float)letterSpacing, 0);
+            }
 
             if (highlightEllipsis && fullText.EndsWith("......"))
             {
@@ -224,6 +249,36 @@ namespace NotiFlow.Models
             _showBackground = showBackground;
             _cornerRadius = (float)cornerRadius.TopLeft;
             _isUnderlined = isUnderlined;
+            
+            _showBgImage = showBgImage;
+            _bgAnchor = bgAnchor;
+            _bgOffsetX = bgOffsetX;
+            _bgOffsetY = bgOffsetY;
+            _bgScale = bgScale;
+            _bgKeepBaseColor = bgKeepBaseColor;
+            _bgImageOpacity = bgImageOpacity;
+            _showTextStroke = showTextStroke;
+            _textStrokeColor = Windows.UI.Color.FromArgb((byte)(textStrokeColor.A * textOpacity), textStrokeColor.R, textStrokeColor.G, textStrokeColor.B);
+            _textStrokeThickness = textStrokeThickness;
+
+            if (_showBgImage && !string.IsNullOrEmpty(bgImagePath))
+            {
+                lock (_bgImageLock)
+                {
+                    if (_cachedBgImagePath != bgImagePath)
+                    {
+                        _cachedBgImage?.Dispose();
+                        _cachedBgImage = null;
+                        try
+                        {
+                            // 使用同步阻塞等待（因为我们在后台线程 Task.Run 中）
+                            _cachedBgImage = CanvasBitmap.LoadAsync(device, bgImagePath).GetAwaiter().GetResult();
+                            _cachedBgImagePath = bgImagePath;
+                        }
+                        catch { }
+                    }
+                }
+            }
         }
 
         public void CreateVisualForComposition(CanvasDevice device, Compositor compositor,
@@ -268,12 +323,20 @@ namespace NotiFlow.Models
                 CurrentY = savedY;
             }
 
-            // 创建 SpriteVisual 并绑定纹理画刷
+            // 将 SpriteVisual 挂载到 Composition
             var surfaceBrush = compositor.CreateSurfaceBrush(_surface);
             surfaceBrush.Stretch = CompositionStretch.None;
-            Visual = compositor.CreateSpriteVisual();
-            Visual.Size = new Vector2(surfaceWidth, surfaceHeight);
-            Visual.Brush = surfaceBrush;
+            var contentVisual = compositor.CreateSpriteVisual();
+            contentVisual.Size = new Vector2(surfaceWidth, surfaceHeight);
+            contentVisual.Brush = surfaceBrush;
+
+            var root = compositor.CreateContainerVisual();
+            root.Size = contentVisual.Size;
+
+
+
+            root.Children.InsertAtTop(contentVisual);
+            Visual = root;
         }
 
         public void Draw(CanvasDrawingSession session)
@@ -285,7 +348,63 @@ namespace NotiFlow.Models
 
             if (_showBackground)
             {
-                session.FillRoundedRectangle(drawX, drawY, (float)_bgWidth, (float)_bgHeight, _cornerRadius, _cornerRadius, _backgroundColor);
+                if (!_showBgImage || _bgKeepBaseColor)
+                {
+                    session.FillRoundedRectangle(drawX, drawY, (float)_bgWidth, (float)_bgHeight, _cornerRadius, _cornerRadius, _backgroundColor);
+                }
+                
+                if (_showBgImage && _cachedBgImage != null)
+                {
+                    double imgW = _cachedBgImage.Size.Width * _bgScale;
+                    double imgH = _cachedBgImage.Size.Height * _bgScale;
+                    double destX = drawX;
+                    double destY = drawY;
+                    
+                    switch (_bgAnchor)
+                    {
+                        case ImageAnchor.TopLeft:
+                        case ImageAnchor.MiddleLeft:
+                        case ImageAnchor.BottomLeft:
+                            destX += _bgOffsetX;
+                            break;
+                        case ImageAnchor.TopCenter:
+                        case ImageAnchor.MiddleCenter:
+                        case ImageAnchor.BottomCenter:
+                            destX += (_bgWidth - imgW) / 2.0 + _bgOffsetX;
+                            break;
+                        case ImageAnchor.TopRight:
+                        case ImageAnchor.MiddleRight:
+                        case ImageAnchor.BottomRight:
+                            destX += _bgWidth - imgW - _bgOffsetX;
+                            break;
+                    }
+                    
+                    switch (_bgAnchor)
+                    {
+                        case ImageAnchor.TopLeft:
+                        case ImageAnchor.TopCenter:
+                        case ImageAnchor.TopRight:
+                            destY += _bgOffsetY;
+                            break;
+                        case ImageAnchor.MiddleLeft:
+                        case ImageAnchor.MiddleCenter:
+                        case ImageAnchor.MiddleRight:
+                            destY += (_bgHeight - imgH) / 2.0 + _bgOffsetY;
+                            break;
+                        case ImageAnchor.BottomLeft:
+                        case ImageAnchor.BottomCenter:
+                        case ImageAnchor.BottomRight:
+                            destY += _bgHeight - imgH - _bgOffsetY;
+                            break;
+                    }
+
+                    // 创建一个圆角矩形的 Geometry 用来裁剪背景图，防止图片超出背景区域
+                    using (var geometry = Microsoft.Graphics.Canvas.Geometry.CanvasGeometry.CreateRoundedRectangle(session.Device, drawX, drawY, (float)_bgWidth, (float)_bgHeight, _cornerRadius, _cornerRadius))
+                    using (session.CreateLayer(1.0f, geometry))
+                    {
+                        session.DrawImage(_cachedBgImage, new Windows.Foundation.Rect(destX, destY, imgW, imgH), _cachedBgImage.Bounds, (float)_bgImageOpacity, Microsoft.Graphics.Canvas.CanvasImageInterpolation.Linear);
+                    }
+                }
             }
 
             float contentX = drawX + (_showBackground ? (float)_padH : 0);
@@ -319,6 +438,14 @@ namespace NotiFlow.Models
             {
                 Windows.UI.Color shadowColor = Windows.UI.Color.FromArgb((byte)(0.9 * _textColor.A), 0, 0, 0);
                 session.DrawTextLayout(_textLayout, contentX + 1.5f, textY + 1.5f, shadowColor);
+            }
+
+            if (_showTextStroke && _textStrokeThickness > 0)
+            {
+                using (var geom = Microsoft.Graphics.Canvas.Geometry.CanvasGeometry.CreateText(_textLayout))
+                {
+                    session.DrawGeometry(geom, contentX, textY, _textStrokeColor, (float)_textStrokeThickness);
+                }
             }
 
             session.DrawTextLayout(_textLayout, contentX, textY, _textColor);
