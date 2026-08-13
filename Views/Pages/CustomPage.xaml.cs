@@ -2,6 +2,8 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using NotiFlow.Models;
 
@@ -19,7 +21,17 @@ namespace NotiFlow.Views.Pages
             _whiteBrush.Freeze();
         }
 
-        private void Page_Loaded(object sender, RoutedEventArgs e)
+
+        private static void OnCurrentScrollOffsetChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is CustomPage page && page.MainScrollViewer != null)
+            {
+                page.MainScrollViewer.ScrollToVerticalOffset((double)e.NewValue);
+            }
+        }
+        
+
+private void Page_Loaded(object sender, RoutedEventArgs e)
         {
             UpdateWorkButtonState(); // 刚进入页面时先校准一次当前实际状态
             
@@ -53,9 +65,9 @@ namespace NotiFlow.Views.Pages
         {
             PreviewCanvas.Children.Clear();
 
+            string previewText = "图标 应用名称：这是一条测试弹幕......";
             var textBlock = new TextBlock
             {
-                Text = "图标 应用名称：这是一条测试弹幕......",
                 Foreground = BarrageSettings.TextColor,
                 Opacity = BarrageSettings.TextOpacity,
                 FontSize = BarrageSettings.FontSize,
@@ -64,6 +76,25 @@ namespace NotiFlow.Views.Pages
                 FontWeight = BarrageSettings.FontWeight,
                 VerticalAlignment = VerticalAlignment.Center
             };
+
+            if (BarrageSettings.LetterSpacing > 0)
+            {
+                for (int i = 0; i < previewText.Length; i++)
+                {
+                    textBlock.Inlines.Add(new System.Windows.Documents.Run(previewText[i].ToString()));
+                    if (i < previewText.Length - 1)
+                    {
+                        textBlock.Inlines.Add(new System.Windows.Documents.InlineUIContainer(new System.Windows.Controls.Border { Width = BarrageSettings.LetterSpacing })
+                        {
+                            BaselineAlignment = BaselineAlignment.Center
+                        });
+                    }
+                }
+            }
+            else
+            {
+                textBlock.Text = previewText;
+            }
 
             if (BarrageSettings.IsUnderlined)
             {
@@ -298,8 +329,7 @@ namespace NotiFlow.Views.Pages
         /// </summary>
         private void Page_SizeChanged(object sender, System.Windows.SizeChangedEventArgs e)
         {
-            if (SettingsGrid == null || LeftSettingsCard == null || RightSettingsCard == null ||
-                BottomSettingsGrid == null || AnimationCard == null || OtherCard == null) return;
+            if (SettingsGrid == null || LeftSettingsStack == null || RightSettingsCard == null) return;
 
             if (e.NewSize.Width < 700)
             {
@@ -311,27 +341,12 @@ namespace NotiFlow.Views.Pages
                 SettingsGrid.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = System.Windows.GridLength.Auto });
                 SettingsGrid.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = System.Windows.GridLength.Auto });
 
-                System.Windows.Controls.Grid.SetColumn(LeftSettingsCard, 0);
-                System.Windows.Controls.Grid.SetRow(LeftSettingsCard, 0);
+                System.Windows.Controls.Grid.SetColumn(LeftSettingsStack, 0);
+                System.Windows.Controls.Grid.SetRow(LeftSettingsStack, 0);
 
                 System.Windows.Controls.Grid.SetColumn(RightSettingsCard, 0);
                 System.Windows.Controls.Grid.SetRow(RightSettingsCard, 1);
                 RightSettingsCard.Margin = new System.Windows.Thickness(0, 24, 0, 0);
-
-                // BottomSettingsGrid Single column layout
-                BottomSettingsGrid.ColumnDefinitions.Clear();
-                BottomSettingsGrid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) });
-
-                BottomSettingsGrid.RowDefinitions.Clear();
-                BottomSettingsGrid.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = System.Windows.GridLength.Auto });
-                BottomSettingsGrid.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = System.Windows.GridLength.Auto });
-
-                System.Windows.Controls.Grid.SetColumn(AnimationCard, 0);
-                System.Windows.Controls.Grid.SetRow(AnimationCard, 0);
-
-                System.Windows.Controls.Grid.SetColumn(OtherCard, 0);
-                System.Windows.Controls.Grid.SetRow(OtherCard, 1);
-                OtherCard.Margin = new System.Windows.Thickness(0, 24, 0, 0);
             }
             else
             {
@@ -343,27 +358,12 @@ namespace NotiFlow.Views.Pages
 
                 SettingsGrid.RowDefinitions.Clear();
 
-                System.Windows.Controls.Grid.SetColumn(LeftSettingsCard, 0);
-                System.Windows.Controls.Grid.SetRow(LeftSettingsCard, 0);
+                System.Windows.Controls.Grid.SetColumn(LeftSettingsStack, 0);
+                System.Windows.Controls.Grid.SetRow(LeftSettingsStack, 0);
 
                 System.Windows.Controls.Grid.SetColumn(RightSettingsCard, 2);
                 System.Windows.Controls.Grid.SetRow(RightSettingsCard, 0);
                 RightSettingsCard.Margin = new System.Windows.Thickness(0);
-
-                // BottomSettingsGrid Two columns layout
-                BottomSettingsGrid.ColumnDefinitions.Clear();
-                BottomSettingsGrid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) });
-                BottomSettingsGrid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new System.Windows.GridLength(16) });
-                BottomSettingsGrid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) });
-
-                BottomSettingsGrid.RowDefinitions.Clear();
-
-                System.Windows.Controls.Grid.SetColumn(AnimationCard, 0);
-                System.Windows.Controls.Grid.SetRow(AnimationCard, 0);
-
-                System.Windows.Controls.Grid.SetColumn(OtherCard, 2);
-                System.Windows.Controls.Grid.SetRow(OtherCard, 0);
-                OtherCard.Margin = new System.Windows.Thickness(0);
             }
         }
     }

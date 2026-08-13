@@ -11,9 +11,6 @@ using System.Windows.Threading;
 
 namespace NotiFlow.Models
 {
-    /// <summary>
-    /// 用于包装 FontFamily 并提供其本地化名称（如处理中文名，防止符号字体显示乱码）
-    /// </summary>
     public class FontViewModel
     {
         public FontFamily Family { get; }
@@ -22,8 +19,6 @@ namespace NotiFlow.Models
         public FontViewModel(FontFamily family)
         {
             Family = family;
-            
-            // 尝试获取本地化字体名称，优先级：中文 -> 英语 -> 字体原始名称
             var zhLang = System.Windows.Markup.XmlLanguage.GetLanguage("zh-cn");
             var enLang = System.Windows.Markup.XmlLanguage.GetLanguage("en-us");
 
@@ -36,9 +31,6 @@ namespace NotiFlow.Models
         }
     }
 
-    /// <summary>
-    /// 用于装载预设调色板信息的结构体
-    /// </summary>
     public class ColorPaletteItem
     {
         public string Name { get; set; }
@@ -46,52 +38,153 @@ namespace NotiFlow.Models
         public Brush Brush { get; set; }
     }
 
-    /// <summary>
-    /// 设置界面的总调度 ViewModel，主要作用是将静态层里的 BarrageSettings 与前端进行带缓冲的双向绑定
-    /// </summary>
+    public partial class ScopeSelectionItem : ObservableObject
+    {
+        public string DisplayName { get; set; }
+        public string Identifier { get; set; }
+        public string Type { get; set; } // "Global", "Source", "Scene"
+        public ScopeRuleItemDto RuleItem { get; set; }
+
+        [ObservableProperty]
+        private bool _hasOverride;
+    }
+
     public partial class SettingsViewModel : ObservableObject
     {
         private readonly DispatcherTimer _debounceTimer;
+        private bool _isSyncing = false;
+
+        public ObservableCollection<ScopeSelectionItem> ConfigScopes { get; } = new();
+        public ObservableCollection<ScopeSelectionItem> FilteredScopes { get; } = new();
+
+        [ObservableProperty]
+        private string _scopeCategory = "Global"; // "Global", "Scene", "Source"
+
+        public bool IsCategoryGlobal
+        {
+            get => ScopeCategory == "Global";
+            set { if (value) { ScopeCategory = "Global"; OnPropertyChanged(); OnPropertyChanged(nameof(IsCategoryScene)); OnPropertyChanged(nameof(IsCategorySource)); } }
+        }
+
+        public bool IsCategoryScene
+        {
+            get => ScopeCategory == "Scene";
+            set { if (value) { ScopeCategory = "Scene"; OnPropertyChanged(); OnPropertyChanged(nameof(IsCategoryGlobal)); OnPropertyChanged(nameof(IsCategorySource)); } }
+        }
+
+        public bool IsCategorySource
+        {
+            get => ScopeCategory == "Source";
+            set { if (value) { ScopeCategory = "Source"; OnPropertyChanged(); OnPropertyChanged(nameof(IsCategoryGlobal)); OnPropertyChanged(nameof(IsCategoryScene)); } }
+        }
+
+        public Visibility ComboBoxVisibility => (ScopeCategory == "Global" || FilteredScopes.Count == 0) ? Visibility.Collapsed : Visibility.Visible;
+        public Visibility EmptyListMessageVisibility => (ScopeCategory != "Global" && FilteredScopes.Count == 0) ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility ClearButtonVisibility => (SelectedScope != null && SelectedScope.HasOverride && !IsCategoryGlobal) ? Visibility.Visible : Visibility.Collapsed;
+        partial void OnScopeCategoryChanged(string value)
+        {
+            if (value == "Global")
+            {
+                SelectedScope = ConfigScopes.FirstOrDefault(s => s.Type == "Global");
+            }
+            else
+            {
+                FilteredScopes.Clear();
+                foreach (var item in ConfigScopes.Where(s => s.Type == value))
+                {
+                    FilteredScopes.Add(item);
+                }
+                SelectedScope = FilteredScopes.FirstOrDefault();
+            }
+            OnPropertyChanged(nameof(ComboBoxVisibility));
+            OnPropertyChanged(nameof(EmptyListMessageVisibility));
+            OnPropertyChanged(nameof(ClearButtonVisibility));
+        }
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(IsEditingGlobal))]
+        private ScopeSelectionItem _selectedScope;
+        partial void OnSelectedScopeChanged(ScopeSelectionItem value)
+        {
+            OnPropertyChanged(nameof(ClearButtonVisibility));
+            if (value == null) return;
+            LoadConfigToUI();
+        }
+
+        private BarrageConfigDto GetTargetConfig(bool createIfNull)
+        {
+            if (SelectedScope == null || SelectedScope.Type == "Global") return null;
+            if (SelectedScope.RuleItem.StyleOverride == null)
+            {
+                if (createIfNull)
+                {
+                    SelectedScope.RuleItem.StyleOverride = BarrageSettings.GetGlobalConfigDto();
+                    SelectedScope.HasOverride = true;
+
+                    if (SelectedScope.Type == "Scene")
+                    {
+                        if (!BarrageSettings.SceneWhitelist.Contains(SelectedScope.RuleItem) &&
+                            !BarrageSettings.SceneBlacklist.Contains(SelectedScope.RuleItem) &&
+                            !BarrageSettings.RecentScenesCache.Contains(SelectedScope.RuleItem))
+                        {
+                            BarrageSettings.RecentScenesCache.Add(SelectedScope.RuleItem);
+                        }
+                    }
+                    else if (SelectedScope.Type == "Source")
+                    {
+                        if (!BarrageSettings.SourceWhitelist.Contains(SelectedScope.RuleItem) &&
+                            !BarrageSettings.SourceBlacklist.Contains(SelectedScope.RuleItem) &&
+                            !BarrageSettings.RecentSourcesCache.Contains(SelectedScope.RuleItem))
+                        {
+                            BarrageSettings.RecentSourcesCache.Add(SelectedScope.RuleItem);
+                        }
+                    }
+
+                    OnPropertyChanged(nameof(ClearButtonVisibility));
+                }
+            }
+            return SelectedScope.RuleItem.StyleOverride;
+        }
+
+        [RelayCommand]
+        private void SetScopeCategory(string category)
+        {
+            if (category == "Global") IsCategoryGlobal = true;
+            else if (category == "Scene") IsCategoryScene = true;
+            else if (category == "Source") IsCategorySource = true;
+        }
+
+        [RelayCommand]
+        private void ClearScopeOverride()
+        {
+            if (SelectedScope != null && SelectedScope.Type != "Global" && SelectedScope.RuleItem != null)
+            {
+                SelectedScope.RuleItem.StyleOverride = null;
+                SelectedScope.HasOverride = false;
+                OnPropertyChanged(nameof(ClearButtonVisibility));
+                LoadConfigToUI();
+                TriggerSaveAndPreview();
+            }
+        }
+
+        public bool IsEditingGlobal => SelectedScope == null || SelectedScope.Type == "Global";
+
         public SettingsViewModel()
         {
-            // 从静态内存中拉取初始状态
-            
-            // 初始化系统字体列表并尝试配对当前使用字体
             AvailableFonts = Fonts.SystemFontFamilies
                 .Select(f => new FontViewModel(f))
                 .OrderBy(f => f.LocalizedName)
                 .ToList();
-                
-            var currentSource = BarrageSettings.FontFamily.Source;
-            _selectedFontItem = AvailableFonts.FirstOrDefault(f => f.Family.Source.Equals(currentSource, StringComparison.OrdinalIgnoreCase))
-                               ?? AvailableFonts.FirstOrDefault(f => f.Family.Source.Equals("Microsoft YaHei", StringComparison.OrdinalIgnoreCase))
-                               ?? AvailableFonts.FirstOrDefault();
-
-            _textColorHex = (BarrageSettings.TextColor is SolidColorBrush brush) ? brush.Color.ToString() : "#FFFFFF";
-            _currentColorBrush = BarrageSettings.TextColor;
-            _currentColor = (BarrageSettings.TextColor is SolidColorBrush b) ? b.Color : Colors.White;
-
-            _backgroundColorHex = (BarrageSettings.BackgroundColor is SolidColorBrush bgBrush) ? bgBrush.Color.ToString() : "#000000";
-            _currentBackgroundColorBrush = BarrageSettings.BackgroundColor;
-            _currentBackgroundColor = (BarrageSettings.BackgroundColor is SolidColorBrush bgB) ? bgB.Color : Colors.Black;
 
             var hexColors = new[]
             {
-                // Row 3 (Light)
                 "#EF9A9A", "#FFCC80", "#C5E1A5", "#90CAF9", "#CE93D8", "#E0E0E0",
-                // Row 4
                 "#E57373", "#FFB74D", "#AED581", "#64B5F6", "#BA68C8", "#BDBDBD",
-                // Row 5
                 "#EF5350", "#FFA726", "#9CCC65", "#42A5F5", "#AB47BC", "#9E9E9E",
-                // Row 6
                 "#F44336", "#FF9800", "#8BC34A", "#2196F3", "#9C27B0", "#757575",
-                // Row 7 (Primary)
                 "#E53935", "#F57C00", "#7CB342", "#1E88E5", "#8E24AA", "#616161",
-                // Row 8
                 "#D32F2F", "#EF6C00", "#689F38", "#1976D2", "#7B1FA2", "#424242",
-                // Row 9
                 "#C62828", "#E65100", "#558B2F", "#1565C0", "#6A1B9A", "#212121",
-                // Row 10 (Darkest)
                 "#B71C1C", "#BF360C", "#33691E", "#0D47A1", "#4A148C", "#000000"
             };
 
@@ -106,33 +199,9 @@ namespace NotiFlow.Models
                 });
             }
 
-            _fontSize = BarrageSettings.FontSize;
-            _letterSpacing = BarrageSettings.LetterSpacing;
-            _maxTextLength = BarrageSettings.MaxTextLength;
-            _textOpacityPercentage = BarrageSettings.TextOpacity * 100;
-            _backgroundOpacityPercentage = BarrageSettings.BackgroundOpacity * 100;
-            
-            _showTextStroke = BarrageSettings.ShowTextStroke;
-            _textStrokeThickness = BarrageSettings.TextStrokeThickness;
-            _currentTextStrokeColorBrush = BarrageSettings.TextStrokeColor;
-            _currentTextStrokeColor = (BarrageSettings.TextStrokeColor is SolidColorBrush stb) ? stb.Color : Colors.Black;
-            _showAppIcon = BarrageSettings.ShowAppIcon;
-            _showAppName = BarrageSettings.ShowAppName;
-            _highlightEllipsis = BarrageSettings.HighlightEllipsis;
-            _showBackgroundImage = BarrageSettings.ShowBackgroundImage;
-            _backgroundImagePath = BarrageSettings.BackgroundImagePath;
-            _backgroundImageAnchor = BarrageSettings.BackgroundImageAnchor;
-            _backgroundImageOffsetX = BarrageSettings.BackgroundImageOffsetX;
-            _backgroundImageOffsetY = BarrageSettings.BackgroundImageOffsetY;
-            _backgroundImageScale = BarrageSettings.BackgroundImageScale;
-            _backgroundImageOpacity = BarrageSettings.BackgroundImageOpacity;
+            ReloadScopes();
 
-            _scrollSpeedCharsPerSec = BarrageSettings.ScrollSpeedCharsPerSec;
-            _trackStrategy = BarrageSettings.TrackStrategy;
-            
-            _isFontWeightBold = BarrageSettings.FontWeight == FontWeights.Bold;
-            _isFontStyleItalic = BarrageSettings.FontStyle == FontStyles.Italic;
-            _isUnderline = BarrageSettings.IsUnderlined;
+            // Load global non-scoped properties
             _autoStartWorking = BarrageSettings.AutoStartWorking;
             _autoCheckUpdate = BarrageSettings.AutoCheckUpdate;
             _updateSource = BarrageSettings.UpdateSource;
@@ -147,84 +216,236 @@ namespace NotiFlow.Models
             {
                 _debounceTimer.Stop();
                 BarrageSettings.ExportConfig();
-                WeakReferenceMessenger.Default.Send(new BarragePreviewMessage(""));
+                WeakReferenceMessenger.Default.Send(new BarragePreviewMessage(SelectedScope?.Type == "Global" ? "" : SelectedScope?.Identifier));
             };
         }
 
+        public async void ReloadScopes()
+        {
+            var newScopes = new System.Collections.Generic.List<ScopeSelectionItem>();
+            var globalScope = new ScopeSelectionItem { DisplayName = "全局", Type = "Global" };
+            newScopes.Add(globalScope);
+
+            foreach (var item in BarrageSettings.SourceWhitelist.Concat(BarrageSettings.SourceBlacklist).Concat(BarrageSettings.RecentSourcesCache).GroupBy(x => x.Identifier).Select(g => g.First()))
+            {
+                newScopes.Add(new ScopeSelectionItem { DisplayName = item.DisplayName, Identifier = item.Identifier, Type = "Source", RuleItem = item, HasOverride = item.StyleOverride != null });
+            }
+
+            foreach (var item in BarrageSettings.SceneWhitelist.Concat(BarrageSettings.SceneBlacklist).Concat(BarrageSettings.RecentScenesCache).GroupBy(x => x.Identifier).Select(g => g.First()))
+            {
+                newScopes.Add(new ScopeSelectionItem { DisplayName = item.DisplayName, Identifier = item.Identifier, Type = "Scene", RuleItem = item, HasOverride = item.StyleOverride != null });
+            }
+
+            try
+            {
+                var processes = await System.Threading.Tasks.Task.Run(() => Services.ProcessEnumerator.EnumerateWindowProcesses());
+                foreach (var proc in processes)
+                {
+                    if (!newScopes.Any(s => s.Type == "Scene" && s.Identifier.Equals(proc.ProcessName, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        var newRule = new ScopeRuleItemDto { DisplayName = !string.IsNullOrWhiteSpace(proc.MainWindowTitle) ? proc.MainWindowTitle : proc.ProcessName, Identifier = proc.ProcessName };
+                        newScopes.Add(new ScopeSelectionItem { DisplayName = newRule.DisplayName, Identifier = newRule.Identifier, Type = "Scene", RuleItem = newRule, HasOverride = false });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Failed to enumerate processes: " + ex.Message);
+            }
+
+            ConfigScopes.Clear();
+            foreach (var s in newScopes)
+            {
+                ConfigScopes.Add(s);
+            }
+
+            // Make sure we trigger property change for EmptyListMessageVisibility if we are already in Scene
+            if (ScopeCategory == "Scene" || ScopeCategory == "Source")
+            {
+                OnScopeCategoryChanged(ScopeCategory);
+            }
+            else
+            {
+                ScopeCategory = "Global";
+                SelectedScope = globalScope;
+            }
+        }
+
+        private void LoadConfigToUI()
+        {
+            _isSyncing = true;
+            var config = IsEditingGlobal ? BarrageSettings.GetGlobalConfigDto() : (GetTargetConfig(false) ?? BarrageSettings.GetGlobalConfigDto());
+
+            var currentSource = config.FontFamilyName;
+            SelectedFontItem = AvailableFonts.FirstOrDefault(f => f.Family.Source.Equals(currentSource, StringComparison.OrdinalIgnoreCase))
+                               ?? AvailableFonts.FirstOrDefault(f => f.Family.Source.Equals("Microsoft YaHei", StringComparison.OrdinalIgnoreCase))
+                               ?? AvailableFonts.FirstOrDefault();
+
+            TextColorHex = config.TextColorHex;
+            BackgroundColorHex = config.BackgroundColorHex;
+            FontSize = config.FontSize;
+            LetterSpacing = config.LetterSpacing;
+            MaxTextLength = config.MaxTextLength;
+            TextOpacityPercentage = config.TextOpacity * 100;
+            BackgroundOpacityPercentage = config.BackgroundOpacity * 100;
+            
+            ShowTextStroke = config.ShowTextStroke;
+            TextStrokeThickness = config.TextStrokeThickness;
+            TextStrokeColorHex = config.TextStrokeColorHex;
+            
+            ShowAppIcon = config.ShowAppIcon;
+            ShowAppName = config.ShowAppName;
+            HighlightEllipsis = config.HighlightEllipsis;
+            ShowBackgroundImage = config.ShowBackgroundImage;
+            BackgroundImagePath = config.BackgroundImagePath;
+            BackgroundImageAnchor = config.BackgroundImageAnchor;
+            BackgroundImageOffsetX = config.BackgroundImageOffsetX;
+            BackgroundImageOffsetY = config.BackgroundImageOffsetY;
+            BackgroundImageScale = config.BackgroundImageScale;
+            BackgroundImageOpacity = config.BackgroundImageOpacity;
+
+            ScrollSpeedCharsPerSec = config.ScrollSpeedCharsPerSec;
+            TrackStrategy = config.TrackStrategy;
+            
+            IsFontWeightBold = config.FontWeight == "Bold";
+            IsFontStyleItalic = config.FontStyle == "Italic";
+            IsUnderline = config.IsUnderlined;
+
+            OnPropertyChanged(nameof(FontSizeDisplay));
+            OnPropertyChanged(nameof(LetterSpacingDisplay));
+            OnPropertyChanged(nameof(MaxTextLengthDisplay));
+            OnPropertyChanged(nameof(TextOpacityDisplay));
+            OnPropertyChanged(nameof(BackgroundOpacityDisplay));
+            OnPropertyChanged(nameof(TextStrokeThicknessDisplay));
+            OnPropertyChanged(nameof(BackgroundImageOffsetXDisplay));
+            OnPropertyChanged(nameof(BackgroundImageOffsetYDisplay));
+            OnPropertyChanged(nameof(BackgroundImageScaleDisplay));
+            OnPropertyChanged(nameof(BackgroundImageOpacityDisplay));
+            OnPropertyChanged(nameof(SpeedDisplay));
+
+            OnPropertyChanged(nameof(IsTrackUpperCenter));
+            OnPropertyChanged(nameof(IsTrackTopFirst));
+            OnPropertyChanged(nameof(IsTrackBottomFirst));
+
+            _isSyncing = false;
+        }
+
         public IEnumerable<FontViewModel> AvailableFonts { get; }
+        public ObservableCollection<ColorPaletteItem> PresetColors { get; }
 
         [ObservableProperty]
         private FontViewModel? _selectedFontItem;
         partial void OnSelectedFontItemChanged(FontViewModel? value)
         {
-            if (value != null)
-            {
-                BarrageSettings.FontFamily = value.Family;
-                TriggerSaveAndPreview();
-            }
+            if (_isSyncing || value == null) return;
+            if (IsEditingGlobal) BarrageSettings.FontFamily = value.Family;
+            else GetTargetConfig(true).FontFamilyName = value.Family.Source;
+            TriggerSaveAndPreview();
         }
-
-        public ObservableCollection<ColorPaletteItem> PresetColors { get; }
-
-        [ObservableProperty]
-        private Brush _currentColorBrush;
 
         [ObservableProperty]
         private string _textColorHex;
         partial void OnTextColorHexChanged(string value)
         {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(value)) return;
-                var color = (Color)ColorConverter.ConvertFromString(value);
-                CurrentColorBrush = new SolidColorBrush(color);
-                BarrageSettings.TextColor = CurrentColorBrush;
-                if (_currentColor != color)
-                {
-                    _currentColor = color;
-                    OnPropertyChanged(nameof(CurrentColor));
-                }
-                TriggerSaveAndPreview();
-            }
-            catch
-            {
-                // 如果输入不合法，原封不动，防止崩溃
-            }
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.TextColor = new SolidColorBrush((Color)ColorConverter.ConvertFromString(value));
+            else GetTargetConfig(true).TextColorHex = value;
+            TriggerSaveAndPreview();
         }
 
         [ObservableProperty]
-        private Color _currentColor;
-        partial void OnCurrentColorChanged(Color value)
+        private string _backgroundColorHex;
+        partial void OnBackgroundColorHexChanged(string value)
         {
-            CurrentColorBrush = new SolidColorBrush(value);
-            BarrageSettings.TextColor = CurrentColorBrush;
-            
-            string newHex = $"#{value.A:X2}{value.R:X2}{value.G:X2}{value.B:X2}";
-            if (_textColorHex != newHex)
-            {
-                _textColorHex = newHex;
-                OnPropertyChanged(nameof(TextColorHex));
-            }
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.BackgroundColor = new SolidColorBrush((Color)ColorConverter.ConvertFromString(value));
+            else GetTargetConfig(true).BackgroundColorHex = value;
             TriggerSaveAndPreview();
         }
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(FontSizeDisplay))]
+        private double _fontSize;
+        partial void OnFontSizeChanged(double value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.FontSize = value;
+            else GetTargetConfig(true).FontSize = value;
+            TriggerSaveAndPreview();
+            OnPropertyChanged(nameof(FontSizeDisplay));
+        }
+        public string FontSizeDisplay => $"{FontSize:0}px";
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(LetterSpacingDisplay))]
+        private double _letterSpacing;
+        partial void OnLetterSpacingChanged(double value)
+        {
+            if (_isSyncing) return;
+            if (value < 0 || value > 20) 
+            { 
+                var oldVal = IsEditingGlobal ? BarrageSettings.LetterSpacing : GetTargetConfig(true).LetterSpacing;
+                if (oldVal is int && typeof(double) == typeof(double)) oldVal = (double)(int)oldVal;
+                System.Windows.Application.Current.Dispatcher.BeginInvoke(new System.Action(() => LetterSpacing = (double)oldVal));
+                return; 
+            }
+            if (IsEditingGlobal) BarrageSettings.LetterSpacing = value;
+            else GetTargetConfig(true).LetterSpacing = value;
+            TriggerSaveAndPreview();
+            OnPropertyChanged(nameof(LetterSpacingDisplay));
+        }
+        public string LetterSpacingDisplay => $"{LetterSpacing:0.0}px";
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(MaxTextLengthDisplay))]
+        private int _maxTextLength;
+        partial void OnMaxTextLengthChanged(int value)
+        {
+            if (_isSyncing) return;
+            if (value < 10 || value > 100) 
+            { 
+                var oldVal = IsEditingGlobal ? BarrageSettings.MaxTextLength : GetTargetConfig(true).MaxTextLength;
+                System.Windows.Application.Current.Dispatcher.BeginInvoke(new System.Action(() => MaxTextLength = (int)oldVal));
+                return; 
+            }
+            if (IsEditingGlobal) BarrageSettings.MaxTextLength = value;
+            else GetTargetConfig(true).MaxTextLength = value;
+            TriggerSaveAndPreview();
+            OnPropertyChanged(nameof(MaxTextLengthDisplay));
+        }
+        public string MaxTextLengthDisplay => $"{MaxTextLength}";
+
+        [ObservableProperty]
+        private double _textOpacityPercentage;
+        partial void OnTextOpacityPercentageChanged(double value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.TextOpacity = value / 100.0;
+            else GetTargetConfig(true).TextOpacity = value / 100.0;
+            TriggerSaveAndPreview();
+            OnPropertyChanged(nameof(TextOpacityDisplay));
+        }
+        public string TextOpacityDisplay => $"{TextOpacityPercentage:0}%";
+
+        [ObservableProperty]
+        private double _backgroundOpacityPercentage;
+        partial void OnBackgroundOpacityPercentageChanged(double value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.BackgroundOpacity = value / 100.0;
+            else GetTargetConfig(true).BackgroundOpacity = value / 100.0;
+            TriggerSaveAndPreview();
+            OnPropertyChanged(nameof(BackgroundOpacityDisplay));
+        }
+        public string BackgroundOpacityDisplay => $"{BackgroundOpacityPercentage:0}%";
 
         [ObservableProperty]
         private bool _showTextStroke;
         partial void OnShowTextStrokeChanged(bool value)
         {
-            BarrageSettings.ShowTextStroke = value;
-            TriggerSaveAndPreview();
-        }
-
-        [ObservableProperty]
-        private Brush _currentTextStrokeColorBrush;
-
-        [ObservableProperty]
-        private Color _currentTextStrokeColor;
-        partial void OnCurrentTextStrokeColorChanged(Color value)
-        {
-            CurrentTextStrokeColorBrush = new SolidColorBrush(value);
-            BarrageSettings.TextStrokeColor = CurrentTextStrokeColorBrush;
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.ShowTextStroke = value;
+            else GetTargetConfig(true).ShowTextStroke = value;
             TriggerSaveAndPreview();
         }
 
@@ -233,120 +454,38 @@ namespace NotiFlow.Models
         private double _textStrokeThickness;
         partial void OnTextStrokeThicknessChanged(double value)
         {
-            BarrageSettings.TextStrokeThickness = value;
-            TriggerSaveAndPreview();
-        }
-        public string TextStrokeThicknessDisplay => $"{TextStrokeThickness:F1}px";
-
-        [RelayCommand]
-        private void SelectColor(string hex)
-        {
-            TextColorHex = hex;
-        }
-
-        [ObservableProperty]
-        private Brush _currentBackgroundColorBrush;
-
-        [ObservableProperty]
-        private string _backgroundColorHex;
-        partial void OnBackgroundColorHexChanged(string value)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(value)) return;
-                var color = (Color)ColorConverter.ConvertFromString(value);
-                CurrentBackgroundColorBrush = new SolidColorBrush(color);
-                BarrageSettings.BackgroundColor = CurrentBackgroundColorBrush;
-                if (_currentBackgroundColor != color)
-                {
-                    _currentBackgroundColor = color;
-                    OnPropertyChanged(nameof(CurrentBackgroundColor));
-                }
-                TriggerSaveAndPreview();
+            if (_isSyncing) return;
+            if (value < 0.1 || value > 5) 
+            { 
+                var oldVal = IsEditingGlobal ? BarrageSettings.TextStrokeThickness : GetTargetConfig(true).TextStrokeThickness;
+                if (oldVal is int && typeof(double) == typeof(double)) oldVal = (double)(int)oldVal;
+                System.Windows.Application.Current.Dispatcher.BeginInvoke(new System.Action(() => TextStrokeThickness = (double)oldVal));
+                return; 
             }
-            catch
-            {
-                // 如果输入不合法，原封不动，防止崩溃
-            }
+            if (IsEditingGlobal) BarrageSettings.TextStrokeThickness = value;
+            else GetTargetConfig(true).TextStrokeThickness = value;
+            TriggerSaveAndPreview();
+            OnPropertyChanged(nameof(TextStrokeThicknessDisplay));
         }
+        public string TextStrokeThicknessDisplay => $"{TextStrokeThickness:0.0}px";
 
         [ObservableProperty]
-        private Color _currentBackgroundColor;
-        partial void OnCurrentBackgroundColorChanged(Color value)
+        private string _textStrokeColorHex;
+        partial void OnTextStrokeColorHexChanged(string value)
         {
-            CurrentBackgroundColorBrush = new SolidColorBrush(value);
-            BarrageSettings.BackgroundColor = CurrentBackgroundColorBrush;
-            
-            string newHex = $"#{value.A:X2}{value.R:X2}{value.G:X2}{value.B:X2}";
-            if (_backgroundColorHex != newHex)
-            {
-                _backgroundColorHex = newHex;
-                OnPropertyChanged(nameof(BackgroundColorHex));
-            }
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.TextStrokeColor = new SolidColorBrush((Color)ColorConverter.ConvertFromString(value));
+            else GetTargetConfig(true).TextStrokeColorHex = value;
             TriggerSaveAndPreview();
         }
-
-        [RelayCommand]
-        private void SelectBackgroundColor(string hex)
-        {
-            BackgroundColorHex = hex;
-        }
-
-        [ObservableProperty]
-        [NotifyPropertyChangedFor(nameof(FontSizeDisplay))]
-        private double _fontSize;
-        partial void OnFontSizeChanged(double value)
-        {
-            BarrageSettings.FontSize = value;
-            TriggerSaveAndPreview();
-        }
-        public string FontSizeDisplay => $"{(int)FontSize}px";
-
-        [ObservableProperty]
-        [NotifyPropertyChangedFor(nameof(LetterSpacingDisplay))]
-        private double _letterSpacing;
-        partial void OnLetterSpacingChanged(double value)
-        {
-            BarrageSettings.LetterSpacing = value;
-            TriggerSaveAndPreview();
-        }
-        public string LetterSpacingDisplay => $"{(int)LetterSpacing}px";
-
-        [ObservableProperty]
-        [NotifyPropertyChangedFor(nameof(MaxLengthDisplay))]
-        private int _maxTextLength;
-        partial void OnMaxTextLengthChanged(int value)
-        {
-            BarrageSettings.MaxTextLength = value;
-            TriggerSaveAndPreview();
-        }
-        public string MaxLengthDisplay => $"{MaxTextLength} 字";
-
-        [ObservableProperty]
-        [NotifyPropertyChangedFor(nameof(TextOpacityDisplay))]
-        private double _textOpacityPercentage;
-        partial void OnTextOpacityPercentageChanged(double value)
-        {
-            BarrageSettings.TextOpacity = value / 100.0;
-            TriggerSaveAndPreview();
-        }
-        public string TextOpacityDisplay => $"{(int)TextOpacityPercentage}%";
-
-        [ObservableProperty]
-        [NotifyPropertyChangedFor(nameof(BackgroundOpacityDisplay))]
-        private double _backgroundOpacityPercentage;
-        partial void OnBackgroundOpacityPercentageChanged(double value)
-        {
-            BarrageSettings.BackgroundOpacity = value / 100.0;
-            TriggerSaveAndPreview();
-        }
-        public string BackgroundOpacityDisplay => $"{(int)BackgroundOpacityPercentage}%";
 
         [ObservableProperty]
         private bool _showAppIcon;
         partial void OnShowAppIconChanged(bool value)
         {
-            BarrageSettings.ShowAppIcon = value;
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.ShowAppIcon = value;
+            else GetTargetConfig(true).ShowAppIcon = value;
             TriggerSaveAndPreview();
         }
 
@@ -354,7 +493,9 @@ namespace NotiFlow.Models
         private bool _showAppName;
         partial void OnShowAppNameChanged(bool value)
         {
-            BarrageSettings.ShowAppName = value;
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.ShowAppName = value;
+            else GetTargetConfig(true).ShowAppName = value;
             TriggerSaveAndPreview();
         }
 
@@ -362,7 +503,9 @@ namespace NotiFlow.Models
         private bool _highlightEllipsis;
         partial void OnHighlightEllipsisChanged(bool value)
         {
-            BarrageSettings.HighlightEllipsis = value;
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.HighlightEllipsis = value;
+            else GetTargetConfig(true).HighlightEllipsis = value;
             TriggerSaveAndPreview();
         }
 
@@ -370,7 +513,9 @@ namespace NotiFlow.Models
         private bool _showBackgroundImage;
         partial void OnShowBackgroundImageChanged(bool value)
         {
-            BarrageSettings.ShowBackgroundImage = value;
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.ShowBackgroundImage = value;
+            else GetTargetConfig(true).ShowBackgroundImage = value;
             TriggerSaveAndPreview();
         }
 
@@ -378,7 +523,9 @@ namespace NotiFlow.Models
         private string _backgroundImagePath;
         partial void OnBackgroundImagePathChanged(string value)
         {
-            BarrageSettings.BackgroundImagePath = value;
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.BackgroundImagePath = value;
+            else GetTargetConfig(true).BackgroundImagePath = value;
             TriggerSaveAndPreview();
         }
 
@@ -386,41 +533,67 @@ namespace NotiFlow.Models
         private ImageAnchor _backgroundImageAnchor;
         partial void OnBackgroundImageAnchorChanged(ImageAnchor value)
         {
-            BarrageSettings.BackgroundImageAnchor = value;
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.BackgroundImageAnchor = value;
+            else GetTargetConfig(true).BackgroundImageAnchor = value;
             TriggerSaveAndPreview();
         }
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(BackgroundImageOffsetXDisplay))]
         private double _backgroundImageOffsetX;
         partial void OnBackgroundImageOffsetXChanged(double value)
         {
-            BarrageSettings.BackgroundImageOffsetX = value;
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.BackgroundImageOffsetX = value;
+            else GetTargetConfig(true).BackgroundImageOffsetX = value;
             TriggerSaveAndPreview();
+            OnPropertyChanged(nameof(BackgroundImageOffsetXDisplay));
         }
+        public string BackgroundImageOffsetXDisplay => $"{BackgroundImageOffsetX:0}px";
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(BackgroundImageOffsetYDisplay))]
         private double _backgroundImageOffsetY;
         partial void OnBackgroundImageOffsetYChanged(double value)
         {
-            BarrageSettings.BackgroundImageOffsetY = value;
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.BackgroundImageOffsetY = value;
+            else GetTargetConfig(true).BackgroundImageOffsetY = value;
             TriggerSaveAndPreview();
+            OnPropertyChanged(nameof(BackgroundImageOffsetYDisplay));
         }
+        public string BackgroundImageOffsetYDisplay => $"{BackgroundImageOffsetY:0}px";
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(BackgroundImageScaleDisplay))]
         private double _backgroundImageScale;
         partial void OnBackgroundImageScaleChanged(double value)
         {
-            BarrageSettings.BackgroundImageScale = value;
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.BackgroundImageScale = value;
+            else GetTargetConfig(true).BackgroundImageScale = value;
             TriggerSaveAndPreview();
+            OnPropertyChanged(nameof(BackgroundImageScaleDisplay));
         }
+        public string BackgroundImageScaleDisplay => $"{BackgroundImageScale:0.00}x";
 
         [ObservableProperty]
-        [NotifyPropertyChangedFor(nameof(BackgroundImageOpacityDisplay))]
         private double _backgroundImageOpacity;
         partial void OnBackgroundImageOpacityChanged(double value)
         {
-            BarrageSettings.BackgroundImageOpacity = value;
+            if (_isSyncing) return;
+            if (value < 0 || value > 1) 
+            { 
+                var oldVal = IsEditingGlobal ? BarrageSettings.BackgroundImageOpacity : GetTargetConfig(true).BackgroundImageOpacity;
+                System.Windows.Application.Current.Dispatcher.BeginInvoke(new System.Action(() => BackgroundImageOpacity = oldVal));
+                return; 
+            }
+            if (IsEditingGlobal) BarrageSettings.BackgroundImageOpacity = value;
+            else GetTargetConfig(true).BackgroundImageOpacity = value;
             TriggerSaveAndPreview();
+            OnPropertyChanged(nameof(BackgroundImageOpacityDisplay));
+            OnPropertyChanged(nameof(BackgroundImageOpacityPercentage));
         }
 
         public string BackgroundImageOpacityDisplay => $"{BackgroundImageOpacity * 100:0}%";
@@ -435,7 +608,16 @@ namespace NotiFlow.Models
         private double _scrollSpeedCharsPerSec;
         partial void OnScrollSpeedCharsPerSecChanged(double value)
         {
-            BarrageSettings.ScrollSpeedCharsPerSec = value;
+            if (_isSyncing) return;
+            if (value < 5 || value > 30) 
+            { 
+                var oldVal = IsEditingGlobal ? BarrageSettings.ScrollSpeedCharsPerSec : GetTargetConfig(true).ScrollSpeedCharsPerSec;
+                if (oldVal is int && typeof(double) == typeof(double)) oldVal = (double)(int)oldVal;
+                System.Windows.Application.Current.Dispatcher.BeginInvoke(new System.Action(() => ScrollSpeedCharsPerSec = (double)oldVal));
+                return; 
+            }
+            if (IsEditingGlobal) BarrageSettings.ScrollSpeedCharsPerSec = value;
+            else GetTargetConfig(true).ScrollSpeedCharsPerSec = value;
             TriggerSaveAndPreview();
         }
         
@@ -451,10 +633,15 @@ namespace NotiFlow.Models
         }
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(IsTrackUpperCenter))]
+        [NotifyPropertyChangedFor(nameof(IsTrackTopFirst))]
+        [NotifyPropertyChangedFor(nameof(IsTrackBottomFirst))]
         private string _trackStrategy;
         partial void OnTrackStrategyChanged(string value)
         {
-            BarrageSettings.TrackStrategy = value;
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.TrackStrategy = value;
+            else GetTargetConfig(true).TrackStrategy = value;
             TriggerSaveAndPreview();
             OnPropertyChanged(nameof(IsTrackUpperCenter));
             OnPropertyChanged(nameof(IsTrackTopFirst));
@@ -483,7 +670,9 @@ namespace NotiFlow.Models
         private bool _isFontWeightBold;
         partial void OnIsFontWeightBoldChanged(bool value)
         {
-            BarrageSettings.FontWeight = value ? FontWeights.Bold : FontWeights.Normal;
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.FontWeight = value ? FontWeights.Bold : FontWeights.Normal;
+            else GetTargetConfig(true).FontWeight = value ? "Bold" : "Normal";
             TriggerSaveAndPreview();
         }
 
@@ -491,7 +680,9 @@ namespace NotiFlow.Models
         private bool _isFontStyleItalic;
         partial void OnIsFontStyleItalicChanged(bool value)
         {
-            BarrageSettings.FontStyle = value ? FontStyles.Italic : FontStyles.Normal;
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.FontStyle = value ? FontStyles.Italic : FontStyles.Normal;
+            else GetTargetConfig(true).FontStyle = value ? "Italic" : "Normal";
             TriggerSaveAndPreview();
         }
 
@@ -499,10 +690,13 @@ namespace NotiFlow.Models
         private bool _isUnderline;
         partial void OnIsUnderlineChanged(bool value)
         {
-            BarrageSettings.IsUnderlined = value;
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.IsUnderlined = value;
+            else GetTargetConfig(true).IsUnderlined = value;
             TriggerSaveAndPreview();
         }
 
+        // Global only properties
         [ObservableProperty]
         private bool _autoStartWorking;
         partial void OnAutoStartWorkingChanged(bool value)
@@ -554,14 +748,9 @@ namespace NotiFlow.Models
         {
             BarrageSettings.AllowCapture = value;
             TriggerSaveAndPreview();
-            
-            // 立即生效防截屏设置
             Application.Current.Dispatcher.Invoke(() => 
             {
-                if (Application.Current is App app)
-                {
-                    app.ApplyCaptureSetting();
-                }
+                if (Application.Current is App app) app.ApplyCaptureSetting();
             });
         }
 
@@ -587,8 +776,6 @@ namespace NotiFlow.Models
         {
             BarrageSettings.RunOnStartup = value;
             TriggerSaveAndPreview();
-            
-            // 处理开机自启动快捷方式
             App.UpdateStartupShortcut(value);
         }
 
@@ -611,11 +798,7 @@ namespace NotiFlow.Models
             BarrageSettings.HotKey = key;
             HotKeyText = GetHotKeyString(modifiers, key);
             IsCapturingHotKey = false;
-            
-            // 立即生效：通知托盘服务重新注册热键
             (App.Current as App)?.TrayIconService?.ReRegisterHotKey();
-            
-            // 保存配置
             BarrageSettings.ExportConfig();
         }
 
@@ -626,11 +809,8 @@ namespace NotiFlow.Models
             if ((modifiers & NativeMethods.MOD_SHIFT) != 0) parts.Add("Shift");
             if ((modifiers & NativeMethods.MOD_ALT) != 0) parts.Add("Alt");
             if ((modifiers & NativeMethods.MOD_WIN) != 0) parts.Add("Win");
-            
-            // 将 KeyCode 转为字符串 (简单映射，满足常用场景)
             string keyName = ((System.Windows.Input.Key)System.Windows.Input.KeyInterop.KeyFromVirtualKey((int)key)).ToString();
             parts.Add(keyName);
-            
             return string.Join(" + ", parts);
         }
 
@@ -649,9 +829,6 @@ namespace NotiFlow.Models
         [RelayCommand]
         private void SetUpdateSource(string source) => UpdateSource = source;
 
-        /// <summary>
-        /// 当 UI 的值成功反写回底部的静态内存对象后，触发落地 IO 和一次通知中心预览
-        /// </summary>
         private void TriggerSaveAndPreview()
         {
             _debounceTimer.Stop();

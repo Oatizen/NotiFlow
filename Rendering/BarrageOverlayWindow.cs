@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,7 +12,7 @@ using Microsoft.Graphics.Canvas;
 using Windows.UI.Composition;
 using Windows.UI.Composition.Desktop;
 using WinRT;
-// 别名避免�?System.Windows.Media.CompositionTarget 冲突
+// 鍒悕閬垮厤锟?System.Windows.Media.CompositionTarget 鍐茬獊
 using WinCompTarget = System.Windows.Media.CompositionTarget;
 
 namespace NotiFlow.Rendering
@@ -23,7 +23,7 @@ namespace NotiFlow.Rendering
         private NativeMethods.WndProc _wndProcDelegate;
         private bool _disposed;
 
-        // ===== Windows.UI.Composition 渲染核心 =====
+        // ===== Windows.UI.Composition 娓叉煋鏍稿績 =====
         private Compositor _compositor;
         private DesktopWindowTarget _compositionTarget;
         private Windows.UI.Composition.ContainerVisual _rootContainer;
@@ -31,8 +31,8 @@ namespace NotiFlow.Rendering
         private CanvasDevice _canvasDevice;
 
         /// <summary>
-        /// 保持 DispatcherQueueController COM 引用存活，防�?GC 回收�?
-        /// Compositor 依赖当前线程�?DispatcherQueue，若控制器被回收则合成器将失效�?
+        /// 淇濇寔 DispatcherQueueController COM 寮曠敤瀛樻椿锛岄槻锟?GC 鍥炴敹锟?
+        /// Compositor 渚濊禆褰撳墠绾跨▼锟?DispatcherQueue锛岃嫢鎺у埗鍣ㄨ鍥炴敹鍒欏悎鎴愬櫒灏嗗け鏁堬拷?
         /// </summary>
         private IntPtr _dispatcherQueueController;
 
@@ -43,8 +43,8 @@ namespace NotiFlow.Rendering
 
         private readonly Random _random = new();
 
-        // ===== 轨道管理系统 =====
-        private double TrackHeight => BarrageSettings.FontSize + 16;
+        // ===== 杞ㄩ亾绠＄悊绯荤粺 =====
+        // private double TrackHeight => BarrageSettings.FontSize + 16;
         private const int TopMargin = 20;
         private bool[] _trackOccupied = Array.Empty<bool>();
         private int _trackCount;
@@ -105,8 +105,8 @@ namespace NotiFlow.Rendering
 
             NativeMethods.RegisterClassEx(ref wndClass);
 
-            // 使用 WS_EX_NOREDIRECTIONBITMAP 替代 WS_EX_LAYERED�?
-            // �?DWM 不为此窗口分配重定向位图，而是�?Composition 引擎直接渲染
+            // 浣跨敤 WS_EX_NOREDIRECTIONBITMAP 鏇夸唬 WS_EX_LAYERED锟?
+            // 锟?DWM 涓嶄负姝ょ獥鍙ｅ垎閰嶉噸瀹氬悜浣嶅浘锛岃€屾槸锟?Composition 寮曟搸鐩存帴娓叉煋
             int exStyle = NativeMethods.WS_EX_NOREDIRECTIONBITMAP
                         | NativeMethods.WS_EX_TRANSPARENT
                         | NativeMethods.WS_EX_TOOLWINDOW
@@ -114,9 +114,9 @@ namespace NotiFlow.Rendering
                         | 0x00000008 /* WS_EX_TOPMOST */;
             int style = NativeMethods.WS_POPUP;
 
-            // 创建窗口，故意不传入标题 (string.Empty)�?
-            // 因为许多截图工具（如微信、QQ、Snipping Tool）在遍历窗口时，
-            // 会自动过滤掉没有标题的无边框窗口，从而可能绕过“按窗口截图”的捕捉�?
+            // 鍒涘缓绐楀彛锛屾晠鎰忎笉浼犲叆鏍囬 (string.Empty)锟?
+            // 鍥犱负璁稿鎴浘宸ュ叿锛堝寰俊銆丵Q銆丼nipping Tool锛夊湪閬嶅巻绐楀彛鏃讹紝
+            // 浼氳嚜鍔ㄨ繃婊ゆ帀娌℃湁鏍囬鐨勬棤杈规绐楀彛锛屼粠鑰屽彲鑳界粫杩団€滄寜绐楀彛鎴浘鈥濈殑鎹曟崏锟?
             _hwnd = NativeMethods.CreateWindowEx(
                 exStyle,
                 className,
@@ -132,13 +132,13 @@ namespace NotiFlow.Rendering
         }
 
         /// <summary>
-        /// 初始�?Windows.UI.Composition 渲染管线�?
-        /// 创建顺序：DispatcherQueue �?Compositor �?DesktopWindowTarget �?根容�?�?Win2D 设备�?
-        /// DispatcherQueue 必须�?Compositor 之前创建，否�?Compositor 构造函数会抛出异常�?
+        /// 鍒濆锟?Windows.UI.Composition 娓叉煋绠＄嚎锟?
+        /// 鍒涘缓椤哄簭锛欴ispatcherQueue 锟?Compositor 锟?DesktopWindowTarget 锟?鏍瑰锟?锟?Win2D 璁惧锟?
+        /// DispatcherQueue 蹇呴』锟?Compositor 涔嬪墠鍒涘缓锛屽惁锟?Compositor 鏋勯€犲嚱鏁颁細鎶涘嚭寮傚父锟?
         /// </summary>
         private void InitializeRendering()
         {
-            // 1. 创建 DispatcherQueueController（Compositor 需要当前线程具备消息泵�?
+            // 1. 鍒涘缓 DispatcherQueueController锛圕ompositor 闇€瑕佸綋鍓嶇嚎绋嬪叿澶囨秷鎭车锟?
             var options = new NativeMethods.DispatcherQueueOptions
             {
                 dwSize = Marshal.SizeOf<NativeMethods.DispatcherQueueOptions>(),
@@ -147,28 +147,28 @@ namespace NotiFlow.Rendering
             };
             NativeMethods.CreateDispatcherQueueController(options, out _dispatcherQueueController);
 
-            // 2. 创建 OS �?Compositor 并通过 ICompositorDesktopInterop 绑定�?HWND
+            // 2. 鍒涘缓 OS 锟?Compositor 骞堕€氳繃 ICompositorDesktopInterop 缁戝畾锟?HWND
             _compositor = new Compositor();
             var interop = _compositor.As<NativeMethods.ICompositorDesktopInterop>();
             interop.CreateDesktopWindowTarget(_hwnd, false, out var rawTarget);
             _compositionTarget = MarshalInterface<DesktopWindowTarget>.FromAbi(rawTarget);
             Marshal.Release(rawTarget);
 
-            // 3. 创建根容器视觉并设为合成目标的根
+            // 3. 鍒涘缓鏍瑰鍣ㄨ瑙夊苟璁句负鍚堟垚鐩爣鐨勬牴
             _rootContainer = _compositor.CreateContainerVisual();
             _rootContainer.Size = new Vector2(_width, _height);
             _compositionTarget.Root = _rootContainer;
 
-            // 4. 追加 WS_EX_LAYERED 以恢复鼠标穿透�?
-            //    WS_EX_TRANSPARENT 的穿透行为依�?WS_EX_LAYERED�?
-            //    WS_EX_NOREDIRECTIONBITMAP + WS_EX_LAYERED 可以共存�?
-            //    DWM �?Composition 引擎提供内容，WS_EX_LAYERED 仅影响命中测试语义�?
+            // 4. 杩藉姞 WS_EX_LAYERED 浠ユ仮澶嶉紶鏍囩┛閫忥拷?
+            //    WS_EX_TRANSPARENT 鐨勭┛閫忚涓轰緷锟?WS_EX_LAYERED锟?
+            //    WS_EX_NOREDIRECTIONBITMAP + WS_EX_LAYERED 鍙互鍏卞瓨锟?
+            //    DWM 锟?Composition 寮曟搸鎻愪緵鍐呭锛學S_EX_LAYERED 浠呭奖鍝嶅懡涓祴璇曡涔夛拷?
             IntPtr curStyle = NativeMethods.GetWindowLongPtr(_hwnd, NativeMethods.GWL_EXSTYLE);
             NativeMethods.SetWindowLongPtr(_hwnd, NativeMethods.GWL_EXSTYLE,
                 (IntPtr)((long)curStyle | NativeMethods.WS_EX_LAYERED));
 
-            // 4. 创建共享同一 D3D11 设备�?CompositionGraphicsDevice �?CanvasDevice
-            //    通过 CompositionHelper 从零创建 D3D11 设备（替�?CanvasComposition�?
+            // 4. 鍒涘缓鍏变韩鍚屼竴 D3D11 璁惧锟?CompositionGraphicsDevice 锟?CanvasDevice
+            //    閫氳繃 CompositionHelper 浠庨浂鍒涘缓 D3D11 璁惧锛堟浛锟?CanvasComposition锟?
             (_graphicsDevice, _canvasDevice) = CompositionHelper.CreateSharedDevices(_compositor);
         }
 
@@ -193,8 +193,8 @@ namespace NotiFlow.Rendering
 
         private void InitializeTracks()
         {
-            double usableHeight = _height - TopMargin - TrackHeight;
-            _trackCount = Math.Max(1, (int)(usableHeight / TrackHeight));
+            double usableHeight = _height - TopMargin - (BarrageSettings.FontSize + 16);
+            _trackCount = Math.Max(1, (int)(usableHeight / (BarrageSettings.FontSize + 16)));
             _trackOccupied = new bool[_trackCount];
         }
 
@@ -350,10 +350,10 @@ namespace NotiFlow.Rendering
         }
 
         /// <summary>
-        /// �?UI 线程上提取所�?WPF 依赖的纯值数据，然后将弹幕纹理构建工�?
-        /// 通过 Task.Run 移交到后台线程执行�?
-        /// 后台线程使用 CompositionGraphicsDevice 创建 SpriteVisual + DrawingSurface�?
-        /// 完成后将弹幕推入就绪队列等待合成�?
+        /// 锟?UI 绾跨▼涓婃彁鍙栨墍锟?WPF 渚濊禆鐨勭函鍊兼暟鎹紝鐒跺悗灏嗗脊骞曠汗鐞嗘瀯寤哄伐锟?
+        /// 閫氳繃 Task.Run 绉讳氦鍒板悗鍙扮嚎绋嬫墽琛岋拷?
+        /// 鍚庡彴绾跨▼浣跨敤 CompositionGraphicsDevice 鍒涘缓 SpriteVisual + DrawingSurface锟?
+        /// 瀹屾垚鍚庡皢寮瑰箷鎺ㄥ叆灏辩华闃熷垪绛夊緟鍚堟垚锟?
         /// </summary>
         private void PrepareBarrage(NotificationMessage message, int track)
         {
@@ -370,52 +370,48 @@ namespace NotiFlow.Rendering
             
             item.TrackIndex = track;
 
-            // ===== �?UI 线程上提取所�?WPF 依赖的纯值数�?=====
-            var textBrush = (SolidColorBrush)BarrageSettings.TextColor.Clone();
-            textBrush.Freeze();
-            var textColor = textBrush.Color;
+            // ===== 锟?UI 绾跨▼涓婃彁鍙栨墍锟?WPF 渚濊禆鐨勭函鍊兼暟锟?=====
+            string currentForegroundExe = ((App)Application.Current).ForegroundMonitor?.CurrentForegroundProcess ?? "";
+            var config = BarrageSettings.GetResolvedConfig(message.Aumid, currentForegroundExe);
 
-            var textStrokeBrush = (SolidColorBrush)BarrageSettings.TextStrokeColor.Clone();
-            textStrokeBrush.Freeze();
-            var textStrokeColor = textStrokeBrush.Color;
+            var textColor = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(config.TextColorHex);
+            var textStrokeColor = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(config.TextStrokeColorHex);
 
-            string fontFamilyName = BarrageSettings.FontFamily.Source;
-            double fontSize = BarrageSettings.FontSize;
-            var fontStyle = BarrageSettings.FontStyle;
-            var fontWeight = BarrageSettings.FontWeight;
-            double topPosition = TopMargin + track * TrackHeight;
-            double speedPixelsPerSec = BarrageSettings.ScrollSpeedCharsPerSec * fontSize;
+            string fontFamilyName = config.FontFamilyName;
+            double fontSize = config.FontSize;
+            var fontStyle = config.FontStyle == "Italic" ? System.Windows.FontStyles.Italic : System.Windows.FontStyles.Normal;
+            var fontWeight = config.FontWeight == "Bold" ? System.Windows.FontWeights.Bold : System.Windows.FontWeights.Normal;
+            double topPosition = TopMargin + track * (BarrageSettings.FontSize + 16);
+            double speedPixelsPerSec = config.ScrollSpeedCharsPerSec * fontSize;
             if (speedPixelsPerSec < 10) speedPixelsPerSec = 10;
 
-            // 预提取背景设�?
-            bool showBackground = BarrageSettings.ShowBackground;
-            var bgBrush = BarrageSettings.BackgroundColor as SolidColorBrush ?? new SolidColorBrush(System.Windows.Media.Colors.Black);
-            var bgColor = bgBrush.Color;
-            double bgOpacity = BarrageSettings.BackgroundOpacity;
-            double textOpacity = BarrageSettings.TextOpacity;
-            var cornerRadius = BarrageSettings.BackgroundCornerRadius;
+            bool showBackground = config.ShowBackground;
+            var bgColor = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(config.BackgroundColorHex);
+            double bgOpacity = config.BackgroundOpacity;
+            double textOpacity = config.TextOpacity;
+            var cornerRadius = new System.Windows.CornerRadius(config.BackgroundCornerRadius);
 
-            // 预提取省略号设置
-            bool highlightEllipsis = BarrageSettings.HighlightEllipsis;
-            var ellBrush = BarrageSettings.EllipsisColor as SolidColorBrush ?? new SolidColorBrush(System.Windows.Media.Colors.White);
-            var ellColor = ellBrush.Color;
+            bool highlightEllipsis = config.HighlightEllipsis;
+            var ellColor = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(config.EllipsisColorHex);
 
-            // 预提取文本内?
-            bool showAppName = BarrageSettings.ShowAppName;
-            double maxTextLen = BarrageSettings.MaxTextLength;
-            bool isUnderlined = BarrageSettings.IsUnderlined;
-            double letterSpacing = BarrageSettings.LetterSpacing;
+            bool showAppName = config.ShowAppName;
+            double maxTextLen = config.MaxTextLength;
+            bool isUnderlined = config.IsUnderlined;
+            double letterSpacing = config.LetterSpacing;
             
-            // 预提取背景图片设置
-            bool showBgImage = BarrageSettings.ShowBackgroundImage;
-            string bgImagePath = BarrageSettings.BackgroundImagePath;
-            NotiFlow.Models.ImageAnchor bgAnchor = BarrageSettings.BackgroundImageAnchor;
-            double bgOffsetX = BarrageSettings.BackgroundImageOffsetX;
-            double bgOffsetY = BarrageSettings.BackgroundImageOffsetY;
-            double bgScale = BarrageSettings.BackgroundImageScale;
-            bool bgKeepBaseColor = BarrageSettings.BackgroundImageKeepBaseColor;
+            bool showBgImage = config.ShowBackgroundImage;
+            string bgImagePath = config.BackgroundImagePath;
+            NotiFlow.Models.ImageAnchor bgAnchor = config.BackgroundImageAnchor;
+            double bgOffsetX = config.BackgroundImageOffsetX;
+            double bgOffsetY = config.BackgroundImageOffsetY;
+            double bgScale = config.BackgroundImageScale;
+            bool bgKeepBaseColor = config.BackgroundImageKeepBaseColor;
+            
+            double textStrokeThickness = config.TextStrokeThickness;
+            bool showTextStroke = config.ShowTextStroke;
+            double bgImageOpacity = config.BackgroundImageOpacity;
 
-            // 预提取图标像素（WPF 对象只能?UI 线程访问?
+            // 棰勬彁鍙栧浘鏍囧儚绱狅紙WPF 瀵硅薄鍙兘?UI 绾跨▼璁块棶?
             bool showAppIcon = BarrageSettings.ShowAppIcon;
             byte[]? iconPixels = null;
             int iconWidth = 0, iconHeight = 0;
@@ -441,7 +437,7 @@ namespace NotiFlow.Rendering
             string title = message.Title ?? "";
             string body = message.Body ?? "";
 
-            // ===== 纹理构建移到后台线程 =====
+            // ===== 绾圭悊鏋勫缓绉诲埌鍚庡彴绾跨▼ =====
             var compositor = _compositor;
             var graphicsDevice = _graphicsDevice;
             var canvasDevice = _canvasDevice;
@@ -471,8 +467,8 @@ namespace NotiFlow.Rendering
         }
 
         /// <summary>
-        /// 将已完成纹理构建的弹幕添加到合成视觉树，并启动滚动动画�?
-        /// 动画�?Compositor �?GPU 端驱动，无需每帧手动更新位置�?
+        /// 灏嗗凡瀹屾垚绾圭悊鏋勫缓鐨勫脊骞曟坊鍔犲埌鍚堟垚瑙嗚鏍戯紝骞跺惎鍔ㄦ粴鍔ㄥ姩鐢伙拷?
+        /// 鍔ㄧ敾锟?Compositor 锟?GPU 绔┍鍔紝鏃犻渶姣忓抚鎵嬪姩鏇存柊浣嶇疆锟?
         /// </summary>
         private void CommitBarrage(BarrageItem item)
         {
@@ -485,11 +481,11 @@ namespace NotiFlow.Rendering
                 return;
             }
 
-            // 将弹幕的 SpriteVisual 添加到合成树
+            // 灏嗗脊骞曠殑 SpriteVisual 娣诲姞鍒板悎鎴愭爲
             _rootContainer.Children.InsertAtTop(item.Visual);
 
-            // 创建从屏幕右端到完全离开左端的匀速滚动动�?
-            // 额外增加 50 像素的安全边距，防止倾斜字体或长阴影由于测量误差导致边缘粘连
+            // 鍒涘缓浠庡睆骞曞彸绔埌瀹屽叏绂诲紑宸︾鐨勫寑閫熸粴鍔ㄥ姩锟?
+            // 棰濆澧炲姞 50 鍍忕礌鐨勫畨鍏ㄨ竟璺濓紝闃叉鍊炬枩瀛椾綋鎴栭暱闃村奖鐢变簬娴嬮噺璇樊瀵艰嚧杈圭紭绮樿繛
             var linear = _compositor.CreateLinearEasingFunction();
             var animation = _compositor.CreateVector3KeyFrameAnimation();
             float destinationX = -(float)item.PhysicalWidth - 50f;
@@ -508,9 +504,9 @@ namespace NotiFlow.Rendering
         }
 
         /// <summary>
-        /// WPF CompositionTarget.Rendering 回调，驱动弹幕生命周期管理�?
-        /// 不再执行任何像素操作——滚动动画由合成器自动驱动�?
-        /// 此回调仅负责：消息入队、弹幕提交、轨道释放判断、过期弹幕清理�?
+        /// WPF CompositionTarget.Rendering 鍥炶皟锛岄┍鍔ㄥ脊骞曠敓鍛藉懆鏈熺鐞嗭拷?
+        /// 涓嶅啀鎵ц浠讳綍鍍忕礌鎿嶄綔鈥斺€旀粴鍔ㄥ姩鐢荤敱鍚堟垚鍣ㄨ嚜鍔ㄩ┍鍔拷?
+        /// 姝ゅ洖璋冧粎璐熻矗锛氭秷鎭叆闃熴€佸脊骞曟彁浜ゃ€佽建閬撻噴鏀惧垽鏂€佽繃鏈熷脊骞曟竻鐞嗭拷?
         /// </summary>
         private void CompositionTarget_Rendering(object? sender, EventArgs e)
         {
@@ -520,7 +516,7 @@ namespace NotiFlow.Rendering
             if (_lastRenderTime == renderingArgs.RenderingTime) return;
             _lastRenderTime = renderingArgs.RenderingTime;
 
-            // 每帧处理所有待入队的通知消息（避�?20 条通知只取 1 条的积压问题�?
+            // 姣忓抚澶勭悊鎵€鏈夊緟鍏ラ槦鐨勯€氱煡娑堟伅锛堥伩锟?20 鏉￠€氱煡鍙彇 1 鏉＄殑绉帇闂锟?
             while (_spawnQueue.TryDequeue(out var spawnMsg))
             {
                 if (((App)Application.Current).ForegroundMonitor is { } monitor && !monitor.IsSceneSuppressed)
@@ -529,8 +525,8 @@ namespace NotiFlow.Rendering
                 }
             }
 
-            // 接收后台线程完成的弹幕布局，并�?UI 线程创建 Composition 视觉对象
-            // 限制每帧最多创�?2-3 个纹理，防止单帧内向 DWM 提交过多表面分配请求导致 D3D/DXGI 异常（引发弹幕丢失）
+            // 鎺ユ敹鍚庡彴绾跨▼瀹屾垚鐨勫脊骞曞竷灞€锛屽苟锟?UI 绾跨▼鍒涘缓 Composition 瑙嗚瀵硅薄
+            // 闄愬埗姣忓抚鏈€澶氬垱锟?2-3 涓汗鐞嗭紝闃叉鍗曞抚鍐呭悜 DWM 鎻愪氦杩囧琛ㄩ潰鍒嗛厤璇锋眰瀵艰嚧 D3D/DXGI 寮傚父锛堝紩鍙戝脊骞曚涪澶憋級
             int maxCommitsPerFrame = 3;
             int commitCount = 0;
             while (commitCount < maxCommitsPerFrame && _spriteReadyQueue.TryDequeue(out var readyItem))
@@ -542,7 +538,7 @@ namespace NotiFlow.Rendering
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"CreateVisualFailed: {ex.Message}");
-                } // 如果抛异常，Visual 会保持为 null，由 CommitBarrage 处理回收
+                } // 濡傛灉鎶涘紓甯革紝Visual 浼氫繚鎸佷负 null锛岀敱 CommitBarrage 澶勭悊鍥炴敹
 
                 CommitBarrage(readyItem);
                 commitCount++;
@@ -557,7 +553,7 @@ namespace NotiFlow.Rendering
                 return;
             }
 
-            // 遍历活跃弹幕，处理轨道释放和生命周期结束
+            // 閬嶅巻娲昏穬寮瑰箷锛屽鐞嗚建閬撻噴鏀惧拰鐢熷懡鍛ㄦ湡缁撴潫
             var now = DateTime.UtcNow;
             for (int i = _activeItems.Count - 1; i >= 0; i--)
             {
@@ -565,8 +561,8 @@ namespace NotiFlow.Rendering
                 double elapsed = (now - item.AnimationStartTime).TotalSeconds;
                 double totalDuration = (item.AnimationEndTime - item.AnimationStartTime).TotalSeconds;
 
-                // 轨道释放判断：根据动画进度推算当前位置，
-                // 当弹幕尾部通过屏幕右侧 3/4 处时释放轨道，允许下一条弹幕进�?
+                // 杞ㄩ亾閲婃斁鍒ゆ柇锛氭牴鎹姩鐢昏繘搴︽帹绠楀綋鍓嶄綅缃紝
+                // 褰撳脊骞曞熬閮ㄩ€氳繃灞忓箷鍙充晶 3/4 澶勬椂閲婃斁杞ㄩ亾锛屽厑璁镐笅涓€鏉″脊骞曡繘锟?
                 if (!item.TrackReleased && totalDuration > 0)
                 {
                     double progress = elapsed / totalDuration;
@@ -578,8 +574,8 @@ namespace NotiFlow.Rendering
                     }
                 }
 
-                // 弹幕动画结束，从合成树移除并回收
-                // 增加 1.5 秒的缓冲时间，弥补后台线程生成与 GPU 渲染的异步延迟，确保弹幕彻底飞出屏幕后再移除
+                // 寮瑰箷鍔ㄧ敾缁撴潫锛屼粠鍚堟垚鏍戠Щ闄ゅ苟鍥炴敹
+                // 澧炲姞 1.5 绉掔殑缂撳啿鏃堕棿锛屽讥琛ュ悗鍙扮嚎绋嬬敓鎴愪笌 GPU 娓叉煋鐨勫紓姝ュ欢杩燂紝纭繚寮瑰箷褰诲簳椋炲嚭灞忓箷鍚庡啀绉婚櫎
                 if (now >= item.AnimationEndTime.AddSeconds(1.5))
                 {
                     if (item.Visual != null)
@@ -607,7 +603,7 @@ namespace NotiFlow.Rendering
                 _hwnd = IntPtr.Zero;
             }
 
-            // 清理合成视觉�?
+            // 娓呯悊鍚堟垚瑙嗚锟?
             _rootContainer?.Children.RemoveAll();
 
             foreach (var item in _activeItems) item.Dispose();
@@ -615,10 +611,10 @@ namespace NotiFlow.Rendering
 
             while (_pool.Count > 0) _pool.Dequeue().Dispose();
 
-            // 清空异步队列中残留的项目
+            // 娓呯┖寮傛闃熷垪涓畫鐣欑殑椤圭洰
             while (_spriteReadyQueue.TryDequeue(out var leftover)) leftover.Dispose();
 
-            // 按逆序释放 Composition 资源
+            // 鎸夐€嗗簭閲婃斁 Composition 璧勬簮
             _compositionTarget?.Dispose();
             _graphicsDevice?.Dispose();
             _canvasDevice?.Dispose();

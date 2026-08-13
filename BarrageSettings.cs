@@ -77,6 +77,7 @@ namespace NotiFlow
         public List<Models.ScopeRuleItemDto> SourceBlacklist { get; set; } = new();
         public List<Models.ScopeRuleItemDto> SourceWhitelist { get; set; } = new();
         public List<Models.ScopeRuleItemDto> RecentSourcesCache { get; set; } = new();
+        public List<Models.ScopeRuleItemDto> RecentScenesCache { get; set; } = new();
         
         // 安全模式（防崩溃循环）配置
         public int DeviceCrashCount { get; set; } = 0;
@@ -164,6 +165,7 @@ namespace NotiFlow
         /// 近期接收过通知的应用缓存（带有历史消息列表）
         /// </summary>
         public static List<Models.ScopeRuleItemDto> RecentSourcesCache { get; set; } = new();
+        public static List<Models.ScopeRuleItemDto> RecentScenesCache { get; set; } = new();
 
         // ====== 安全模式（防崩溃循环）配置 ======
         public static int DeviceCrashCount { get; set; } = 0;
@@ -179,79 +181,100 @@ namespace NotiFlow
             "NotiFlow", 
             "BarrageConfig.json");
 
+        public static BarrageConfigDto GetGlobalConfigDto()
+        {
+            return new BarrageConfigDto
+            {
+                FontFamilyName = FontFamily.Source,
+                FontSize = FontSize,
+                FontWeight = FontWeight.ToString(),
+                FontStyle = FontStyle.ToString(),
+                IsUnderlined = IsUnderlined,
+                TextColorHex = (TextColor is SolidColorBrush textBrush) ? textBrush.Color.ToString() : "#FFFFFF",
+                ShowTextStroke = ShowTextStroke,
+                TextStrokeColorHex = (TextStrokeColor is SolidColorBrush strokeBrush) ? strokeBrush.Color.ToString() : "#000000",
+                TextStrokeThickness = TextStrokeThickness,
+                TextOpacity = TextOpacity,
+                LetterSpacing = LetterSpacing,
+                ShowAppIcon = ShowAppIcon,
+                ShowAppName = ShowAppName,
+                ShowBackground = ShowBackground,
+                BackgroundColorHex = (BackgroundColor is SolidColorBrush bgBrush) ? bgBrush.Color.ToString() : "#000000",
+                BackgroundOpacity = BackgroundOpacity,
+                BackgroundCornerRadius = BackgroundCornerRadius.TopLeft,
+                ShowBackgroundImage = ShowBackgroundImage,
+                BackgroundImagePath = BackgroundImagePath,
+                BackgroundImageAnchor = BackgroundImageAnchor,
+                BackgroundImageOffsetX = BackgroundImageOffsetX,
+                BackgroundImageOffsetY = BackgroundImageOffsetY,
+                BackgroundImageScale = BackgroundImageScale,
+                BackgroundImageKeepBaseColor = BackgroundImageKeepBaseColor,
+                BackgroundImageOpacity = BackgroundImageOpacity,
+                MaxTextLength = MaxTextLength,
+                HighlightEllipsis = HighlightEllipsis,
+                EllipsisColorHex = (EllipsisColor is SolidColorBrush ellBrush) ? ellBrush.Color.ToString() : "#32CD32",
+                ScrollSpeedCharsPerSec = ScrollSpeedCharsPerSec,
+                TrackStrategy = TrackStrategy,
+                AutoStartWorking = AutoStartWorking,
+                HotKeyModifier = HotKeyModifier,
+                HotKey = HotKey,
+                ConfigVersion = 1,
+                AutoCheckUpdate = AutoCheckUpdate,
+                UpdateSource = UpdateSource,
+                Theme = Theme,
+                AllowCapture = AllowCapture,
+                MinimizeToTray = MinimizeToTray,
+                CloseToTray = CloseToTray,
+                RunOnStartup = RunOnStartup,
+                SceneFilterMode = SceneFilterMode,
+                SceneBlacklist = SceneBlacklist,
+                SceneWhitelist = SceneWhitelist,
+                SourceFilterMode = SourceFilterMode,
+                SourceBlacklist = SourceBlacklist,
+                SourceWhitelist = SourceWhitelist,
+                RecentSourcesCache = RecentSourcesCache,
+                RecentScenesCache = RecentScenesCache,
+                DeviceCrashCount = DeviceCrashCount,
+                SoftwareCrashCount = SoftwareCrashCount
+            };
+        }
+
+        public static BarrageConfigDto GetResolvedConfig(string sourceAumid, string foregroundExe)
+        {
+            if (!string.IsNullOrEmpty(sourceAumid))
+            {
+                var sourceRule = SourceWhitelist.Concat(SourceBlacklist).Concat(RecentSourcesCache)
+                    .FirstOrDefault(x => string.Equals(x.Identifier, sourceAumid, StringComparison.OrdinalIgnoreCase));
+                if (sourceRule != null && sourceRule.StyleOverride != null)
+                {
+                    return sourceRule.StyleOverride;
+                }
+            }
+            
+            if (!string.IsNullOrEmpty(foregroundExe))
+            {
+                var sceneRule = SceneWhitelist.Concat(SceneBlacklist).Concat(RecentScenesCache)
+                    .FirstOrDefault(x => string.Equals(x.Identifier, foregroundExe, StringComparison.OrdinalIgnoreCase));
+                if (sceneRule != null && sceneRule.StyleOverride != null)
+                {
+                    return sceneRule.StyleOverride;
+                }
+            }
+            
+            return GetGlobalConfigDto();
+        }
+
         public static void ExportConfig(string? filePath = null)
         {
             try
             {
-                var dto = new BarrageConfigDto
-                {
-                    FontFamilyName = FontFamily.Source,
-                    FontSize = FontSize,
-                    FontWeight = FontWeight.ToString(),
-                    FontStyle = FontStyle.ToString(),
-                    IsUnderlined = IsUnderlined,
-                    TextColorHex = (TextColor is SolidColorBrush textBrush) ? textBrush.Color.ToString() : "#FFFFFF",
-                    ShowTextStroke = ShowTextStroke,
-                    TextStrokeColorHex = (TextStrokeColor is SolidColorBrush strokeBrush) ? strokeBrush.Color.ToString() : "#000000",
-                    TextStrokeThickness = TextStrokeThickness,
-                    TextOpacity = TextOpacity,
-                    LetterSpacing = LetterSpacing,
-                    ShowAppIcon = ShowAppIcon,
-                    ShowAppName = ShowAppName,
-                    ShowBackground = ShowBackground,
-                    BackgroundColorHex = (BackgroundColor is SolidColorBrush bgBrush) ? bgBrush.Color.ToString() : "#000000",
-                    BackgroundOpacity = BackgroundOpacity,
-                    BackgroundCornerRadius = BackgroundCornerRadius.TopLeft,
-                    ShowBackgroundImage = ShowBackgroundImage,
-                    BackgroundImagePath = BackgroundImagePath,
-                    BackgroundImageAnchor = BackgroundImageAnchor,
-                    BackgroundImageOffsetX = BackgroundImageOffsetX,
-                    BackgroundImageOffsetY = BackgroundImageOffsetY,
-                    BackgroundImageScale = BackgroundImageScale,
-                    BackgroundImageKeepBaseColor = BackgroundImageKeepBaseColor,
-                    BackgroundImageOpacity = BackgroundImageOpacity,
-
-                    MaxTextLength = MaxTextLength,
-                    HighlightEllipsis = HighlightEllipsis,
-                    EllipsisColorHex = (EllipsisColor is SolidColorBrush ellBrush) ? ellBrush.Color.ToString() : "#32CD32",
-                    ScrollSpeedCharsPerSec = ScrollSpeedCharsPerSec,
-                    TrackStrategy = TrackStrategy,
-                    AutoStartWorking = AutoStartWorking,
-                    HotKeyModifier = HotKeyModifier,
-                    HotKey = HotKey,
-                    ConfigVersion = 1,
-                    AutoCheckUpdate = AutoCheckUpdate,
-                    UpdateSource = UpdateSource,
-                    SkippedVersion = SkippedVersion,
-                    Theme = Theme,
-                    AllowCapture = AllowCapture,
-                    MinimizeToTray = MinimizeToTray,
-                    CloseToTray = CloseToTray,
-                    RunOnStartup = RunOnStartup,
-                    SceneFilterMode = SceneFilterMode,
-                    SceneBlacklist = SceneBlacklist,
-                    SceneWhitelist = SceneWhitelist,
-                    SourceFilterMode = SourceFilterMode,
-                    SourceBlacklist = SourceBlacklist,
-                    SourceWhitelist = SourceWhitelist,
-                    RecentSourcesCache = RecentSourcesCache,
-                    DeviceCrashCount = DeviceCrashCount,
-                    SoftwareCrashCount = SoftwareCrashCount
-                };
-
-                string? dir = Path.GetDirectoryName(filePath ?? DefaultConfigPath);
-                if (dir != null && !Directory.Exists(dir))
-                {
-                    Directory.CreateDirectory(dir);
-                }
-
-                var options = new JsonSerializerOptions { WriteIndented = true };
-                string json = JsonSerializer.Serialize(dto, options);
+                var dto = GetGlobalConfigDto();
+                string json = JsonSerializer.Serialize(dto, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(filePath ?? DefaultConfigPath, json);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"无法导出配置文件: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Failed to export config: {ex.Message}");
             }
         }
 
@@ -341,6 +364,7 @@ namespace NotiFlow
                 SourceBlacklist = dto.SourceBlacklist ?? new();
                 SourceWhitelist = dto.SourceWhitelist ?? new();
                 RecentSourcesCache = dto.RecentSourcesCache ?? new();
+                RecentScenesCache = dto.RecentScenesCache ?? new();
                 DeviceCrashCount = dto.DeviceCrashCount;
                 SoftwareCrashCount = dto.SoftwareCrashCount;
             }
@@ -401,6 +425,7 @@ namespace NotiFlow
             SourceBlacklist = new();
             SourceWhitelist = new();
             RecentSourcesCache = new();
+            RecentScenesCache = new();
             DeviceCrashCount = 0;
             SoftwareCrashCount = 0;
             IsSafeMode = false;
