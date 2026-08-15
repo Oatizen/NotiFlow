@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -374,45 +374,13 @@ namespace NotiFlow.Rendering
             string currentForegroundExe = ((App)Application.Current).ForegroundMonitor?.CurrentForegroundProcess ?? "";
             var config = BarrageSettings.GetResolvedConfig(message.Aumid, currentForegroundExe);
 
-            var textColor = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(config.TextColorHex);
-            var textStrokeColor = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(config.TextStrokeColorHex);
-
-            string fontFamilyName = config.FontFamilyName;
-            double fontSize = config.FontSize;
-            var fontStyle = config.FontStyle == "Italic" ? System.Windows.FontStyles.Italic : System.Windows.FontStyles.Normal;
-            var fontWeight = config.FontWeight == "Bold" ? System.Windows.FontWeights.Bold : System.Windows.FontWeights.Normal;
+            double fontSize = config.FontSize > 0 ? config.FontSize : 36;
             double topPosition = TopMargin + track * (BarrageSettings.FontSize + 16);
             double speedPixelsPerSec = config.ScrollSpeedCharsPerSec * fontSize;
             if (speedPixelsPerSec < 10) speedPixelsPerSec = 10;
 
-            bool showBackground = config.ShowBackground;
-            var bgColor = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(config.BackgroundColorHex);
-            double bgOpacity = config.BackgroundOpacity;
-            double textOpacity = config.TextOpacity;
-            var cornerRadius = new System.Windows.CornerRadius(config.BackgroundCornerRadius);
-
-            bool highlightEllipsis = config.HighlightEllipsis;
-            var ellColor = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(config.EllipsisColorHex);
-
-            bool showAppName = config.ShowAppName;
-            double maxTextLen = config.MaxTextLength;
-            bool isUnderlined = config.IsUnderlined;
-            double letterSpacing = config.LetterSpacing;
-            
-            bool showBgImage = config.ShowBackgroundImage;
-            string bgImagePath = config.BackgroundImagePath;
-            NotiFlow.Models.ImageAnchor bgAnchor = config.BackgroundImageAnchor;
-            double bgOffsetX = config.BackgroundImageOffsetX;
-            double bgOffsetY = config.BackgroundImageOffsetY;
-            double bgScale = config.BackgroundImageScale;
-            bool bgKeepBaseColor = config.BackgroundImageKeepBaseColor;
-            
-            double textStrokeThickness = config.TextStrokeThickness;
-            bool showTextStroke = config.ShowTextStroke;
-            double bgImageOpacity = config.BackgroundImageOpacity;
-
             // 棰勬彁鍙栧浘鏍囧儚绱狅紙WPF 瀵硅薄鍙兘?UI 绾跨▼璁块棶?
-            bool showAppIcon = BarrageSettings.ShowAppIcon;
+            bool showAppIcon = config.ShowAppIcon;
             byte[]? iconPixels = null;
             int iconWidth = 0, iconHeight = 0;
             bool isUwpIcon = message.IsUwpIcon;
@@ -449,13 +417,8 @@ namespace NotiFlow.Rendering
                 {
                     item.PrepareLayout(canvasDevice,
                         appName, title, body,
-                        textColor, textOpacity, fontSize, letterSpacing, fontFamilyName, fontStyle, fontWeight,
-                        showBackground, bgColor, bgOpacity, cornerRadius,
-                        showBgImage, bgImagePath, bgAnchor, bgOffsetX, bgOffsetY, bgScale, bgKeepBaseColor, BarrageSettings.BackgroundImageOpacity,
-                        BarrageSettings.ShowTextStroke, textStrokeColor, BarrageSettings.TextStrokeThickness,
-                        highlightEllipsis, ellColor,
-                        showAppName, maxTextLen, isUnderlined,
-                        showAppIcon, iconPixels, iconWidth, iconHeight, isUwpIcon);
+                        config,
+                        iconPixels, iconWidth, iconHeight, isUwpIcon);
                     item.CurrentX = screenWidth;
                     item.CurrentY = topPosition;
                     item.SpeedPixelsPerSec = speedPixelsPerSec;

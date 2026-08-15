@@ -109,6 +109,7 @@ namespace NotiFlow.Models
             OnPropertyChanged(nameof(ClearButtonVisibility));
             if (value == null) return;
             LoadConfigToUI();
+            TriggerSaveAndPreview();
         }
 
         private BarrageConfigDto GetTargetConfig(bool createIfNull)
@@ -168,6 +169,15 @@ namespace NotiFlow.Models
         }
 
         public bool IsEditingGlobal => SelectedScope == null || SelectedScope.Type == "Global";
+
+        public BarrageConfigDto GetCurrentConfig()
+        {
+            if (IsEditingGlobal)
+            {
+                return BarrageSettings.GetGlobalConfigDto();
+            }
+            return GetTargetConfig(false) ?? BarrageSettings.GetGlobalConfigDto();
+        }
 
         public SettingsViewModel()
         {
@@ -271,7 +281,7 @@ namespace NotiFlow.Models
             }
         }
 
-        private void LoadConfigToUI()
+                        private void LoadConfigToUI()
         {
             _isSyncing = true;
             var config = IsEditingGlobal ? BarrageSettings.GetGlobalConfigDto() : (GetTargetConfig(false) ?? BarrageSettings.GetGlobalConfigDto());
@@ -311,12 +321,51 @@ namespace NotiFlow.Models
             IsFontStyleItalic = config.FontStyle == "Italic";
             IsUnderline = config.IsUnderlined;
 
+            // --- AppName Local Config (populate with global values if not overridden) ---
+            AppNameTextColorHex = config.AppNameTextColorHex;
+            AppNameFontFamilyName = !string.IsNullOrEmpty(config.AppNameFontFamilyName) ? config.AppNameFontFamilyName : config.FontFamilyName;
+            AppNameFontSize = config.AppNameFontSize > 0 ? config.AppNameFontSize : config.FontSize;
+            AppNameLetterSpacing = config.AppNameLetterSpacing > 0 ? config.AppNameLetterSpacing : config.LetterSpacing;
+            AppNameFontWeight = !string.IsNullOrEmpty(config.AppNameFontWeight) ? config.AppNameFontWeight : config.FontWeight;
+            AppNameFontStyle = !string.IsNullOrEmpty(config.AppNameFontStyle) ? config.AppNameFontStyle : config.FontStyle;
+            AppNameTextOpacityPercentage = config.AppNameTextOpacity.HasValue ? config.AppNameTextOpacity.Value * 100.0 : config.TextOpacity * 100.0;
+            AppNameIsFontStyleItalic = AppNameFontStyle == "Italic";
+            AppNameIsUnderlined = config.AppNameIsUnderlined;
+            AppNameShowTextStroke = config.AppNameShowTextStroke ?? config.ShowTextStroke;
+
+            // --- Content Local Config ---
+            ContentTextColorHex = config.ContentTextColorHex;
+            ContentFontFamilyName = !string.IsNullOrEmpty(config.ContentFontFamilyName) ? config.ContentFontFamilyName : config.FontFamilyName;
+            ContentFontSize = config.ContentFontSize > 0 ? config.ContentFontSize : config.FontSize;
+            ContentLetterSpacing = config.ContentLetterSpacing > 0 ? config.ContentLetterSpacing : config.LetterSpacing;
+            ContentFontWeight = !string.IsNullOrEmpty(config.ContentFontWeight) ? config.ContentFontWeight : config.FontWeight;
+            ContentFontStyle = !string.IsNullOrEmpty(config.ContentFontStyle) ? config.ContentFontStyle : config.FontStyle;
+            ContentTextOpacityPercentage = config.ContentTextOpacity.HasValue ? config.ContentTextOpacity.Value * 100.0 : config.TextOpacity * 100.0;
+            ContentIsFontStyleItalic = ContentFontStyle == "Italic";
+            ContentIsUnderlined = config.ContentIsUnderlined;
+            ContentShowTextStroke = config.ContentShowTextStroke ?? config.ShowTextStroke;
+            
+            // --- Ellipsis Local Config ---
+            EllipsisColorHex = config.EllipsisColorHex;
+            EllipsisFontSize = config.EllipsisFontSize > 0 ? config.EllipsisFontSize : config.FontSize;
+            EllipsisTextOpacityPercentage = config.EllipsisTextOpacity.HasValue ? config.EllipsisTextOpacity.Value * 100.0 : config.TextOpacity * 100.0;
+            EllipsisIsUnderlined = config.EllipsisIsUnderlined;
+
+            // --- AppIcon Local Config ---
+            AppIconScale = config.AppIconScale > 0 ? config.AppIconScale : 1.0;
+
             OnPropertyChanged(nameof(FontSizeDisplay));
             OnPropertyChanged(nameof(LetterSpacingDisplay));
             OnPropertyChanged(nameof(MaxTextLengthDisplay));
             OnPropertyChanged(nameof(TextOpacityDisplay));
             OnPropertyChanged(nameof(BackgroundOpacityDisplay));
             OnPropertyChanged(nameof(TextStrokeThicknessDisplay));
+            OnPropertyChanged(nameof(TextColorBrush));
+            OnPropertyChanged(nameof(AppNameTextColorBrush));
+            OnPropertyChanged(nameof(ContentTextColorBrush));
+            OnPropertyChanged(nameof(EllipsisColorBrush));
+            OnPropertyChanged(nameof(BackgroundColorBrush));
+            OnPropertyChanged(nameof(TextStrokeColorBrush));
             OnPropertyChanged(nameof(BackgroundImageOffsetXDisplay));
             OnPropertyChanged(nameof(BackgroundImageOffsetYDisplay));
             OnPropertyChanged(nameof(BackgroundImageScaleDisplay));
@@ -326,12 +375,73 @@ namespace NotiFlow.Models
             OnPropertyChanged(nameof(IsTrackUpperCenter));
             OnPropertyChanged(nameof(IsTrackTopFirst));
             OnPropertyChanged(nameof(IsTrackBottomFirst));
+            OnPropertyChanged(nameof(HasAppNameCustomSettings));
+            OnPropertyChanged(nameof(HasContentCustomSettings));
+            OnPropertyChanged(nameof(HasEllipsisCustomSettings));
+            OnPropertyChanged(nameof(HasAppIconCustomSettings));
 
             _isSyncing = false;
         }
 
         public IEnumerable<FontViewModel> AvailableFonts { get; }
         public ObservableCollection<ColorPaletteItem> PresetColors { get; }
+        public Brush TextColorBrush
+        {
+            get
+            {
+                try { return new SolidColorBrush((Color)ColorConverter.ConvertFromString(TextColorHex ?? "#FFFFFFFF")); }
+                catch { return Brushes.White; }
+            }
+        }
+        
+        public Brush AppNameTextColorBrush
+        {
+            get
+            {
+                string hex = string.IsNullOrEmpty(AppNameTextColorHex) ? TextColorHex : AppNameTextColorHex;
+                try { return new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex ?? "#FFFFFFFF")); }
+                catch { return Brushes.White; }
+            }
+        }
+
+        public Brush ContentTextColorBrush
+        {
+            get
+            {
+                string hex = string.IsNullOrEmpty(ContentTextColorHex) ? TextColorHex : ContentTextColorHex;
+                try { return new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex ?? "#FFFFFFFF")); }
+                catch { return Brushes.White; }
+            }
+        }
+
+        public Brush BackgroundColorBrush
+        {
+            get
+            {
+                try { return new SolidColorBrush((Color)ColorConverter.ConvertFromString(BackgroundColorHex ?? "#FF000000")); }
+                catch { return Brushes.Black; }
+            }
+        }
+
+                public Brush EllipsisColorBrush
+        {
+            get
+            {
+                string hex = string.IsNullOrEmpty(EllipsisColorHex) ? (string.IsNullOrEmpty(ContentTextColorHex) ? TextColorHex : ContentTextColorHex) : EllipsisColorHex;
+                try { return new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex ?? "#FFFFFFFF")); }
+                catch { return Brushes.White; }
+            }
+        }
+
+        public Brush TextStrokeColorBrush
+        {
+            get
+            {
+                try { return new SolidColorBrush((Color)ColorConverter.ConvertFromString(TextStrokeColorHex ?? "#FF000000")); }
+                catch { return Brushes.Black; }
+            }
+        }
+
 
         [ObservableProperty]
         private FontViewModel? _selectedFontItem;
@@ -344,6 +454,10 @@ namespace NotiFlow.Models
         }
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(TextColorBrush))]
+        [NotifyPropertyChangedFor(nameof(AppNameTextColorBrush))]
+        [NotifyPropertyChangedFor(nameof(ContentTextColorBrush))]
+        [NotifyPropertyChangedFor(nameof(EllipsisColorBrush))]
         private string _textColorHex;
         partial void OnTextColorHexChanged(string value)
         {
@@ -352,8 +466,115 @@ namespace NotiFlow.Models
             else GetTargetConfig(true).TextColorHex = value;
             TriggerSaveAndPreview();
         }
+        
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(AppNameTextColorBrush))]
+        
+
+
+        private string _appNameTextColorHex;
+        partial void OnAppNameTextColorHexChanged(string value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.AppNameTextColorHex = value;
+            else GetTargetConfig(true).AppNameTextColorHex = value;
+            TriggerSaveAndPreview();
+        }
+        
+        [ObservableProperty]
+        private double _appNameFontSize;
+        partial void OnAppNameFontSizeChanged(double value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.AppNameFontSize = value;
+            else GetTargetConfig(true).AppNameFontSize = value;
+            TriggerSaveAndPreview();
+        }
+        
+        [ObservableProperty]
+        private string _appNameFontWeight;
+        partial void OnAppNameFontWeightChanged(string value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.AppNameFontWeight = value;
+            else GetTargetConfig(true).AppNameFontWeight = value;
+            TriggerSaveAndPreview();
+        }
+        
+        [ObservableProperty]
+        private string _appNameFontStyle;
+        partial void OnAppNameFontStyleChanged(string value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.AppNameFontStyle = value;
+            else GetTargetConfig(true).AppNameFontStyle = value;
+            TriggerSaveAndPreview();
+        }
+        
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(ContentTextColorBrush))]
+        [NotifyPropertyChangedFor(nameof(EllipsisColorBrush))]
+        private string _contentTextColorHex;
+        partial void OnContentTextColorHexChanged(string value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.ContentTextColorHex = value;
+            else GetTargetConfig(true).ContentTextColorHex = value;
+            TriggerSaveAndPreview();
+        }
+        
+        [ObservableProperty]
+        private double _contentFontSize;
+        partial void OnContentFontSizeChanged(double value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.ContentFontSize = value;
+            else GetTargetConfig(true).ContentFontSize = value;
+            TriggerSaveAndPreview();
+        }
+        
+        [ObservableProperty]
+        private string _contentFontWeight;
+        partial void OnContentFontWeightChanged(string value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.ContentFontWeight = value;
+            else GetTargetConfig(true).ContentFontWeight = value;
+            TriggerSaveAndPreview();
+        }
+        
+        [ObservableProperty]
+        private string _contentFontStyle;
+        partial void OnContentFontStyleChanged(string value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.ContentFontStyle = value;
+            else GetTargetConfig(true).ContentFontStyle = value;
+            TriggerSaveAndPreview();
+        }
+        
+        [ObservableProperty]
+        private double _ellipsisFontSize;
+        partial void OnEllipsisFontSizeChanged(double value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.EllipsisFontSize = value;
+            else GetTargetConfig(true).EllipsisFontSize = value;
+            TriggerSaveAndPreview();
+        }
+        
+        [ObservableProperty]
+        private double _appIconScale;
+        partial void OnAppIconScaleChanged(double value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.AppIconScale = value;
+            else GetTargetConfig(true).AppIconScale = value;
+            TriggerSaveAndPreview();
+        }
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(BackgroundColorBrush))]
         private string _backgroundColorHex;
         partial void OnBackgroundColorHexChanged(string value)
         {
@@ -466,10 +687,14 @@ namespace NotiFlow.Models
             else GetTargetConfig(true).TextStrokeThickness = value;
             TriggerSaveAndPreview();
             OnPropertyChanged(nameof(TextStrokeThicknessDisplay));
+            OnPropertyChanged(nameof(TextColorBrush));
+            OnPropertyChanged(nameof(BackgroundColorBrush));
+            OnPropertyChanged(nameof(TextStrokeColorBrush));
         }
         public string TextStrokeThicknessDisplay => $"{TextStrokeThickness:0.0}px";
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(TextStrokeColorBrush))]
         private string _textStrokeColorHex;
         partial void OnTextStrokeColorHexChanged(string value)
         {
@@ -833,6 +1058,405 @@ namespace NotiFlow.Models
         {
             _debounceTimer.Stop();
             _debounceTimer.Start();
+            OnPropertyChanged(nameof(HasAppNameCustomSettings));
+            OnPropertyChanged(nameof(HasContentCustomSettings));
+            OnPropertyChanged(nameof(HasEllipsisCustomSettings));
+            OnPropertyChanged(nameof(HasAppIconCustomSettings));
+        }
+
+        public bool HasAppNameCustomSettings
+        {
+            get
+            {
+                var config = IsEditingGlobal ? BarrageSettings.GetGlobalConfigDto() : (GetTargetConfig(false) ?? BarrageSettings.GetGlobalConfigDto());
+                return !string.IsNullOrEmpty(config.AppNameTextColorHex)
+                    || config.AppNameFontSize > 0
+                    || !string.IsNullOrEmpty(config.AppNameFontWeight)
+                    || !string.IsNullOrEmpty(config.AppNameFontStyle)
+                    || !string.IsNullOrEmpty(config.AppNameFontFamilyName)
+                    || config.AppNameLetterSpacing > 0
+                    || config.AppNameTextOpacity.HasValue
+                    || config.AppNameShowTextStroke.HasValue
+                    || config.AppNameIsUnderlined
+                    || !config.ShowAppName;
+            }
+        }
+
+        public bool HasContentCustomSettings
+        {
+            get
+            {
+                var config = IsEditingGlobal ? BarrageSettings.GetGlobalConfigDto() : (GetTargetConfig(false) ?? BarrageSettings.GetGlobalConfigDto());
+                return !string.IsNullOrEmpty(config.ContentTextColorHex)
+                    || config.ContentFontSize > 0
+                    || !string.IsNullOrEmpty(config.ContentFontWeight)
+                    || !string.IsNullOrEmpty(config.ContentFontStyle)
+                    || !string.IsNullOrEmpty(config.ContentFontFamilyName)
+                    || config.ContentLetterSpacing > 0
+                    || config.ContentTextOpacity.HasValue
+                    || config.ContentShowTextStroke.HasValue
+                    || config.ContentIsUnderlined;
+            }
+        }
+
+        public bool HasEllipsisCustomSettings
+        {
+            get
+            {
+                var config = IsEditingGlobal ? BarrageSettings.GetGlobalConfigDto() : (GetTargetConfig(false) ?? BarrageSettings.GetGlobalConfigDto());
+                return !string.IsNullOrEmpty(config.EllipsisColorHex)
+                    || config.EllipsisFontSize > 0
+                    || config.EllipsisTextOpacity.HasValue
+                    || config.EllipsisIsUnderlined;
+            }
+        }
+
+        public bool HasAppIconCustomSettings
+        {
+            get
+            {
+                var config = IsEditingGlobal ? BarrageSettings.GetGlobalConfigDto() : (GetTargetConfig(false) ?? BarrageSettings.GetGlobalConfigDto());
+                return Math.Abs(config.AppIconScale - 1.0) > 0.01 || !config.ShowAppIcon;
+            }
+        }
+
+        [RelayCommand]
+        private void ResetAppNameSettings()
+        {
+            if (IsEditingGlobal)
+            {
+                BarrageSettings.AppNameTextColorHex = "";
+                BarrageSettings.AppNameFontSize = 0;
+                BarrageSettings.AppNameFontWeight = "";
+                BarrageSettings.AppNameFontStyle = "";
+                BarrageSettings.AppNameFontFamilyName = "";
+                BarrageSettings.AppNameLetterSpacing = 0;
+                BarrageSettings.AppNameTextOpacity = null;
+                BarrageSettings.AppNameIsUnderlined = false;
+                BarrageSettings.AppNameShowTextStroke = null;
+                BarrageSettings.ShowAppName = true;
+            }
+            else
+            {
+                var target = GetTargetConfig(true);
+                target.AppNameTextColorHex = "";
+                target.AppNameFontSize = 0;
+                target.AppNameFontWeight = "";
+                target.AppNameFontStyle = "";
+                target.AppNameFontFamilyName = "";
+                target.AppNameLetterSpacing = 0;
+                target.AppNameTextOpacity = null;
+                target.AppNameIsUnderlined = false;
+                target.AppNameShowTextStroke = null;
+                target.ShowAppName = true;
+            }
+
+            _isSyncing = true;
+            AppNameTextColorHex = "";
+            AppNameFontSize = FontSize;
+            AppNameLetterSpacing = LetterSpacing;
+            AppNameFontWeight = IsFontWeightBold ? "Bold" : "Normal";
+            AppNameFontStyle = IsFontStyleItalic ? "Italic" : "Normal";
+            AppNameFontFamilyName = SelectedFontItem?.Family.Source ?? "Microsoft YaHei";
+            AppNameTextOpacityPercentage = TextOpacityPercentage;
+            AppNameIsUnderlined = false;
+            AppNameIsFontStyleItalic = IsFontStyleItalic;
+            AppNameShowTextStroke = ShowTextStroke;
+            ShowAppName = true;
+            _isSyncing = false;
+
+            TriggerSaveAndPreview();
+            OnPropertyChanged(nameof(AppNameTextColorBrush));
+            OnPropertyChanged(nameof(HasAppNameCustomSettings));
+        }
+
+        [RelayCommand]
+        private void ResetContentSettings()
+        {
+            if (IsEditingGlobal)
+            {
+                BarrageSettings.ContentTextColorHex = "";
+                BarrageSettings.ContentFontSize = 0;
+                BarrageSettings.ContentFontWeight = "";
+                BarrageSettings.ContentFontStyle = "";
+                BarrageSettings.ContentFontFamilyName = "";
+                BarrageSettings.ContentLetterSpacing = 0;
+                BarrageSettings.ContentTextOpacity = null;
+                BarrageSettings.ContentIsUnderlined = false;
+                BarrageSettings.ContentShowTextStroke = null;
+            }
+            else
+            {
+                var target = GetTargetConfig(true);
+                target.ContentTextColorHex = "";
+                target.ContentFontSize = 0;
+                target.ContentFontWeight = "";
+                target.ContentFontStyle = "";
+                target.ContentFontFamilyName = "";
+                target.ContentLetterSpacing = 0;
+                target.ContentTextOpacity = null;
+                target.ContentIsUnderlined = false;
+                target.ContentShowTextStroke = null;
+            }
+
+            _isSyncing = true;
+            ContentTextColorHex = "";
+            ContentFontSize = FontSize;
+            ContentLetterSpacing = LetterSpacing;
+            ContentFontWeight = IsFontWeightBold ? "Bold" : "Normal";
+            ContentFontStyle = IsFontStyleItalic ? "Italic" : "Normal";
+            ContentFontFamilyName = SelectedFontItem?.Family.Source ?? "Microsoft YaHei";
+            ContentTextOpacityPercentage = TextOpacityPercentage;
+            ContentIsUnderlined = false;
+            ContentIsFontStyleItalic = IsFontStyleItalic;
+            ContentShowTextStroke = ShowTextStroke;
+            _isSyncing = false;
+
+            TriggerSaveAndPreview();
+            OnPropertyChanged(nameof(ContentTextColorBrush));
+            OnPropertyChanged(nameof(HasContentCustomSettings));
+        }
+
+        [RelayCommand]
+        private void ResetEllipsisSettings()
+        {
+            if (IsEditingGlobal)
+            {
+                BarrageSettings.EllipsisColorHex = "";
+                BarrageSettings.EllipsisFontSize = 0;
+                BarrageSettings.EllipsisTextOpacity = null;
+                BarrageSettings.EllipsisIsUnderlined = false;
+            }
+            else
+            {
+                var target = GetTargetConfig(true);
+                target.EllipsisColorHex = "";
+                target.EllipsisFontSize = 0;
+                target.EllipsisTextOpacity = null;
+                target.EllipsisIsUnderlined = false;
+            }
+
+            _isSyncing = true;
+            EllipsisColorHex = "";
+            EllipsisFontSize = FontSize;
+            EllipsisTextOpacityPercentage = TextOpacityPercentage;
+            EllipsisIsUnderlined = false;
+            _isSyncing = false;
+
+            TriggerSaveAndPreview();
+            OnPropertyChanged(nameof(EllipsisColorBrush));
+            OnPropertyChanged(nameof(HasEllipsisCustomSettings));
+        }
+
+        [RelayCommand]
+        private void ResetAppIconSettings()
+        {
+            if (IsEditingGlobal)
+            {
+                BarrageSettings.AppIconScale = 1.0;
+                BarrageSettings.ShowAppIcon = true;
+            }
+            else
+            {
+                var target = GetTargetConfig(true);
+                target.AppIconScale = 1.0;
+                target.ShowAppIcon = true;
+            }
+
+            _isSyncing = true;
+            AppIconScale = 1.0;
+            ShowAppIcon = true;
+            _isSyncing = false;
+
+            TriggerSaveAndPreview();
+            OnPropertyChanged(nameof(HasAppIconCustomSettings));
+        }
+
+
+        [ObservableProperty]
+        private string _appNameFontFamilyName;
+        partial void OnAppNameFontFamilyNameChanged(string value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.AppNameFontFamilyName = value;
+            else GetTargetConfig(true).AppNameFontFamilyName = value;
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(AppNameLetterSpacingDisplay))]
+        private double _appNameLetterSpacing;
+        partial void OnAppNameLetterSpacingChanged(double value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.AppNameLetterSpacing = value;
+            else GetTargetConfig(true).AppNameLetterSpacing = value;
+            TriggerSaveAndPreview();
+            OnPropertyChanged(nameof(AppNameLetterSpacingDisplay));
+        }
+        public string AppNameLetterSpacingDisplay => $"{AppNameLetterSpacing:0.0}px";
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(AppNameTextOpacityDisplay))]
+        private double _appNameTextOpacityPercentage;
+        partial void OnAppNameTextOpacityPercentageChanged(double value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.AppNameTextOpacity = value / 100.0;
+            else GetTargetConfig(true).AppNameTextOpacity = value / 100.0;
+            TriggerSaveAndPreview();
+            OnPropertyChanged(nameof(AppNameTextOpacityDisplay));
+        }
+        
+        [ObservableProperty] private bool _isAppNameColorPickerOpen;
+        [ObservableProperty] private bool _isContentColorPickerOpen;
+        [ObservableProperty] private bool _isEllipsisColorPickerOpen;
+        
+        [ObservableProperty] private bool _appNameIsUnderlined;
+        partial void OnAppNameIsUnderlinedChanged(bool value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.AppNameIsUnderlined = value;
+            else GetTargetConfig(true).AppNameIsUnderlined = value;
+            TriggerSaveAndPreview();
+        }
+        
+        [ObservableProperty] private bool _contentIsUnderlined;
+        partial void OnContentIsUnderlinedChanged(bool value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.ContentIsUnderlined = value;
+            else GetTargetConfig(true).ContentIsUnderlined = value;
+            TriggerSaveAndPreview();
+        }
+        
+        [ObservableProperty] private bool _ellipsisIsUnderlined;
+        partial void OnEllipsisIsUnderlinedChanged(bool value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.EllipsisIsUnderlined = value;
+            else GetTargetConfig(true).EllipsisIsUnderlined = value;
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        private bool _contentShowTextStroke;
+        partial void OnContentShowTextStrokeChanged(bool value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.ContentShowTextStroke = value;
+            else GetTargetConfig(true).ContentShowTextStroke = value;
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        private string _contentFontFamilyName;
+        partial void OnContentFontFamilyNameChanged(string value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.ContentFontFamilyName = value;
+            else GetTargetConfig(true).ContentFontFamilyName = value;
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(ContentLetterSpacingDisplay))]
+        private double _contentLetterSpacing;
+        partial void OnContentLetterSpacingChanged(double value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.ContentLetterSpacing = value;
+            else GetTargetConfig(true).ContentLetterSpacing = value;
+            TriggerSaveAndPreview();
+            OnPropertyChanged(nameof(ContentLetterSpacingDisplay));
+        }
+        public string ContentLetterSpacingDisplay => $"{ContentLetterSpacing:0.0}px";
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(ContentTextOpacityDisplay))]
+        private double _contentTextOpacityPercentage;
+        partial void OnContentTextOpacityPercentageChanged(double value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.ContentTextOpacity = value / 100.0;
+            else GetTargetConfig(true).ContentTextOpacity = value / 100.0;
+            TriggerSaveAndPreview();
+            OnPropertyChanged(nameof(ContentTextOpacityDisplay));
+        }
+        public string ContentTextOpacityDisplay => $"{ContentTextOpacityPercentage:0}%";
+
+        [ObservableProperty]
+        private bool _contentIsFontStyleItalic;
+        partial void OnContentIsFontStyleItalicChanged(bool value)
+        {
+            if (_isSyncing) return;
+            string style = value ? "Italic" : "Normal";
+            ContentFontStyle = style;
+        }
+
+        [RelayCommand]
+        private void SetContentFontWeight(string weight)
+        {
+            ContentFontWeight = weight;
+            if (IsEditingGlobal) BarrageSettings.ContentFontWeight = weight;
+            else GetTargetConfig(true).ContentFontWeight = weight;
+            TriggerSaveAndPreview();
+        }
+
+        public string AppNameTextOpacityDisplay => $"{AppNameTextOpacityPercentage:0}%";
+
+        [ObservableProperty]
+        private bool _appNameShowTextStroke;
+        partial void OnAppNameShowTextStrokeChanged(bool value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.AppNameShowTextStroke = value;
+            else GetTargetConfig(true).AppNameShowTextStroke = value;
+            TriggerSaveAndPreview();
+        }
+        
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(EllipsisColorBrush))]
+        private string _ellipsisColorHex;
+        partial void OnEllipsisColorHexChanged(string value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.EllipsisColorHex = value;
+            else GetTargetConfig(true).EllipsisColorHex = value;
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(EllipsisTextOpacityDisplay))]
+        private double _ellipsisTextOpacityPercentage;
+        partial void OnEllipsisTextOpacityPercentageChanged(double value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.EllipsisTextOpacity = value / 100.0;
+            else GetTargetConfig(true).EllipsisTextOpacity = value / 100.0;
+            TriggerSaveAndPreview();
+            OnPropertyChanged(nameof(EllipsisTextOpacityDisplay));
+        }
+        public string EllipsisTextOpacityDisplay => $"{EllipsisTextOpacityPercentage:0}%";
+
+        [ObservableProperty]
+        private bool _appNameIsFontStyleItalic;
+        partial void OnAppNameIsFontStyleItalicChanged(bool value)
+        {
+            if (_isSyncing) return;
+            string style = value ? "Italic" : "Normal";
+            if (IsEditingGlobal) BarrageSettings.AppNameFontStyle = style;
+            else GetTargetConfig(true).AppNameFontStyle = style;
+            TriggerSaveAndPreview();
+        }
+
+        [RelayCommand]
+        private void SetAppNameFontWeight(string weight)
+        {
+            AppNameFontWeight = weight;
+            if (IsEditingGlobal) BarrageSettings.AppNameFontWeight = weight;
+            else GetTargetConfig(true).AppNameFontWeight = weight;
+            TriggerSaveAndPreview();
         }
     }
 }

@@ -21,6 +21,9 @@ namespace NotiFlow
         public string FontWeight { get; set; } = "Bold";
         public string FontStyle { get; set; } = "Normal";
         public bool IsUnderlined { get; set; } = false;
+        public bool AppNameIsUnderlined { get; set; } = false;
+        public bool ContentIsUnderlined { get; set; } = false;
+        public bool EllipsisIsUnderlined { get; set; } = false;
         
         public string TextColorHex { get; set; } = "#FFFFFF"; // 默认白色
         public bool ShowTextStroke { get; set; } = false;
@@ -28,6 +31,31 @@ namespace NotiFlow
         public double TextStrokeThickness { get; set; } = 1.0;
         public double TextOpacity { get; set; } = 1.0;
         public double LetterSpacing { get; set; } = 0; // 字间距弹幕文字间距
+        
+        // --- 局部样式配置 (若为空/0 则回退到全局) ---
+        public string AppNameTextColorHex { get; set; } = "";
+        public double AppNameFontSize { get; set; } = 0;
+        public string AppNameFontWeight { get; set; } = "";
+        public string AppNameFontStyle { get; set; } = "";
+        public string AppNameFontFamilyName { get; set; } = "";
+        public double AppNameLetterSpacing { get; set; } = 0;
+        public double? AppNameTextOpacity { get; set; } = null;
+        public bool? AppNameShowTextStroke { get; set; } = null;
+        public bool? ContentShowTextStroke { get; set; } = null;
+        
+        public string ContentTextColorHex { get; set; } = "";
+        public double ContentFontSize { get; set; } = 0;
+        public string ContentFontWeight { get; set; } = "";
+        public string ContentFontStyle { get; set; } = "";
+        public string ContentFontFamilyName { get; set; } = "";
+        public double ContentLetterSpacing { get; set; } = 0;
+        public double? ContentTextOpacity { get; set; } = null;
+        
+        public double EllipsisFontSize { get; set; } = 0;
+        public string EllipsisColorHex { get; set; } = "";
+        public double? EllipsisTextOpacity { get; set; } = null;
+        public double AppIconScale { get; set; } = 1.0;
+        // ---------------------------------------------
         
         public bool ShowAppIcon { get; set; } = true;
         public bool ShowAppName { get; set; } = true;
@@ -47,7 +75,7 @@ namespace NotiFlow
         
         public int MaxTextLength { get; set; } = 50;
         public bool HighlightEllipsis { get; set; } = true;
-        public string EllipsisColorHex { get; set; } = "#32CD32"; // 亮绿色 (LimeGreen)
+
         public double ScrollSpeedCharsPerSec { get; set; } = 12.0;
         public string TrackStrategy { get; set; } = "UpperCenter"; // UpperCenter, TopFirst, BottomFirst
         public bool AutoStartWorking { get; set; } = true;
@@ -96,6 +124,9 @@ namespace NotiFlow
         public static FontWeight FontWeight { get; set; } = FontWeights.Bold;
         public static FontStyle FontStyle { get; set; } = FontStyles.Normal;
         public static bool IsUnderlined { get; set; } = false;
+        public static bool AppNameIsUnderlined { get; set; } = false;
+        public static bool ContentIsUnderlined { get; set; } = false;
+        public static bool EllipsisIsUnderlined { get; set; } = false;
         
         public static Brush TextColor { get; set; } = Brushes.White;
         public static bool ShowTextStroke { get; set; } = false;
@@ -103,6 +134,31 @@ namespace NotiFlow
         public static double TextStrokeThickness { get; set; } = 1.0;
         public static double TextOpacity { get; set; } = 1.0;
         public static double LetterSpacing { get; set; } = 0;
+        
+        // --- 局部样式配置 (若为空/0 则回退到全局) ---
+        public static string AppNameTextColorHex { get; set; } = "";
+        public static double AppNameFontSize { get; set; } = 0;
+        public static string AppNameFontWeight { get; set; } = "";
+        public static string AppNameFontStyle { get; set; } = "";
+        public static string AppNameFontFamilyName { get; set; } = "";
+        public static double AppNameLetterSpacing { get; set; } = 0;
+        public static double? AppNameTextOpacity { get; set; } = null;
+        public static bool? AppNameShowTextStroke { get; set; } = null;
+        public static bool? ContentShowTextStroke { get; set; } = null;
+        
+        public static string ContentTextColorHex { get; set; } = "";
+        public static double ContentFontSize { get; set; } = 0;
+        public static string ContentFontWeight { get; set; } = "";
+        public static string ContentFontStyle { get; set; } = "";
+        public static string ContentFontFamilyName { get; set; } = "";
+        public static double ContentLetterSpacing { get; set; } = 0;
+        public static double? ContentTextOpacity { get; set; } = null;
+        
+        public static double EllipsisFontSize { get; set; } = 0;
+        public static string EllipsisColorHex { get; set; } = "";
+        public static double? EllipsisTextOpacity { get; set; } = null;
+        public static double AppIconScale { get; set; } = 1.0;
+        // ---------------------------------------------
         
         public static bool ShowAppIcon { get; set; } = true;
         public static bool ShowAppName { get; set; } = true;
@@ -190,12 +246,35 @@ namespace NotiFlow
                 FontWeight = FontWeight.ToString(),
                 FontStyle = FontStyle.ToString(),
                 IsUnderlined = IsUnderlined,
+                AppNameIsUnderlined = AppNameIsUnderlined,
+                ContentIsUnderlined = ContentIsUnderlined,
+                EllipsisIsUnderlined = EllipsisIsUnderlined,
                 TextColorHex = (TextColor is SolidColorBrush textBrush) ? textBrush.Color.ToString() : "#FFFFFF",
                 ShowTextStroke = ShowTextStroke,
                 TextStrokeColorHex = (TextStrokeColor is SolidColorBrush strokeBrush) ? strokeBrush.Color.ToString() : "#000000",
                 TextStrokeThickness = TextStrokeThickness,
                 TextOpacity = TextOpacity,
                 LetterSpacing = LetterSpacing,
+                AppNameTextColorHex = AppNameTextColorHex,
+                AppNameFontSize = AppNameFontSize,
+                AppNameFontWeight = AppNameFontWeight,
+                AppNameFontStyle = AppNameFontStyle,
+                AppNameFontFamilyName = AppNameFontFamilyName,
+                AppNameLetterSpacing = AppNameLetterSpacing,
+                AppNameTextOpacity = AppNameTextOpacity,
+                AppNameShowTextStroke = AppNameShowTextStroke,
+                ContentShowTextStroke = ContentShowTextStroke,
+                ContentTextColorHex = ContentTextColorHex,
+                ContentFontSize = ContentFontSize,
+                ContentFontWeight = ContentFontWeight,
+                ContentFontStyle = ContentFontStyle,
+                ContentFontFamilyName = ContentFontFamilyName,
+                ContentLetterSpacing = ContentLetterSpacing,
+                ContentTextOpacity = ContentTextOpacity,
+                EllipsisFontSize = EllipsisFontSize,
+                EllipsisColorHex = EllipsisColorHex,
+                EllipsisTextOpacity = EllipsisTextOpacity,
+                AppIconScale = AppIconScale,
                 ShowAppIcon = ShowAppIcon,
                 ShowAppName = ShowAppName,
                 ShowBackground = ShowBackground,
@@ -212,7 +291,7 @@ namespace NotiFlow
                 BackgroundImageOpacity = BackgroundImageOpacity,
                 MaxTextLength = MaxTextLength,
                 HighlightEllipsis = HighlightEllipsis,
-                EllipsisColorHex = (EllipsisColor is SolidColorBrush ellBrush) ? ellBrush.Color.ToString() : "#32CD32",
+
                 ScrollSpeedCharsPerSec = ScrollSpeedCharsPerSec,
                 TrackStrategy = TrackStrategy,
                 AutoStartWorking = AutoStartWorking,
@@ -307,9 +386,36 @@ namespace NotiFlow
                 FontSize = Math.Clamp(dto.FontSize, 12, 200);
                 TextOpacity = Math.Clamp(dto.TextOpacity, 0.1, 1.0);
                 LetterSpacing = Math.Clamp(dto.LetterSpacing, 0, 100);
+                
+                AppNameTextColorHex = dto.AppNameTextColorHex ?? "";
+                AppNameFontSize = dto.AppNameFontSize;
+                AppNameFontWeight = dto.AppNameFontWeight ?? "";
+                AppNameFontStyle = dto.AppNameFontStyle ?? "";
+                AppNameFontFamilyName = dto.AppNameFontFamilyName ?? "";
+                AppNameLetterSpacing = dto.AppNameLetterSpacing;
+                AppNameTextOpacity = dto.AppNameTextOpacity;
+                AppNameShowTextStroke = dto.AppNameShowTextStroke;
+                ContentShowTextStroke = dto.ContentShowTextStroke;
+                
+                ContentTextColorHex = dto.ContentTextColorHex ?? "";
+                ContentFontSize = dto.ContentFontSize;
+                ContentFontWeight = dto.ContentFontWeight ?? "";
+                ContentFontStyle = dto.ContentFontStyle ?? "";
+                ContentFontFamilyName = dto.ContentFontFamilyName ?? "";
+                ContentLetterSpacing = dto.ContentLetterSpacing;
+                ContentTextOpacity = dto.ContentTextOpacity;
+                
+                EllipsisFontSize = dto.EllipsisFontSize;
+                EllipsisColorHex = dto.EllipsisColorHex ?? "";
+                EllipsisTextOpacity = dto.EllipsisTextOpacity;
+                AppIconScale = dto.AppIconScale > 0 ? dto.AppIconScale : 1.0;
+                
                 BackgroundOpacity = Math.Clamp(dto.BackgroundOpacity, 0.0, 1.0);
                 BackgroundCornerRadius = new CornerRadius(Math.Clamp(dto.BackgroundCornerRadius, 0, 100));
                 IsUnderlined = dto.IsUnderlined;
+                AppNameIsUnderlined = dto.AppNameIsUnderlined;
+                ContentIsUnderlined = dto.ContentIsUnderlined;
+                EllipsisIsUnderlined = dto.EllipsisIsUnderlined;
                 ShowAppIcon = dto.ShowAppIcon;
                 ShowAppName = dto.ShowAppName;
                 ShowBackground = dto.ShowBackground;
@@ -381,12 +487,32 @@ namespace NotiFlow
             FontWeight = FontWeights.Bold;
             FontStyle = FontStyles.Normal;
             IsUnderlined = false;
+            AppNameIsUnderlined = false;
+            ContentIsUnderlined = false;
+            EllipsisIsUnderlined = false;
             TextColor = Brushes.White;
             ShowTextStroke = false;
             TextStrokeColor = Brushes.Black;
             TextStrokeThickness = 1.0;
             TextOpacity = 1.0;
             LetterSpacing = 0;
+            
+            AppNameTextColorHex = "";
+            AppNameFontSize = 0;
+            AppNameFontWeight = "";
+            AppNameFontStyle = "";
+            
+            ContentTextColorHex = "";
+            ContentFontSize = 0;
+            ContentFontWeight = "";
+            ContentFontStyle = "";
+            ContentFontFamilyName = "";
+            ContentLetterSpacing = 0;
+            ContentTextOpacity = 1.0;
+            
+            EllipsisFontSize = 0;
+            AppIconScale = 1.0;
+            
             ShowAppIcon = true;
             ShowAppName = true;
             ShowBackground = true;

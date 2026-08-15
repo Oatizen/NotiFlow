@@ -1,4 +1,4 @@
-﻿<Page x:Class="NotiFlow.Views.Pages.CustomPage"
+<Page x:Class="NotiFlow.Views.Pages.CustomPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -138,6 +138,420 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
+        
+        <!-- Flyouts for interactive static preview -->
+        <Popup x:Key="AppIconFlyout" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+            <Border Width="300" Background="{DynamicResource ApplicationBackgroundBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16" TextElement.FontSize="14" TextElement.FontStyle="Normal" TextElement.FontWeight="Normal" TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                <StackPanel Width="268">
+                    <StackPanel Orientation="Horizontal" Height="32" Margin="0,0,0,12">
+                        <ui:SymbolIcon Symbol="Image24" FontSize="18" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <ui:TextBlock Text="图标设置" FontTypography="BodyStrong" FontSize="15" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <Grid Margin="0,0,0,4">
+                        <ui:TextBlock Text="缩放比例" VerticalAlignment="Center"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,2,0">
+                            <TextBox Text="{Binding AppIconScale, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.0}}" Style="{StaticResource EditableValueTextBoxStyle}"/>
+                            <ui:TextBlock Text="x" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="3,1,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                    <Slider Minimum="0.5" Maximum="2.0" Value="{Binding AppIconScale, Mode=TwoWay}" TickFrequency="0.1" IsSnapToTickEnabled="True" Margin="0,0,0,12"/>
+                    
+                    <Grid Margin="0,4,0,0">
+                        <ui:TextBlock Text="显示应用图标" VerticalAlignment="Center"/>
+                        <ui:ToggleSwitch IsChecked="{Binding ShowAppIcon, Mode=TwoWay}" HorizontalAlignment="Right"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <Popup x:Key="AppNameFlyout" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+            <Border Width="608" Background="{DynamicResource ApplicationBackgroundBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16" TextElement.FontSize="14" TextElement.FontStyle="Normal" TextElement.FontWeight="Normal" TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                <Grid Width="576">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- 顶部标题栏固定高度 32px，确保按钮显隐时面板高度绝对恒定 -->
+                    <Grid Grid.Row="0" Height="32" Margin="0,0,0,12">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
+                            <ui:SymbolIcon Symbol="AppGeneric24" FontSize="18" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <ui:TextBlock Text="应用名称设置" FontTypography="BodyStrong" FontSize="15" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ui:Button Content="恢复为全局设置"
+                                   Icon="{ui:SymbolIcon ArrowReset24}"
+                                   Appearance="Transparent"
+                                   Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                   Command="{Binding ResetAppNameSettingsCommand}"
+                                   Visibility="{Binding HasAppNameCustomSettings, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                   HorizontalAlignment="Right"
+                                   VerticalAlignment="Center"
+                                   Height="30"
+                                   Padding="8,0"
+                                   FontSize="12"
+                                   Cursor="Hand"/>
+                    </Grid>
+
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="280"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="280"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- 左边：文字 -->
+                        <Border Grid.Column="0" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="14">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                    <ui:SymbolIcon Symbol="TextFont24" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="0,0,8,0"/>
+                                    <ui:TextBlock Text="文字" FontTypography="BodyStrong"/>
+                                </StackPanel>
+                                
+                                <ui:TextBlock Text="字体"/>
+                                <ComboBox SelectedValue="{Binding AppNameFontFamilyName, Mode=TwoWay}" SelectedValuePath="Family.Source" ItemsSource="{Binding AvailableFonts}" Margin="0,4,0,16" HorizontalAlignment="Stretch" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,0,14,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding LocalizedName}" VerticalAlignment="Center" ToolTip="{Binding LocalizedName}" TextTrimming="CharacterEllipsis" Margin="0,0,6,0"/>
+                                                <TextBlock Grid.Column="1" Text="Abc弹幕" FontFamily="{Binding Family}" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                
+                                <Grid Margin="0,0,0,4">
+                                    <ui:TextBlock Text="字体大小" VerticalAlignment="Center"/>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,2,0">
+                                        <TextBox Text="{Binding AppNameFontSize, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.#}}" Style="{StaticResource EditableValueTextBoxStyle}" />
+                                        <ui:TextBlock Text="px" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="3,1,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Slider Minimum="0" Maximum="64" Value="{Binding AppNameFontSize, Mode=TwoWay}" TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,0,0,16"/>
+                                
+                                <Grid Margin="0,0,0,4">
+                                    <ui:TextBlock Text="文字间距" VerticalAlignment="Center"/>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,2,0">
+                                        <TextBox Text="{Binding AppNameLetterSpacing, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.0}}" Style="{StaticResource EditableValueTextBoxStyle}" />
+                                        <ui:TextBlock Text="px" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="3,1,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Slider Minimum="0" Maximum="20" Value="{Binding AppNameLetterSpacing, Mode=TwoWay}" TickFrequency="0.5" IsSnapToTickEnabled="True" Margin="0,0,0,16"/>
+                                
+                                <ui:TextBlock Text="字重"/>
+                                <Grid Margin="0,4,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ui:Button Content="常规" Command="{Binding SetAppNameFontWeightCommand}" CommandParameter="Normal" HorizontalAlignment="Stretch" Margin="0,0,4,0">
+                                        <ui:Button.Style>
+                                            <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                                <Setter Property="Appearance" Value="Secondary"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding AppNameFontWeight}" Value="Normal"><Setter Property="Appearance" Value="Primary"/></DataTrigger>
+                                                    <DataTrigger Binding="{Binding AppNameFontWeight}" Value=""><Setter Property="Appearance" Value="Primary"/></DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ui:Button.Style>
+                                    </ui:Button>
+                                    <ui:Button Content="加粗" Command="{Binding SetAppNameFontWeightCommand}" CommandParameter="Bold" Grid.Column="1" HorizontalAlignment="Stretch" Margin="4,0,0,0">
+                                        <ui:Button.Style>
+                                            <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                                <Setter Property="Appearance" Value="Secondary"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding AppNameFontWeight}" Value="Bold"><Setter Property="Appearance" Value="Primary"/></DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ui:Button.Style>
+                                    </ui:Button>
+                                </Grid>
+                                
+                                <ui:TextBlock Text="字体样式"/>
+                                <Grid Margin="0,4,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ToggleButton Grid.Column="0" Content="斜体" IsChecked="{Binding AppNameIsFontStyleItalic, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="0,0,4,0"/>
+                                    <ToggleButton Grid.Column="1" Content="下划线" IsChecked="{Binding AppNameIsUnderlined, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="4,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- 右边：外观 -->
+                        <Border Grid.Column="2" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="14">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                    <ui:SymbolIcon Symbol="Color24" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="0,0,8,0"/>
+                                    <ui:TextBlock Text="外观" FontTypography="BodyStrong"/>
+                                </StackPanel>
+                                
+                                <ui:TextBlock Text="文字颜色"/>
+                                <ui:TextBlock Text="点击方框或输入16进制色号改变颜色" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,8"/>
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid x:Name="AppNameColorPickerContainer" Margin="0,0,8,0" HorizontalAlignment="Left" Cursor="Hand">
+                                        <ToggleButton x:Name="AppNameColorToggle" IsChecked="{Binding IsAppNameColorPickerOpen, Mode=TwoWay}" Cursor="Hand" ForceCursor="True" Background="{Binding AppNameTextColorBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" Width="36" Height="36" Padding="0" ToolTip="点击选择颜色"/>
+                                        <Popup PlacementTarget="{Binding ElementName=AppNameColorToggle}" Placement="Bottom" IsOpen="{Binding IsAppNameColorPickerOpen, Mode=TwoWay}" StaysOpen="False" AllowsTransparency="True">
+                                            <Border Background="{DynamicResource ApplicationBackgroundBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="4">
+                                                <controls:ModernColorPicker SelectedColor="{Binding AppNameTextColorHex, Mode=TwoWay}" PresetColors="{Binding PresetColors}" Margin="0"/>
+                                            </Border>
+                                        </Popup>
+                                    </Grid>
+                                    <ui:TextBox Text="{Binding AppNameTextColorHex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="跟随全局" Grid.Column="1" VerticalAlignment="Center"/>
+                                </Grid>
+                                
+                                <Grid Margin="0,0,0,4">
+                                    <ui:TextBlock Text="文字不透明度" VerticalAlignment="Center"/>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,2,0">
+                                        <TextBox Text="{Binding AppNameTextOpacityPercentage, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.#}}" Style="{StaticResource EditableValueTextBoxStyle}" />
+                                        <ui:TextBlock Text="%" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="3,1,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Slider Minimum="0" Maximum="100" Value="{Binding AppNameTextOpacityPercentage, Mode=TwoWay}" TickFrequency="5" IsSnapToTickEnabled="True" Margin="0,0,0,16"/>
+                                
+                                <Grid Margin="0,0,0,16">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <ui:TextBlock Text="显示文字描边"/>
+                                        <ui:TextBlock Text="在复杂背景下提高文字可读性" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <ui:ToggleSwitch IsChecked="{Binding AppNameShowTextStroke, Mode=TwoWay}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+                                
+                                <Grid>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <ui:TextBlock Text="显示应用名称"/>
+                                        <ui:TextBlock Text="决定是否在通知中显示应用的名称" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <ui:ToggleSwitch IsChecked="{Binding ShowAppName, Mode=TwoWay}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Popup>
+
+        <Popup x:Key="ContentFlyout" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+            <Border Width="608" Background="{DynamicResource ApplicationBackgroundBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16" TextElement.FontSize="14" TextElement.FontStyle="Normal" TextElement.FontWeight="Normal" TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                <Grid Width="576">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- 顶部标题栏固定高度 32px，确保按钮显隐时面板高度绝对恒定 -->
+                    <Grid Grid.Row="0" Height="32" Margin="0,0,0,12">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
+                            <ui:SymbolIcon Symbol="TextFont24" FontSize="18" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <ui:TextBlock Text="内容设置" FontTypography="BodyStrong" FontSize="15" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ui:Button Content="恢复为全局设置"
+                                   Icon="{ui:SymbolIcon ArrowReset24}"
+                                   Appearance="Transparent"
+                                   Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                   Command="{Binding ResetContentSettingsCommand}"
+                                   Visibility="{Binding HasContentCustomSettings, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                   HorizontalAlignment="Right"
+                                   VerticalAlignment="Center"
+                                   Height="30"
+                                   Padding="8,0"
+                                   FontSize="12"
+                                   Cursor="Hand"/>
+                    </Grid>
+
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="280"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="280"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- 左边：文字 -->
+                        <Border Grid.Column="0" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="14">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                    <ui:SymbolIcon Symbol="TextFont24" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="0,0,8,0"/>
+                                    <ui:TextBlock Text="文字" FontTypography="BodyStrong"/>
+                                </StackPanel>
+                                
+                                <ui:TextBlock Text="字体"/>
+                                <ComboBox SelectedValue="{Binding ContentFontFamilyName, Mode=TwoWay}" SelectedValuePath="Family.Source" ItemsSource="{Binding AvailableFonts}" Margin="0,4,0,16" HorizontalAlignment="Stretch" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,0,14,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding LocalizedName}" VerticalAlignment="Center" ToolTip="{Binding LocalizedName}" TextTrimming="CharacterEllipsis" Margin="0,0,6,0"/>
+                                                <TextBlock Grid.Column="1" Text="Abc弹幕" FontFamily="{Binding Family}" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                
+                                <Grid Margin="0,0,0,4">
+                                    <ui:TextBlock Text="字体大小" VerticalAlignment="Center"/>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,2,0">
+                                        <TextBox Text="{Binding ContentFontSize, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.#}}" Style="{StaticResource EditableValueTextBoxStyle}" />
+                                        <ui:TextBlock Text="px" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="3,1,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Slider Minimum="0" Maximum="64" Value="{Binding ContentFontSize, Mode=TwoWay}" TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,0,0,16"/>
+                                
+                                <Grid Margin="0,0,0,4">
+                                    <ui:TextBlock Text="文字间距" VerticalAlignment="Center"/>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,2,0">
+                                        <TextBox Text="{Binding ContentLetterSpacing, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.0}}" Style="{StaticResource EditableValueTextBoxStyle}" />
+                                        <ui:TextBlock Text="px" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="3,1,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Slider Minimum="0" Maximum="20" Value="{Binding ContentLetterSpacing, Mode=TwoWay}" TickFrequency="0.5" IsSnapToTickEnabled="True" Margin="0,0,0,16"/>
+                                
+                                <ui:TextBlock Text="字重"/>
+                                <Grid Margin="0,4,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ui:Button Content="常规" Command="{Binding SetContentFontWeightCommand}" CommandParameter="Normal" HorizontalAlignment="Stretch" Margin="0,0,4,0">
+                                        <ui:Button.Style>
+                                            <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                                <Setter Property="Appearance" Value="Secondary"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding ContentFontWeight}" Value="Normal"><Setter Property="Appearance" Value="Primary"/></DataTrigger>
+                                                    <DataTrigger Binding="{Binding ContentFontWeight}" Value=""><Setter Property="Appearance" Value="Primary"/></DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ui:Button.Style>
+                                    </ui:Button>
+                                    <ui:Button Content="加粗" Command="{Binding SetContentFontWeightCommand}" CommandParameter="Bold" Grid.Column="1" HorizontalAlignment="Stretch" Margin="4,0,0,0">
+                                        <ui:Button.Style>
+                                            <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                                <Setter Property="Appearance" Value="Secondary"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding ContentFontWeight}" Value="Bold"><Setter Property="Appearance" Value="Primary"/></DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ui:Button.Style>
+                                    </ui:Button>
+                                </Grid>
+                                
+                                <ui:TextBlock Text="字体样式"/>
+                                <Grid Margin="0,4,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ToggleButton Grid.Column="0" Content="斜体" IsChecked="{Binding ContentIsFontStyleItalic, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="0,0,4,0"/>
+                                    <ToggleButton Grid.Column="1" Content="下划线" IsChecked="{Binding ContentIsUnderlined, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="4,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- 右边：外观 -->
+                        <Border Grid.Column="2" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="14">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                    <ui:SymbolIcon Symbol="Color24" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="0,0,8,0"/>
+                                    <ui:TextBlock Text="外观" FontTypography="BodyStrong"/>
+                                </StackPanel>
+                                
+                                <ui:TextBlock Text="文字颜色"/>
+                                <ui:TextBlock Text="点击方框或输入16进制色号改变颜色" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,8"/>
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid x:Name="ContentColorPickerContainer" Margin="0,0,8,0" HorizontalAlignment="Left" Cursor="Hand">
+                                        <ToggleButton x:Name="ContentColorToggle" IsChecked="{Binding IsContentColorPickerOpen, Mode=TwoWay}" Cursor="Hand" ForceCursor="True" Background="{Binding ContentTextColorBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" Width="36" Height="36" Padding="0" ToolTip="点击选择颜色"/>
+                                        <Popup PlacementTarget="{Binding ElementName=ContentColorToggle}" Placement="Bottom" IsOpen="{Binding IsContentColorPickerOpen, Mode=TwoWay}" StaysOpen="False" AllowsTransparency="True">
+                                            <Border Background="{DynamicResource ApplicationBackgroundBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="4">
+                                                <controls:ModernColorPicker SelectedColor="{Binding ContentTextColorHex, Mode=TwoWay}" PresetColors="{Binding PresetColors}" Margin="0"/>
+                                            </Border>
+                                        </Popup>
+                                    </Grid>
+                                    <ui:TextBox Text="{Binding ContentTextColorHex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="跟随全局" Grid.Column="1" VerticalAlignment="Center"/>
+                                </Grid>
+                                
+                                <Grid Margin="0,0,0,4">
+                                    <ui:TextBlock Text="文字不透明度" VerticalAlignment="Center"/>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,2,0">
+                                        <TextBox Text="{Binding ContentTextOpacityPercentage, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.#}}" Style="{StaticResource EditableValueTextBoxStyle}" />
+                                        <ui:TextBlock Text="%" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="3,1,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Slider Minimum="0" Maximum="100" Value="{Binding ContentTextOpacityPercentage, Mode=TwoWay}" TickFrequency="5" IsSnapToTickEnabled="True" Margin="0,0,0,16"/>
+                                
+                                <Grid Margin="0,0,0,0">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <ui:TextBlock Text="显示文字描边"/>
+                                        <ui:TextBlock Text="在复杂背景下提高文字可读性" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <ui:ToggleSwitch IsChecked="{Binding ContentShowTextStroke, Mode=TwoWay}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Popup>
+
+        <Popup x:Key="EllipsisFlyout" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+            <Border Width="300" Background="{DynamicResource ApplicationBackgroundBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16" TextElement.FontSize="14" TextElement.FontStyle="Normal" TextElement.FontWeight="Normal" TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                <StackPanel Width="268">
+                    <StackPanel Orientation="Horizontal" Height="32" Margin="0,0,0,12">
+                        <ui:SymbolIcon Symbol="MoreHorizontal24" FontSize="18" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <ui:TextBlock Text="省略号设置" FontTypography="BodyStrong" FontSize="15" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <ui:TextBlock Text="文字颜色" Margin="0,0,0,4"/>
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid x:Name="EllipsisColorPickerContainer" Margin="0,0,8,0" HorizontalAlignment="Left" Cursor="Hand">
+                            <ToggleButton x:Name="EllipsisColorToggle" IsChecked="{Binding IsEllipsisColorPickerOpen, Mode=TwoWay}" Cursor="Hand" ForceCursor="True" Background="{Binding EllipsisColorBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" Width="36" Height="36" Padding="0" ToolTip="点击选择颜色"/>
+                            <Popup PlacementTarget="{Binding ElementName=EllipsisColorToggle}" Placement="Bottom" IsOpen="{Binding IsEllipsisColorPickerOpen, Mode=TwoWay}" StaysOpen="False" AllowsTransparency="True">
+                                <Border Background="{DynamicResource ApplicationBackgroundBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="4">
+                                    <controls:ModernColorPicker SelectedColor="{Binding EllipsisColorHex, Mode=TwoWay}" PresetColors="{Binding PresetColors}" Margin="0"/>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ui:TextBox Text="{Binding EllipsisColorHex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="跟随全局" Grid.Column="1" VerticalAlignment="Center"/>
+                    </Grid>
+                    
+                    <Grid Margin="0,0,0,4">
+                        <ui:TextBlock Text="字体大小" VerticalAlignment="Center"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,2,0">
+                            <TextBox Text="{Binding EllipsisFontSize, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.#}}" Style="{StaticResource EditableValueTextBoxStyle}" />
+                            <ui:TextBlock Text="px" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="3,1,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                    <Slider Minimum="0" Maximum="64" Value="{Binding EllipsisFontSize, Mode=TwoWay}" TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,0,0,16"/>
+
+                    <Grid Margin="0,0,0,4">
+                        <ui:TextBlock Text="不透明度" VerticalAlignment="Center"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,2,0">
+                            <TextBox Text="{Binding EllipsisTextOpacityPercentage, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.#}}" Style="{StaticResource EditableValueTextBoxStyle}" />
+                            <ui:TextBlock Text="%" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="3,1,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                    <Slider Minimum="0" Maximum="100" Value="{Binding EllipsisTextOpacityPercentage, Mode=TwoWay}" TickFrequency="5" IsSnapToTickEnabled="True" Margin="0,0,0,0"/>
+                </StackPanel>
+            </Border>
+        </Popup>
     </Page.Resources>
 
     <ScrollViewer x:Name="MainScrollViewer" VerticalScrollBarVisibility="Auto" CanContentScroll="False" Background="Transparent" >
@@ -237,7 +651,8 @@
             <!-- 第一区域：弹幕预览区 -->
             <StackPanel Margin="0,0,0,24">
                 <Grid Margin="0,0,0,16">
-                    <ui:TextBlock Text="弹幕预览" FontTypography="BodyStrong"/>
+                    <ui:TextBlock Text="弹幕预览" FontTypography="BodyStrong" VerticalAlignment="Center"/>
+                    <ToggleButton x:Name="PausePreviewButton" Content="暂停以编辑" HorizontalAlignment="Right" Click="PausePreviewButton_Click"/>
                 </Grid>
 
                 <Border x:Name="PreviewBorder" Height="200" Background="#1c1c1c" CornerRadius="12" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" ClipToBounds="True">
@@ -268,10 +683,7 @@
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
                                     <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="200"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="{Binding LocalizedName}" VerticalAlignment="Center" ToolTip="{Binding LocalizedName}" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"/>
                                         <TextBlock Grid.Column="1" Text="Abc弹幕" FontFamily="{Binding Family}" VerticalAlignment="Center" FontSize="14" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                                     </Grid>
@@ -470,11 +882,11 @@
                             
                             <Grid Grid.Column="0" Margin="0,0,12,0">
                                 <Button Padding="0" BorderThickness="0" Background="Transparent" Click="ColorPickerButton_Click" Cursor="Hand">
-                                    <Border Width="40" Height="40" Background="{Binding CurrentColorBrush}" CornerRadius="8" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
+                                    <Border Width="40" Height="40" Background="{Binding TextColorBrush}" CornerRadius="8" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
                                 </Button>
                                 
                                 <ui:Flyout x:Name="ColorPaletteFlyout" Placement="Bottom">
-                                    <controls:ModernColorPicker SelectedColor="{Binding CurrentColor, Mode=TwoWay}" PresetColors="{Binding PresetColors}" Margin="4"/>
+                                    <controls:ModernColorPicker SelectedColor="{Binding TextColorHex, Mode=TwoWay}" PresetColors="{Binding PresetColors}" Margin="4"/>
                                 </ui:Flyout>
                             </Grid>
                             
@@ -508,11 +920,11 @@
                                 </Grid.ColumnDefinitions>
                                 <Grid Grid.Column="0" Margin="0,0,12,0">
                                     <Button Padding="0" BorderThickness="0" Background="Transparent" Click="TextStrokeColorPickerButton_Click" Cursor="Hand">
-                                        <Border Width="40" Height="40" Background="{Binding CurrentTextStrokeColorBrush}" CornerRadius="8" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
+                                        <Border Width="40" Height="40" Background="{Binding TextStrokeColorBrush}" CornerRadius="8" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
                                     </Button>
                                     
                                     <ui:Flyout x:Name="TextStrokeColorPaletteFlyout" Placement="Bottom">
-                                        <controls:ModernColorPicker SelectedColor="{Binding CurrentTextStrokeColor, Mode=TwoWay}" PresetColors="{Binding PresetColors}" Margin="4"/>
+                                        <controls:ModernColorPicker SelectedColor="{Binding TextStrokeColorHex, Mode=TwoWay}" PresetColors="{Binding PresetColors}" Margin="4"/>
                                     </ui:Flyout>
                                 </Grid>
                                 <ui:TextBox Grid.Column="1" Text="{Binding TextStrokeColorHex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="HEX (例: #000000)" VerticalAlignment="Center"/>
@@ -539,11 +951,11 @@
                             
                             <Grid Grid.Column="0" Margin="0,0,12,0">
                                 <Button Padding="0" BorderThickness="0" Background="Transparent" Click="BackgroundColorPickerButton_Click" Cursor="Hand">
-                                    <Border Width="40" Height="40" Background="{Binding CurrentBackgroundColorBrush}" CornerRadius="8" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
+                                    <Border Width="40" Height="40" Background="{Binding BackgroundColorBrush}" CornerRadius="8" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
                                 </Button>
                                 
                                 <ui:Flyout x:Name="BackgroundColorPaletteFlyout" Placement="Bottom">
-                                    <controls:ModernColorPicker SelectedColor="{Binding CurrentBackgroundColor, Mode=TwoWay}" PresetColors="{Binding PresetColors}" Margin="4"/>
+                                    <controls:ModernColorPicker SelectedColor="{Binding BackgroundColorHex, Mode=TwoWay}" PresetColors="{Binding PresetColors}" Margin="4"/>
                                 </ui:Flyout>
                             </Grid>
                             
