@@ -31,9 +31,21 @@ namespace NotiFlow.Views.Pages
         }
         
 
-private void Page_Loaded(object sender, RoutedEventArgs e)
+        private static readonly string[] FlyoutKeys = new[]
+        {
+            "AppIconFlyout",
+            "AppNameFlyout",
+            "ContentFlyout",
+            "EllipsisFlyout"
+        };
+
+        private readonly System.Collections.Generic.HashSet<System.Windows.Controls.Primitives.Popup> _closingFlyouts = new();
+        private Window? _parentWindow;
+
+        private void Page_Loaded(object sender, RoutedEventArgs e)
         {
             UpdateWorkButtonState(); // 刚进入页面时先校准一次当前实际状态
+            RegisterWindowEvents();
             
             WeakReferenceMessenger.Default.Register<BarragePreviewMessage>(this, (recipient, message) =>
             {
@@ -57,9 +69,118 @@ private void Page_Loaded(object sender, RoutedEventArgs e)
 
         private void Page_Unloaded(object sender, RoutedEventArgs e)
         {
+            UnregisterWindowEvents();
+            CloseAllFlyoutsWithAnimation();
             WeakReferenceMessenger.Default.Unregister<BarragePreviewMessage>(this);
             WeakReferenceMessenger.Default.Unregister<WorkStateChangedMessage>(this);
         }
+
+        private void RegisterWindowEvents()
+        {
+            if (_parentWindow != null) return;
+            _parentWindow = Window.GetWindow(this);
+            if (_parentWindow != null)
+            {
+                _parentWindow.PreviewMouseDown += OnGlobalPreviewMouseDown;
+                _parentWindow.PreviewKeyDown += OnGlobalPreviewKeyDown;
+                _parentWindow.Deactivated += OnGlobalDeactivated;
+            }
+        }
+
+        private void UnregisterWindowEvents()
+        {
+            if (_parentWindow != null)
+            {
+                _parentWindow.PreviewMouseDown -= OnGlobalPreviewMouseDown;
+                _parentWindow.PreviewKeyDown -= OnGlobalPreviewKeyDown;
+                _parentWindow.Deactivated -= OnGlobalDeactivated;
+                _parentWindow = null;
+            }
+        }
+
+        private void OnGlobalPreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            var openFlyout = System.Linq.Enumerable.FirstOrDefault(
+                System.Linq.Enumerable.Select(FlyoutKeys, k => this.Resources[k] as System.Windows.Controls.Primitives.Popup),
+                f => f != null && f.IsOpen && !_closingFlyouts.Contains(f));
+
+            if (openFlyout != null)
+            {
+                if (IsClickInsideFlyoutOrSubPopups(openFlyout, e))
+                {
+                    return;
+                }
+
+                // 点击在菜单外部（包括弹幕预览区域、主页面等任意区域），立即执行渐隐关闭
+                CloseFlyoutWithAnimation(openFlyout);
+            }
+        }
+
+        private static bool IsClickInsideFlyoutOrSubPopups(System.Windows.Controls.Primitives.Popup flyout, MouseButtonEventArgs e)
+        {
+            if (flyout.Child is FrameworkElement child)
+            {
+                var pos = e.GetPosition(child);
+                if (pos.X >= 0 && pos.X <= child.ActualWidth && pos.Y >= 0 && pos.Y <= child.ActualHeight)
+                {
+                    return true;
+                }
+
+                // 兼容弹窗内部嵌套打开的颜色拾色器等子 Popup
+                foreach (var subPopup in FindVisualChildren<System.Windows.Controls.Primitives.Popup>(child))
+                {
+                    if (subPopup.IsOpen && subPopup.Child is FrameworkElement subChild)
+                    {
+                        var subPos = e.GetPosition(subChild);
+                        if (subPos.X >= 0 && subPos.X <= subChild.ActualWidth && subPos.Y >= 0 && subPos.Y <= subChild.ActualHeight)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        private static System.Collections.Generic.IEnumerable<T> FindVisualChildren<T>(DependencyObject depObj) where T : DependencyObject
+        {
+            if (depObj == null) yield break;
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(depObj); i++)
+            {
+                DependencyObject child = VisualTreeHelper.GetChild(depObj, i);
+                if (child is T t)
+                {
+                    yield return t;
+                }
+                foreach (T childOfChild in FindVisualChildren<T>(child))
+                {
+                    yield return childOfChild;
+                }
+            }
+        }
+
+        private void OnGlobalPreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape)
+            {
+                var openFlyout = System.Linq.Enumerable.FirstOrDefault(
+                    System.Linq.Enumerable.Select(FlyoutKeys, k => this.Resources[k] as System.Windows.Controls.Primitives.Popup),
+                    f => f != null && f.IsOpen && !_closingFlyouts.Contains(f));
+
+                if (openFlyout != null)
+                {
+                    CloseFlyoutWithAnimation(openFlyout);
+                    e.Handled = true;
+                }
+            }
+        }
+
+        private void OnGlobalDeactivated(object? sender, EventArgs e)
+        {
+            CloseAllFlyoutsWithAnimation();
+        }
+
+
 
         private void PausePreviewButton_Click(object sender, RoutedEventArgs e)
         {
@@ -70,6 +191,7 @@ private void Page_Loaded(object sender, RoutedEventArgs e)
             else
             {
                 PausePreviewButton.Content = "暂停以编辑";
+                CloseAllFlyoutsWithAnimation();
             }
             SpawnPreviewBarrage();
         }
@@ -232,18 +354,6 @@ private void SpawnPreviewBarrage()
             stack.Children.Add(tbEllipsis);
             
             
-            // Re-attach popups if they are open
-            if (((System.Windows.Controls.Primitives.Popup)this.Resources["AppIconFlyout"])?.IsOpen == true && config.ShowAppIcon) { OpenFlyout("AppIconFlyout", (UIElement)stack.Children[0], true); }
-            
-            int appNameIndex = config.ShowAppIcon ? 1 : 0;
-            if (((System.Windows.Controls.Primitives.Popup)this.Resources["AppNameFlyout"])?.IsOpen == true && config.ShowAppName) { OpenFlyout("AppNameFlyout", (UIElement)stack.Children[appNameIndex], true); }
-            
-            int contentIndex = appNameIndex + (config.ShowAppName ? 1 : 0);
-            if (((System.Windows.Controls.Primitives.Popup)this.Resources["ContentFlyout"])?.IsOpen == true) { OpenFlyout("ContentFlyout", (UIElement)stack.Children[contentIndex], true); }
-            
-            int ellipsisIndex = contentIndex + 1;
-            if (((System.Windows.Controls.Primitives.Popup)this.Resources["EllipsisFlyout"])?.IsOpen == true) { OpenFlyout("EllipsisFlyout", (UIElement)stack.Children[ellipsisIndex], true); }
-            
             UIElement textElement = stack;
 
 
@@ -373,6 +483,31 @@ private void SpawnPreviewBarrage()
                 Canvas.SetLeft(border, (PreviewBorder.ActualWidth - itemWidth) / 2.0);
                 Canvas.SetTop(border, Math.Max(0, (PreviewBorder.ActualHeight - border.DesiredSize.Height) / 2.0));
                 PreviewCanvas.Children.Add(border);
+                border.UpdateLayout();
+
+                // 重新附着弹窗（此时所有视觉子元素均已完成布局测量，TranslatePoint 坐标绝对精确）
+                if (((System.Windows.Controls.Primitives.Popup)this.Resources["AppIconFlyout"])?.IsOpen == true && config.ShowAppIcon) 
+                { 
+                    OpenFlyout("AppIconFlyout", (UIElement)stack.Children[0], true); 
+                }
+                
+                int appNameIndex = config.ShowAppIcon ? 1 : 0;
+                if (((System.Windows.Controls.Primitives.Popup)this.Resources["AppNameFlyout"])?.IsOpen == true && config.ShowAppName) 
+                { 
+                    OpenFlyout("AppNameFlyout", (UIElement)stack.Children[appNameIndex], true); 
+                }
+                
+                int contentIndex = appNameIndex + (config.ShowAppName ? 1 : 0);
+                if (((System.Windows.Controls.Primitives.Popup)this.Resources["ContentFlyout"])?.IsOpen == true) 
+                { 
+                    OpenFlyout("ContentFlyout", (UIElement)stack.Children[contentIndex], true); 
+                }
+                
+                int ellipsisIndex = contentIndex + 1;
+                if (((System.Windows.Controls.Primitives.Popup)this.Resources["EllipsisFlyout"])?.IsOpen == true) 
+                { 
+                    OpenFlyout("EllipsisFlyout", (UIElement)stack.Children[ellipsisIndex], true); 
+                }
             }
             else
             {
@@ -493,23 +628,229 @@ private void SpawnPreviewBarrage()
             }
         }
     
+        /// <summary>
+        /// 播放弹窗唤出动画：从下方偏移 16px 向上滑出并渐显。
+        /// </summary>
+        private void AnimateFlyoutOpen(System.Windows.Controls.Primitives.Popup flyout)
+        {
+            if (flyout.Child is not FrameworkElement child) return;
+
+            if (child.RenderTransform is not TranslateTransform tt)
+            {
+                tt = new TranslateTransform();
+                child.RenderTransform = tt;
+            }
+
+            // 停止任何可能正在运行的动画并重置状态
+            child.BeginAnimation(UIElement.OpacityProperty, null);
+            tt.BeginAnimation(TranslateTransform.YProperty, null);
+
+            child.Opacity = 0.0;
+            tt.Y = 16.0;
+
+            var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+            var slideAnimation = new DoubleAnimation
+            {
+                From = 16.0,
+                To = 0.0,
+                Duration = TimeSpan.FromMilliseconds(220),
+                EasingFunction = easing
+            };
+
+            var fadeAnimation = new DoubleAnimation
+            {
+                From = 0.0,
+                To = 1.0,
+                Duration = TimeSpan.FromMilliseconds(200),
+                EasingFunction = easing
+            };
+
+            tt.BeginAnimation(TranslateTransform.YProperty, slideAnimation);
+            child.BeginAnimation(UIElement.OpacityProperty, fadeAnimation);
+        }
+
+        /// <summary>
+        /// 播放弹窗关闭动画：原位直接渐隐消失后关闭 Popup。
+        /// </summary>
+        private void CloseFlyoutWithAnimation(System.Windows.Controls.Primitives.Popup flyout, Action? onCompleted = null)
+        {
+            if (flyout == null || !flyout.IsOpen)
+            {
+                onCompleted?.Invoke();
+                return;
+            }
+
+            if (_closingFlyouts.Contains(flyout)) return;
+            _closingFlyouts.Add(flyout);
+
+            if (flyout.Child is not FrameworkElement child)
+            {
+                flyout.IsOpen = false;
+                _closingFlyouts.Remove(flyout);
+                onCompleted?.Invoke();
+                return;
+            }
+
+            var fadeOutAnimation = new DoubleAnimation
+            {
+                From = child.Opacity,
+                To = 0.0,
+                Duration = TimeSpan.FromMilliseconds(150),
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
+            };
+
+            fadeOutAnimation.Completed += (s, e) =>
+            {
+                flyout.IsOpen = false;
+                child.Opacity = 1.0;
+                if (child.RenderTransform is TranslateTransform tt)
+                {
+                    tt.Y = 0.0;
+                }
+                _closingFlyouts.Remove(flyout);
+                onCompleted?.Invoke();
+            };
+
+            child.BeginAnimation(UIElement.OpacityProperty, fadeOutAnimation);
+        }
+
+        /// <summary>
+        /// 渐隐关闭所有当前打开的弹窗。
+        /// </summary>
+        private void CloseAllFlyoutsWithAnimation(Action? onCompleted = null)
+        {
+            var openFlyouts = System.Linq.Enumerable.ToList(
+                System.Linq.Enumerable.Where(
+                    System.Linq.Enumerable.Select(FlyoutKeys, key => this.Resources[key] as System.Windows.Controls.Primitives.Popup),
+                    f => f != null && f.IsOpen));
+
+            if (openFlyouts.Count == 0)
+            {
+                onCompleted?.Invoke();
+                return;
+            }
+
+            int remaining = openFlyouts.Count;
+            foreach (var flyout in openFlyouts)
+            {
+                CloseFlyoutWithAnimation(flyout!, () =>
+                {
+                    remaining--;
+                    if (remaining <= 0)
+                    {
+                        onCompleted?.Invoke();
+                    }
+                });
+            }
+        }
+
         private void OpenFlyout(string key, UIElement target, bool isReattaching = false)
         {
             var flyout = this.Resources[key] as System.Windows.Controls.Primitives.Popup;
-            if (flyout != null)
+            if (flyout == null) return;
+
+            flyout.DataContext = this.DataContext;
+
+            // 如果当前有其它弹窗处于打开状态，先平滑渐隐关闭其它弹窗
+            foreach (var otherKey in FlyoutKeys)
             {
-                flyout.DataContext = this.DataContext;
-                if (!isReattaching) 
+                if (otherKey != key && this.Resources[otherKey] is System.Windows.Controls.Primitives.Popup otherFlyout && otherFlyout.IsOpen)
                 {
-                    try {
-                        var p = target.TranslatePoint(new System.Windows.Point(0, target.RenderSize.Height), PreviewCanvas);
+                    CloseFlyoutWithAnimation(otherFlyout);
+                }
+            }
+
+            if (!isReattaching) 
+            {
+                try 
+                {
+                    var p = target.TranslatePoint(new System.Windows.Point(0, target.RenderSize.Height), PreviewCanvas);
+                    flyout.PlacementTarget = PreviewCanvas;
+                    flyout.Placement = System.Windows.Controls.Primitives.PlacementMode.Relative;
+                    flyout.HorizontalOffset = p.X;
+                    flyout.VerticalOffset = p.Y + 4;
+                } 
+                catch {}
+
+                flyout.IsOpen = true;
+                AnimateFlyoutOpen(flyout);
+            }
+            else
+            {
+                // 拖动滑块时重新附着：仅平滑跟随位置，不重新触发进入动画
+                try 
+                {
+                    var p = target.TranslatePoint(new System.Windows.Point(0, target.RenderSize.Height), PreviewCanvas);
+                    if (!double.IsNaN(p.X) && !double.IsNaN(p.Y) && (p.X > 0 || p.Y > 0))
+                    {
                         flyout.PlacementTarget = PreviewCanvas;
                         flyout.Placement = System.Windows.Controls.Primitives.PlacementMode.Relative;
                         flyout.HorizontalOffset = p.X;
                         flyout.VerticalOffset = p.Y + 4;
-                    } catch {}
+                    }
+                } 
+                catch {}
+
+                if (!flyout.IsOpen)
+                {
+                    flyout.IsOpen = true;
+                    AnimateFlyoutOpen(flyout);
                 }
-                flyout.IsOpen = true;
+            }
+        }
+
+        // ====== 多显示器卡片拖拽重排交互 ======
+        private Point _monitorDragStartPoint;
+
+        private void MonitorCard_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _monitorDragStartPoint = e.GetPosition(null);
+        }
+
+        private void MonitorCard_PreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed && sender is FrameworkElement element && element.Tag is MonitorSettingItemDto item)
+            {
+                Point currentPoint = e.GetPosition(null);
+                Vector diff = _monitorDragStartPoint - currentPoint;
+
+                if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
+                    Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
+                {
+                    var data = new DataObject("MonitorItemDto", item);
+                    DragDrop.DoDragDrop(element, data, DragDropEffects.Move);
+                }
+            }
+        }
+
+        private void MonitorCard_DragOver(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent("MonitorItemDto"))
+            {
+                e.Effects = DragDropEffects.Move;
+                e.Handled = true;
+            }
+            else
+            {
+                e.Effects = DragDropEffects.None;
+            }
+        }
+
+        private void MonitorCard_Drop(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent("MonitorItemDto") &&
+                e.Data.GetData("MonitorItemDto") is MonitorSettingItemDto sourceItem &&
+                sender is FrameworkElement targetElement &&
+                targetElement.Tag is MonitorSettingItemDto targetItem &&
+                DataContext is SettingsViewModel vm)
+            {
+                int oldIndex = vm.MonitorList.IndexOf(sourceItem);
+                int newIndex = vm.MonitorList.IndexOf(targetItem);
+                if (oldIndex >= 0 && newIndex >= 0 && oldIndex != newIndex)
+                {
+                    vm.ReorderMonitors(oldIndex, newIndex);
+                }
             }
         }
     }

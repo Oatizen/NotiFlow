@@ -140,8 +140,11 @@
         </Style>
         
         <!-- Flyouts for interactive static preview -->
-        <Popup x:Key="AppIconFlyout" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+        <Popup x:Key="AppIconFlyout" Placement="Bottom" StaysOpen="True" AllowsTransparency="True">
             <Border Width="300" Background="{DynamicResource ApplicationBackgroundBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16" TextElement.FontSize="14" TextElement.FontStyle="Normal" TextElement.FontWeight="Normal" TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                <Border.RenderTransform>
+                    <TranslateTransform Y="0"/>
+                </Border.RenderTransform>
                 <StackPanel Width="268">
                     <StackPanel Orientation="Horizontal" Height="32" Margin="0,0,0,12">
                         <ui:SymbolIcon Symbol="Image24" FontSize="18" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
@@ -165,8 +168,11 @@
             </Border>
         </Popup>
 
-        <Popup x:Key="AppNameFlyout" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+        <Popup x:Key="AppNameFlyout" Placement="Bottom" StaysOpen="True" AllowsTransparency="True">
             <Border Width="608" Background="{DynamicResource ApplicationBackgroundBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16" TextElement.FontSize="14" TextElement.FontStyle="Normal" TextElement.FontWeight="Normal" TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                <Border.RenderTransform>
+                    <TranslateTransform Y="0"/>
+                </Border.RenderTransform>
                 <Grid Width="576">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -340,8 +346,11 @@
             </Border>
         </Popup>
 
-        <Popup x:Key="ContentFlyout" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+        <Popup x:Key="ContentFlyout" Placement="Bottom" StaysOpen="True" AllowsTransparency="True">
             <Border Width="608" Background="{DynamicResource ApplicationBackgroundBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16" TextElement.FontSize="14" TextElement.FontStyle="Normal" TextElement.FontWeight="Normal" TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                <Border.RenderTransform>
+                    <TranslateTransform Y="0"/>
+                </Border.RenderTransform>
                 <Grid Width="576">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -507,8 +516,11 @@
             </Border>
         </Popup>
 
-        <Popup x:Key="EllipsisFlyout" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+        <Popup x:Key="EllipsisFlyout" Placement="Bottom" StaysOpen="True" AllowsTransparency="True">
             <Border Width="300" Background="{DynamicResource ApplicationBackgroundBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16" TextElement.FontSize="14" TextElement.FontStyle="Normal" TextElement.FontWeight="Normal" TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                <Border.RenderTransform>
+                    <TranslateTransform Y="0"/>
+                </Border.RenderTransform>
                 <StackPanel Width="268">
                     <StackPanel Orientation="Horizontal" Height="32" Margin="0,0,0,12">
                         <ui:SymbolIcon Symbol="MoreHorizontal24" FontSize="18" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
@@ -805,61 +817,184 @@
                 </Border>
                     
                     <!-- 左列：其他设置 -->
-                <Border x:Name="OtherCard" Margin="0,0,0,0" VerticalAlignment="Top" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
-                    <StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                            <ui:SymbolIcon Symbol="Options24" FontSize="20" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="0,0,8,0"/>
-                            <ui:TextBlock FontTypography="BodyStrong" Text="其他" FontSize="16"/>
-                        </StackPanel>
+                    <Border x:Name="OtherCard" Margin="0,0,0,16" VerticalAlignment="Top" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                                <ui:SymbolIcon Symbol="Options24" FontSize="20" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="0,0,8,0"/>
+                                <ui:TextBlock FontTypography="BodyStrong" Text="其他" FontSize="16"/>
+                            </StackPanel>
 
-                        <ui:TextBlock Text="弹幕位置" Margin="0,0,0,8"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="8"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="8"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <ui:Button Grid.Column="0" Content="居中偏上" Command="{Binding SetTrackStrategyCommand}" CommandParameter="UpperCenter" HorizontalAlignment="Stretch" Padding="4,6">
-                                <ui:Button.Style>
-                                    <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
-                                        <Setter Property="Appearance" Value="Secondary" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsTrackUpperCenter}" Value="True">
-                                                <Setter Property="Appearance" Value="Primary" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </ui:Button.Style>
-                            </ui:Button>
-                            <ui:Button Grid.Column="2" Content="顶部优先" Command="{Binding SetTrackStrategyCommand}" CommandParameter="TopFirst" HorizontalAlignment="Stretch" Padding="4,6">
-                                <ui:Button.Style>
-                                    <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
-                                        <Setter Property="Appearance" Value="Secondary" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsTrackTopFirst}" Value="True">
-                                                <Setter Property="Appearance" Value="Primary" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </ui:Button.Style>
-                            </ui:Button>
-                            <ui:Button Grid.Column="4" Content="底部优先" Command="{Binding SetTrackStrategyCommand}" CommandParameter="BottomFirst" HorizontalAlignment="Stretch" Padding="4,6">
-                                <ui:Button.Style>
-                                    <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
-                                        <Setter Property="Appearance" Value="Secondary" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsTrackBottomFirst}" Value="True">
-                                                <Setter Property="Appearance" Value="Primary" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </ui:Button.Style>
-                            </ui:Button>
-                        </Grid>
-                    </StackPanel>
-                </Border>
+                            <ui:TextBlock Text="弹幕位置" Margin="0,0,0,8"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <ui:Button Grid.Column="0" Content="居中偏上" Command="{Binding SetTrackStrategyCommand}" CommandParameter="UpperCenter" HorizontalAlignment="Stretch" Padding="4,6">
+                                    <ui:Button.Style>
+                                        <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                            <Setter Property="Appearance" Value="Secondary" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsTrackUpperCenter}" Value="True">
+                                                    <Setter Property="Appearance" Value="Primary" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ui:Button.Style>
+                                </ui:Button>
+                                <ui:Button Grid.Column="2" Content="顶部优先" Command="{Binding SetTrackStrategyCommand}" CommandParameter="TopFirst" HorizontalAlignment="Stretch" Padding="4,6">
+                                    <ui:Button.Style>
+                                        <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                            <Setter Property="Appearance" Value="Secondary" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsTrackTopFirst}" Value="True">
+                                                    <Setter Property="Appearance" Value="Primary" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ui:Button.Style>
+                                </ui:Button>
+                                <ui:Button Grid.Column="4" Content="底部优先" Command="{Binding SetTrackStrategyCommand}" CommandParameter="BottomFirst" HorizontalAlignment="Stretch" Padding="4,6">
+                                    <ui:Button.Style>
+                                        <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                            <Setter Property="Appearance" Value="Secondary" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsTrackBottomFirst}" Value="True">
+                                                    <Setter Property="Appearance" Value="Primary" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ui:Button.Style>
+                                </ui:Button>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 左列：多显示器独立卡片 -->
+                    <Border x:Name="MultiMonitorCard" Margin="0,0,0,0" VerticalAlignment="Top" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                                <ui:SymbolIcon Symbol="Desktop24" FontSize="20" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="0,0,8,0"/>
+                                <ui:TextBlock FontTypography="BodyStrong" Text="多显示器" FontSize="16"/>
+                            </StackPanel>
+
+                            <ui:TextBlock Text="显示器列表" Margin="0,0,0,4"/>
+                            <ui:TextBlock Text="拖拽卡片可调整排列顺序，右侧按钮可开关弹幕" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,12"/>
+
+                            <!-- 显示器卡片列表 -->
+                            <ItemsControl ItemsSource="{Binding MonitorList}" Margin="0,0,0,16">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Tag="{Binding}"
+                                                Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="8"
+                                                Padding="12,10"
+                                                Margin="0,0,0,8"
+                                                AllowDrop="True"
+                                                PreviewMouseLeftButtonDown="MonitorCard_PreviewMouseLeftButtonDown"
+                                                PreviewMouseMove="MonitorCard_PreviewMouseMove"
+                                                Drop="MonitorCard_Drop"
+                                                DragOver="MonitorCard_DragOver">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <!-- 拖拽把手图标与编号 -->
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
+                                                    <ui:SymbolIcon Symbol="ReOrderDotsVertical24" FontSize="16" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Cursor="SizeAll" Margin="0,0,6,0"/>
+                                                    <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" CornerRadius="4" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding DisplayOrder}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                                    </Border>
+                                                </StackPanel>
+
+                                                <!-- 显示器名称与分辨率 -->
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                                                        <!-- 主显示器高亮徽标 -->
+                                                        <Border Visibility="{Binding IsPrimary, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                Background="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                                                CornerRadius="4"
+                                                                Padding="4,1"
+                                                                Margin="6,0,0,0"
+                                                                VerticalAlignment="Center">
+                                                            <TextBlock Text="主屏" FontSize="10" FontWeight="Bold" Foreground="White"/>
+                                                        </Border>
+                                                    </StackPanel>
+                                                    <TextBlock Text="{Binding ResolutionText}" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0"/>
+                                                </StackPanel>
+
+                                                <!-- 右侧状态矩形切换按钮 -->
+                                                <ui:Button Grid.Column="2"
+                                                           Command="{Binding DataContext.ToggleMonitorEnabledCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                           CommandParameter="{Binding}"
+                                                           Padding="14,4"
+                                                           Height="28"
+                                                           MinWidth="72"
+                                                           VerticalAlignment="Center"
+                                                           Cursor="Hand">
+                                                    <ui:Button.Style>
+                                                        <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                                            <Setter Property="Appearance" Value="Secondary"/>
+                                                            <Setter Property="Content" Value="未启用"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsEnabled}" Value="True">
+                                                                    <Setter Property="Appearance" Value="Primary"/>
+                                                                    <Setter Property="Content" Value="已启用"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </ui:Button.Style>
+                                                </ui:Button>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- 显示模式选项 -->
+                            <ui:TextBlock Text="显示模式" Margin="0,0,0,8"/>
+                            <Grid Margin="0,0,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <ui:Button Grid.Column="0" Content="同时显示" Command="{Binding SetMultiMonitorModeCommand}" CommandParameter="Simultaneous" HorizontalAlignment="Stretch" Padding="4,6">
+                                    <ui:Button.Style>
+                                        <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                            <Setter Property="Appearance" Value="Secondary"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsModeSimultaneous}" Value="True">
+                                                    <Setter Property="Appearance" Value="Primary"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ui:Button.Style>
+                                </ui:Button>
+                                <ui:Button Grid.Column="2" Content="按顺序流转" Command="{Binding SetMultiMonitorModeCommand}" CommandParameter="Sequential" HorizontalAlignment="Stretch" Padding="4,6">
+                                    <ui:Button.Style>
+                                        <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                            <Setter Property="Appearance" Value="Secondary"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsModeSequential}" Value="True">
+                                                    <Setter Property="Appearance" Value="Primary"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ui:Button.Style>
+                                </ui:Button>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
                 
                 <!-- 右列：外观设置 -->

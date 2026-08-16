@@ -220,6 +220,13 @@ namespace NotiFlow.Models
             _closeToTray = BarrageSettings.CloseToTray;
             _runOnStartup = BarrageSettings.RunOnStartup;
             _hotKeyText = GetHotKeyString(BarrageSettings.HotKeyModifier, BarrageSettings.HotKey);
+            _multiMonitorMode = BarrageSettings.MultiMonitorMode;
+
+            LoadMonitors();
+            Services.ScreenService.DisplaySettingsChanged += () =>
+            {
+                Application.Current?.Dispatcher?.Invoke(LoadMonitors);
+            };
 
             _debounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
             _debounceTimer.Tick += (s, e) =>
@@ -1456,6 +1463,102 @@ namespace NotiFlow.Models
             AppNameFontWeight = weight;
             if (IsEditingGlobal) BarrageSettings.AppNameFontWeight = weight;
             else GetTargetConfig(true).AppNameFontWeight = weight;
+            TriggerSaveAndPreview();
+        }
+
+        // ====== 多显示器设置支持 ======
+        public ObservableCollection<MonitorSettingItemDto> MonitorList { get; } = new();
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(IsModeSimultaneous))]
+        [NotifyPropertyChangedFor(nameof(IsModeSequential))]
+        private string _multiMonitorMode = "Simultaneous";
+
+        public bool IsModeSimultaneous => MultiMonitorMode == "Simultaneous";
+        public bool IsModeSequential => MultiMonitorMode == "Sequential";
+
+        public void LoadMonitors()
+        {
+            var list = Services.ScreenService.GetMergedMonitors(BarrageSettings.Monitors);
+            MonitorList.Clear();
+            foreach (var item in list)
+            {
+                // 监听每个条目的 IsEnabled 变更以便自动持久化
+                item.PropertyChanged += (s, e) =>
+                {
+                    if (e.PropertyName == nameof(MonitorSettingItemDto.IsEnabled))
+                    {
+                        SaveMonitors();
+                    }
+                };
+                MonitorList.Add(item);
+            }
+            BarrageSettings.Monitors = list;
+        }
+
+        [RelayCommand]
+        private void SetMultiMonitorMode(string mode)
+        {
+            MultiMonitorMode = mode;
+            BarrageSettings.MultiMonitorMode = mode;
+            TriggerSaveAndPreview();
+        }
+
+        [RelayCommand]
+        private void ToggleMonitorEnabled(MonitorSettingItemDto? monitor)
+        {
+            if (monitor == null) return;
+            monitor.IsEnabled = !monitor.IsEnabled;
+            SaveMonitors();
+        }
+
+        [RelayCommand]
+        private void MoveMonitorUp(MonitorSettingItemDto? monitor)
+        {
+            if (monitor == null) return;
+            int index = MonitorList.IndexOf(monitor);
+            if (index > 0)
+            {
+                MonitorList.Move(index, index - 1);
+                UpdateMonitorOrderNumbers();
+                SaveMonitors();
+            }
+        }
+
+        [RelayCommand]
+        private void MoveMonitorDown(MonitorSettingItemDto? monitor)
+        {
+            if (monitor == null) return;
+            int index = MonitorList.IndexOf(monitor);
+            if (index >= 0 && index < MonitorList.Count - 1)
+            {
+                MonitorList.Move(index, index + 1);
+                UpdateMonitorOrderNumbers();
+                SaveMonitors();
+            }
+        }
+
+        public void ReorderMonitors(int oldIndex, int newIndex)
+        {
+            if (oldIndex >= 0 && oldIndex < MonitorList.Count && newIndex >= 0 && newIndex < MonitorList.Count && oldIndex != newIndex)
+            {
+                MonitorList.Move(oldIndex, newIndex);
+                UpdateMonitorOrderNumbers();
+                SaveMonitors();
+            }
+        }
+
+        private void UpdateMonitorOrderNumbers()
+        {
+            for (int i = 0; i < MonitorList.Count; i++)
+            {
+                MonitorList[i].DisplayOrder = i + 1;
+            }
+        }
+
+        private void SaveMonitors()
+        {
+            BarrageSettings.Monitors = MonitorList.ToList();
             TriggerSaveAndPreview();
         }
     }

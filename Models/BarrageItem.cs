@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using System.Windows;
 using System.Windows.Media;
@@ -63,6 +64,12 @@ namespace NotiFlow.Models
         /// </summary>
         public DateTime AnimationEndTime { get; set; }
 
+        // 多显示器流转调度上下文
+        public string TargetMonitorDeviceName { get; set; } = "";
+        public int MonitorSequenceIndex { get; set; } = 0;
+        public List<MonitorSettingItemDto>? TargetMonitorsSequence { get; set; }
+        public NotificationMessage? SourceNotification { get; set; }
+
         // 背景图缓存 (静态复用，避免每条弹幕重复加载)
         private static string _cachedBgImagePath = "";
         private static CanvasBitmap? _cachedBgImage = null;
@@ -111,6 +118,10 @@ namespace NotiFlow.Models
             TrackIndex = -1;
             AnimationStartTime = default;
             AnimationEndTime = default;
+            TargetMonitorDeviceName = "";
+            MonitorSequenceIndex = 0;
+            TargetMonitorsSequence = null;
+            SourceNotification = null;
 
             _textLayout?.Dispose();
             _textLayout = null;

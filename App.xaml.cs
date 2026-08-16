@@ -13,7 +13,7 @@ namespace NotiFlow
         private static Mutex? _mutex;
         private TrayIconService? _trayIconService;
         public TrayIconService? TrayIconService => _trayIconService;
-        private Rendering.BarrageOverlayWindow? _mainWindow;
+        private Rendering.BarrageManager? _barrageManager;
         private SettingsWindow? _settingsWindow;
         private ForegroundMonitorService? _foregroundMonitorService;
         public ForegroundMonitorService? ForegroundMonitor => _foregroundMonitorService;
@@ -105,6 +105,9 @@ namespace NotiFlow
             // 【关键修复】初始化 Windows 原生通知监听核心服务
             new NotificationService();
             _ = NotificationService.Instance!.InitializeAsync();
+
+            // 初始化多显示器弹幕渲染管理中心
+            _barrageManager = new Rendering.BarrageManager();
 
             // 根据自动启动设置决定是否立即显示主弹幕窗口
             if (BarrageSettings.IsWorking)
@@ -249,25 +252,17 @@ namespace NotiFlow
         /// </summary>
         public void EnsureMainWindowVisible()
         {
-            if (_mainWindow == null || !_mainWindow.IsLoaded)
-            {
-                _mainWindow = new Rendering.BarrageOverlayWindow();
-                _mainWindow.Show();
-            }
-            else if (!_mainWindow.IsVisible)
-            {
-                _mainWindow.Show();
-            }
+            _barrageManager?.ShowAll();
         }
 
         public void ApplyCaptureSetting()
         {
-            _mainWindow?.ApplyCaptureSetting();
+            _barrageManager?.ApplyCaptureSetting();
         }
 
         public void ReRegisterHotKey()
         {
-            _mainWindow?.ReRegisterHotKey();
+            _barrageManager?.ReRegisterHotKey();
         }
 
         /// <summary>
@@ -275,7 +270,7 @@ namespace NotiFlow
         /// </summary>
         public void HideMainWindow()
         {
-            _mainWindow?.Hide();
+            _barrageManager?.HideAll();
         }
 
         /// <summary>
@@ -288,8 +283,6 @@ namespace NotiFlow
             {
                 EnsureMainWindowVisible();
             }
-            // 注意：关闭工作状态时不立即隐藏，要等到所有弹幕飞完
-            // MainWindow 内部的渲染循环会检测并自动隐藏
         }
 
         /// <summary>
@@ -347,7 +340,7 @@ namespace NotiFlow
             CleanUpLockFile();
             _foregroundMonitorService?.Dispose();
             _trayIconService?.Dispose();
-            _mainWindow?.Close();
+            _barrageManager?.Dispose();
             _settingsWindow?.Close();
             base.OnExit(e);
         }

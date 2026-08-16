@@ -106,7 +106,10 @@ namespace NotiFlow
         public List<Models.ScopeRuleItemDto> SourceWhitelist { get; set; } = new();
         public List<Models.ScopeRuleItemDto> RecentSourcesCache { get; set; } = new();
         public List<Models.ScopeRuleItemDto> RecentScenesCache { get; set; } = new();
-        
+        // 多显示器配置
+        public string MultiMonitorMode { get; set; } = "Simultaneous"; // Simultaneous / Sequential
+        public List<Models.MonitorSettingItemDto> Monitors { get; set; } = new();
+
         // 安全模式（防崩溃循环）配置
         public int DeviceCrashCount { get; set; } = 0;
         public int SoftwareCrashCount { get; set; } = 0;
@@ -223,6 +226,10 @@ namespace NotiFlow
         public static List<Models.ScopeRuleItemDto> RecentSourcesCache { get; set; } = new();
         public static List<Models.ScopeRuleItemDto> RecentScenesCache { get; set; } = new();
 
+        // ====== 多显示器配置 ======
+        public static string MultiMonitorMode { get; set; } = "Simultaneous"; // Simultaneous / Sequential
+        public static List<Models.MonitorSettingItemDto> Monitors { get; set; } = new();
+
         // ====== 安全模式（防崩溃循环）配置 ======
         public static int DeviceCrashCount { get; set; } = 0;
         public static int SoftwareCrashCount { get; set; } = 0;
@@ -313,6 +320,8 @@ namespace NotiFlow
                 SourceWhitelist = SourceWhitelist,
                 RecentSourcesCache = RecentSourcesCache,
                 RecentScenesCache = RecentScenesCache,
+                MultiMonitorMode = MultiMonitorMode,
+                Monitors = Monitors,
                 DeviceCrashCount = DeviceCrashCount,
                 SoftwareCrashCount = SoftwareCrashCount
             };
@@ -471,6 +480,10 @@ namespace NotiFlow
                 SourceWhitelist = dto.SourceWhitelist ?? new();
                 RecentSourcesCache = dto.RecentSourcesCache ?? new();
                 RecentScenesCache = dto.RecentScenesCache ?? new();
+
+                MultiMonitorMode = (dto.MultiMonitorMode == "Sequential") ? "Sequential" : "Simultaneous";
+                Monitors = Services.ScreenService.GetMergedMonitors(dto.Monitors);
+
                 DeviceCrashCount = dto.DeviceCrashCount;
                 SoftwareCrashCount = dto.SoftwareCrashCount;
             }
