@@ -197,7 +197,7 @@ namespace NotiFlow.Views.Pages
             SpawnPreviewBarrage();
         }
 
-                                private void ApplyConfigToTextBlock(TextBlock tb, BarrageConfigDto config, bool isAppName, bool isEllipsis)
+        private void ApplyConfigToTextBlock(NotiFlow.Views.Controls.OutlinedTextBlock tb, BarrageConfigDto config, bool isAppName, bool isEllipsis)
         {
             string globalHex = config.TextColorHex ?? "#FFFFFF";
             string hex = globalHex;
@@ -249,11 +249,11 @@ namespace NotiFlow.Views.Pages
                 isUnderlined = config.EllipsisIsUnderlined;
                 if (config.EllipsisTextOpacity.HasValue) opacity = config.EllipsisTextOpacity.Value;
                 else opacity = config.TextOpacity;
-                showStroke = config.ShowTextStroke;
+                showStroke = false;
             }
 
-            try { tb.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex ?? "#FFFFFF")); }
-            catch { tb.Foreground = Brushes.White; }
+            try { tb.Fill = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex ?? "#FFFFFF")); }
+            catch { tb.Fill = Brushes.White; }
 
             tb.FontSize = fontSize > 0 ? fontSize : 36;
             tb.Opacity = opacity;
@@ -265,8 +265,7 @@ namespace NotiFlow.Views.Pages
             try { tb.FontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(fontWeight); } catch { tb.FontWeight = FontWeights.Normal; }
             try { tb.FontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(fontStyle); } catch { tb.FontStyle = FontStyles.Normal; }
 
-            if (isUnderlined) tb.TextDecorations = TextDecorations.Underline;
-            else tb.TextDecorations = null;
+            tb.IsUnderlined = isUnderlined;
 
             if (showStroke)
             {
@@ -279,23 +278,17 @@ namespace NotiFlow.Views.Pages
                 catch {}
 
                 double thickness = config.TextStrokeThickness > 0 ? config.TextStrokeThickness : 1.0;
-
-                tb.Effect = new System.Windows.Media.Effects.DropShadowEffect
-                {
-                    Color = strokeColor,
-                    BlurRadius = Math.Max(3.0, thickness * 3.0),
-                    ShadowDepth = 0,
-                    Opacity = 1.0,
-                    RenderingBias = System.Windows.Media.Effects.RenderingBias.Quality
-                };
+                tb.Stroke = new SolidColorBrush(strokeColor);
+                tb.StrokeThickness = thickness;
             }
             else
             {
-                tb.Effect = null;
+                tb.Stroke = null;
+                tb.StrokeThickness = 0;
             }
         }
 
-private void SpawnPreviewBarrage()
+        private void SpawnPreviewBarrage()
         {
             PreviewCanvas.Children.Clear();
             var vm = DataContext as SettingsViewModel;
@@ -320,7 +313,7 @@ private void SpawnPreviewBarrage()
 
             if (config.ShowAppName)
             {
-                var tbApp = new TextBlock { Text = "应用名称：", VerticalAlignment = VerticalAlignment.Center };
+                var tbApp = new NotiFlow.Views.Controls.OutlinedTextBlock { Text = "应用名称：", VerticalAlignment = VerticalAlignment.Center };
                 ApplyConfigToTextBlock(tbApp, config, true, false);
                 if (isPaused) {
                     tbApp.Cursor = Cursors.Hand;
@@ -332,7 +325,7 @@ private void SpawnPreviewBarrage()
                 stack.Children.Add(tbApp);
             }
             
-            var tbContent = new TextBlock { Text = "这是一条测试弹幕", VerticalAlignment = VerticalAlignment.Center };
+            var tbContent = new NotiFlow.Views.Controls.OutlinedTextBlock { Text = "这是一条测试弹幕", VerticalAlignment = VerticalAlignment.Center };
             ApplyConfigToTextBlock(tbContent, config, false, false);
             if (isPaused) {
                 tbContent.Cursor = Cursors.Hand;
@@ -343,7 +336,7 @@ private void SpawnPreviewBarrage()
             }
             stack.Children.Add(tbContent);
             
-            var tbEllipsis = new TextBlock { Text = "......", VerticalAlignment = VerticalAlignment.Center };
+            var tbEllipsis = new NotiFlow.Views.Controls.OutlinedTextBlock { Text = "......", VerticalAlignment = VerticalAlignment.Center };
             ApplyConfigToTextBlock(tbEllipsis, config, false, true);
             if (isPaused) {
                 tbEllipsis.Cursor = Cursors.Hand;
@@ -400,6 +393,64 @@ private void SpawnPreviewBarrage()
                         Width = bmp.PixelWidth * (config.BackgroundImageScale > 0 ? config.BackgroundImageScale : 1.0),
                         Height = bmp.PixelHeight * (config.BackgroundImageScale > 0 ? config.BackgroundImageScale : 1.0)
                     };
+
+                    if (config.BackgroundImageEdgeBlur > 0 && img.Width > 0 && img.Height > 0)
+                    {
+                        double vBlur = Math.Min(6.0, img.Height * 0.15);
+                        double ry = vBlur > 0 ? Math.Min(0.2, vBlur / img.Height) : 0.0;
+
+                        var vStops = new System.Windows.Media.GradientStopCollection
+                        {
+                            new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(0, 255, 255, 255), 0.0),
+                            new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(255, 255, 255, 255), ry),
+                            new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(255, 255, 255, 255), 1.0 - ry),
+                            new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(0, 255, 255, 255), 1.0)
+                        };
+
+                        var hStops = new System.Windows.Media.GradientStopCollection();
+
+                        bool isRightAnchor = config.BackgroundImageAnchor == ImageAnchor.TopRight || config.BackgroundImageAnchor == ImageAnchor.MiddleRight || config.BackgroundImageAnchor == ImageAnchor.BottomRight;
+                        bool isLeftAnchor = config.BackgroundImageAnchor == ImageAnchor.TopLeft || config.BackgroundImageAnchor == ImageAnchor.MiddleLeft || config.BackgroundImageAnchor == ImageAnchor.BottomLeft;
+
+                        if (isRightAnchor)
+                        {
+                            double rx = Math.Clamp(config.BackgroundImageEdgeBlur / img.Width, 0.01, 1.0);
+                            hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(0, 255, 255, 255), 0.0));
+                            hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(38, 255, 255, 255), rx * 0.25));
+                            hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(128, 255, 255, 255), rx * 0.50));
+                            hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(217, 255, 255, 255), rx * 0.75));
+                            hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(255, 255, 255, 255), rx));
+                            hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(255, 255, 255, 255), 1.0));
+                        }
+                        else if (isLeftAnchor)
+                        {
+                            double rx = Math.Clamp(config.BackgroundImageEdgeBlur / img.Width, 0.01, 1.0);
+                            hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(255, 255, 255, 255), 0.0));
+                            hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(255, 255, 255, 255), 1.0 - rx));
+                            hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(217, 255, 255, 255), 1.0 - rx * 0.75));
+                            hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(128, 255, 255, 255), 1.0 - rx * 0.50));
+                            hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(38, 255, 255, 255), 1.0 - rx * 0.25));
+                            hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(0, 255, 255, 255), 1.0));
+                        }
+                        else
+                        {
+                            double rx = Math.Clamp(config.BackgroundImageEdgeBlur / img.Width, 0.01, 0.5);
+                            hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(0, 255, 255, 255), 0.0));
+                            hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(38, 255, 255, 255), rx * 0.25));
+                            hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(128, 255, 255, 255), rx * 0.50));
+                            hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(217, 255, 255, 255), rx * 0.75));
+                            hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(255, 255, 255, 255), rx));
+                            hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(255, 255, 255, 255), 1.0 - rx));
+                            hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(217, 255, 255, 255), 1.0 - rx * 0.75));
+                            hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(128, 255, 255, 255), 1.0 - rx * 0.50));
+                            hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(38, 255, 255, 255), 1.0 - rx * 0.25));
+                            hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(0, 255, 255, 255), 1.0));
+                        }
+
+                        canvas.OpacityMask = new System.Windows.Media.LinearGradientBrush(hStops, new Point(0, 0), new Point(1, 0));
+                        img.OpacityMask = new System.Windows.Media.LinearGradientBrush(vStops, new Point(0, 0), new Point(0, 1));
+                    }
+
                     canvas.Children.Add(img);
 
                     containerGrid.SizeChanged += (s, ev) =>

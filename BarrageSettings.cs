@@ -72,6 +72,7 @@ namespace NotiFlow
         public double BackgroundImageScale { get; set; } = 1.0;
         public bool BackgroundImageKeepBaseColor { get; set; } = true;
         public double BackgroundImageOpacity { get; set; } = 1.0;
+        public double BackgroundImageEdgeBlur { get; set; } = 0;
         
         // 角色伴随挂件配置
         public bool ShowCharacterWidget { get; set; } = false;
@@ -187,6 +188,7 @@ namespace NotiFlow
         public static double BackgroundImageScale { get; set; } = 1.0;
         public static bool BackgroundImageKeepBaseColor { get; set; } = true;
         public static double BackgroundImageOpacity { get; set; } = 1.0;
+        public static double BackgroundImageEdgeBlur { get; set; } = 0;
 
         // ====== 角色伴随挂件配置 ======
         public static bool ShowCharacterWidget { get; set; } = false;
@@ -314,6 +316,7 @@ namespace NotiFlow
                 BackgroundImageScale = BackgroundImageScale,
                 BackgroundImageKeepBaseColor = BackgroundImageKeepBaseColor,
                 BackgroundImageOpacity = BackgroundImageOpacity,
+                BackgroundImageEdgeBlur = BackgroundImageEdgeBlur,
                 ShowCharacterWidget = ShowCharacterWidget,
                 CharacterWidgetPath = CharacterWidgetPath,
                 CharacterWidgetPresetId = CharacterWidgetPresetId,
@@ -476,6 +479,7 @@ namespace NotiFlow
                 BackgroundImageScale = dto.BackgroundImageScale;
                 BackgroundImageKeepBaseColor = dto.BackgroundImageKeepBaseColor;
                 BackgroundImageOpacity = Math.Clamp(dto.BackgroundImageOpacity, 0.0, 1.0);
+                BackgroundImageEdgeBlur = Math.Clamp(dto.BackgroundImageEdgeBlur, 0.0, 100.0);
 
                 ShowCharacterWidget = dto.ShowCharacterWidget;
                 CharacterWidgetPath = dto.CharacterWidgetPath ?? "";

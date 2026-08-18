@@ -67,69 +67,91 @@
         </Grid>
         
         <!-- 右侧设置区 -->
-        <Border Grid.Column="1" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16">
-            <StackPanel>
-                <Button Content="选择本地图片..." HorizontalAlignment="Stretch" Click="SelectImage_Click" Margin="0,0,0,20" />
-                
-                <TextBlock Text="九宫格对齐点" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                <!-- 3x3 Grid for anchors -->
-                <Grid Width="150" Height="150" HorizontalAlignment="Center" Margin="0,0,0,20">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
+        <Border Grid.Column="1" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="0">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="16">
+                <StackPanel>
+                    <Button Content="选择本地图片..." HorizontalAlignment="Stretch" Click="SelectImage_Click" Margin="0,0,0,20" />
                     
-                    <ToggleButton x:Name="AnchorTopLeft" Grid.Row="0" Grid.Column="0" Content="↖" Click="Anchor_Click" />
-                    <ToggleButton x:Name="AnchorTopCenter" Grid.Row="0" Grid.Column="1" Content="↑" Click="Anchor_Click" />
-                    <ToggleButton x:Name="AnchorTopRight" Grid.Row="0" Grid.Column="2" Content="↗" Click="Anchor_Click" />
+                    <TextBlock Text="九宫格对齐点" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                    <!-- 3x3 Grid for anchors -->
+                    <Grid Width="150" Height="150" HorizontalAlignment="Center" Margin="0,0,0,20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        
+                        <ToggleButton x:Name="AnchorTopLeft" Grid.Row="0" Grid.Column="0" Content="↖" Click="Anchor_Click" />
+                        <ToggleButton x:Name="AnchorTopCenter" Grid.Row="0" Grid.Column="1" Content="↑" Click="Anchor_Click" />
+                        <ToggleButton x:Name="AnchorTopRight" Grid.Row="0" Grid.Column="2" Content="↗" Click="Anchor_Click" />
+                        
+                        <ToggleButton x:Name="AnchorMiddleLeft" Grid.Row="1" Grid.Column="0" Content="←" Click="Anchor_Click" />
+                        <ToggleButton x:Name="AnchorMiddleCenter" Grid.Row="1" Grid.Column="1" Content="·" Click="Anchor_Click" />
+                        <ToggleButton x:Name="AnchorMiddleRight" Grid.Row="1" Grid.Column="2" Content="→" Click="Anchor_Click" />
+                        
+                        <ToggleButton x:Name="AnchorBottomLeft" Grid.Row="2" Grid.Column="0" Content="↙" Click="Anchor_Click" />
+                        <ToggleButton x:Name="AnchorBottomCenter" Grid.Row="2" Grid.Column="1" Content="↓" Click="Anchor_Click" />
+                        <ToggleButton x:Name="AnchorBottomRight" Grid.Row="2" Grid.Column="2" Content="↘" Click="Anchor_Click" />
+                    </Grid>
                     
-                    <ToggleButton x:Name="AnchorMiddleLeft" Grid.Row="1" Grid.Column="0" Content="←" Click="Anchor_Click" />
-                    <ToggleButton x:Name="AnchorMiddleCenter" Grid.Row="1" Grid.Column="1" Content="·" Click="Anchor_Click" />
-                    <ToggleButton x:Name="AnchorMiddleRight" Grid.Row="1" Grid.Column="2" Content="→" Click="Anchor_Click" />
+                    <TextBlock Text="偏移量计算 (自动绑定拖拽)" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="X 偏移:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                        <ui:TextBox x:Name="OffsetXBox" Grid.Column="1" Text="0" TextChanged="OffsetBox_TextChanged" />
+                    </Grid>
+                    <Grid Margin="0,0,0,20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Y 偏移:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                        <ui:TextBox x:Name="OffsetYBox" Grid.Column="1" Text="0" TextChanged="OffsetBox_TextChanged" />
+                    </Grid>
                     
-                    <ToggleButton x:Name="AnchorBottomLeft" Grid.Row="2" Grid.Column="0" Content="↙" Click="Anchor_Click" />
-                    <ToggleButton x:Name="AnchorBottomCenter" Grid.Row="2" Grid.Column="1" Content="↓" Click="Anchor_Click" />
-                    <ToggleButton x:Name="AnchorBottomRight" Grid.Row="2" Grid.Column="2" Content="↘" Click="Anchor_Click" />
-                </Grid>
-                
-                <TextBlock Text="偏移量计算 (自动绑定拖拽)" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                <Grid Margin="0,0,0,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="X 偏移:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                    <ui:TextBox x:Name="OffsetXBox" Grid.Column="1" Text="0" TextChanged="OffsetBox_TextChanged" />
-                </Grid>
-                <Grid Margin="0,0,0,20">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="Y 偏移:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                    <ui:TextBox x:Name="OffsetYBox" Grid.Column="1" Text="0" TextChanged="OffsetBox_TextChanged" />
-                </Grid>
-                
-                <TextBlock Text="图片缩放比例:" Margin="0,0,0,5" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                <Grid Margin="0,0,0,20">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <Slider x:Name="ScaleSlider" Minimum="1" Maximum="400" Value="100" ValueChanged="ScaleSlider_ValueChanged" VerticalAlignment="Center" />
-                    <TextBlock x:Name="ScaleText" Grid.Column="1" Text="100%" FontWeight="Bold" Margin="10,0,0,0" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
-                </Grid>
-                
-                <CheckBox x:Name="KeepBaseColorCheckBox" Content="图片未覆盖区域使用弹幕底色" Margin="0,0,0,20" Checked="KeepBaseColor_Changed" Unchecked="KeepBaseColor_Changed" />
-                
-                <ui:Button Content="保存并应用" Appearance="Primary" HorizontalAlignment="Stretch" Margin="0,0,0,0" Click="Save_Click" />
-            </StackPanel>
+                    <TextBlock Text="图片缩放比例:" Margin="0,0,0,5" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                    <Grid Margin="0,0,0,20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="ScaleSlider" Minimum="1" Maximum="400" Value="100" ValueChanged="ScaleSlider_ValueChanged" VerticalAlignment="Center" />
+                        <TextBlock x:Name="ScaleText" Grid.Column="1" Text="100%" FontWeight="Bold" Margin="10,0,0,0" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
+                    </Grid>
+                    
+                    <TextBlock Text="图片不透明度:" Margin="0,0,0,5" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                    <Grid Margin="0,0,0,20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="OpacitySlider" Minimum="0" Maximum="100" Value="100" ValueChanged="OpacitySlider_ValueChanged" VerticalAlignment="Center" />
+                        <TextBlock x:Name="OpacityText" Grid.Column="1" Text="100%" FontWeight="Bold" Margin="10,0,0,0" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
+                    </Grid>
+                    
+                    <TextBlock Text="平滑过渡范围 (羽化):" Margin="0,0,0,5" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                    <Grid Margin="0,0,0,20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="EdgeBlurSlider" Minimum="0" Maximum="500" Value="0" ValueChanged="EdgeBlurSlider_ValueChanged" VerticalAlignment="Center" />
+                        <TextBlock x:Name="EdgeBlurText" Grid.Column="1" Text="0px" FontWeight="Bold" Margin="10,0,0,0" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
+                    </Grid>
+                    
+                    <CheckBox x:Name="KeepBaseColorCheckBox" Content="图片未覆盖区域使用弹幕底色" Margin="0,0,0,20" Checked="KeepBaseColor_Changed" Unchecked="KeepBaseColor_Changed" />
+                    
+                    <ui:Button Content="保存并应用" Appearance="Primary" HorizontalAlignment="Stretch" Margin="0,0,0,0" Click="Save_Click" />
+                </StackPanel>
+            </ScrollViewer>
         </Border>
     </Grid>
 </Window>

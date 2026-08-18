@@ -102,9 +102,11 @@ namespace NotiFlow.Models
         private double _bgScale;
         private bool _bgKeepBaseColor;
         private double _bgImageOpacity;
+        private double _bgEdgeBlur;
         private bool _showTextStroke;
         private Windows.UI.Color _textStrokeColor;
         private double _textStrokeThickness;
+        private Microsoft.Graphics.Canvas.Geometry.CanvasGeometry? _cachedStrokeGeometry;
 
         // 角色伴随挂件缓存与渲染参数
         private static string _cachedCharacterWidgetPath = "";
@@ -353,9 +355,45 @@ namespace NotiFlow.Models
             _bgScale = config.BackgroundImageScale;
             _bgKeepBaseColor = config.BackgroundImageKeepBaseColor;
             _bgImageOpacity = config.BackgroundImageOpacity;
+            _bgEdgeBlur = config.BackgroundImageEdgeBlur;
             _showTextStroke = config.ShowTextStroke;
             _textStrokeColor = ParseColorExact(config.TextStrokeColorHex, Windows.UI.Color.FromArgb((byte)(255 * config.TextOpacity), 0, 0, 0), config.TextOpacity);
             _textStrokeThickness = config.TextStrokeThickness;
+
+            if (_showTextStroke && _textStrokeThickness > 0)
+            {
+                if (hasEllipsis && fullText.Length > 6)
+                {
+                    string textWithoutEllipsis = fullText.Substring(0, fullText.Length - 6);
+                    var strokeLayout = new CanvasTextLayout(device, textWithoutEllipsis, textFormat, 0.0f, 0.0f);
+                    if (appNameLen > 0)
+                    {
+                        if (config.AppNameFontSize > 0) strokeLayout.SetFontSize(appNameStart, appNameLen, (float)config.AppNameFontSize);
+                        if (!string.IsNullOrEmpty(config.AppNameFontWeight)) strokeLayout.SetFontWeight(appNameStart, appNameLen, new Windows.UI.Text.FontWeight { Weight = (ushort)(config.AppNameFontWeight == "Bold" ? System.Windows.FontWeights.Bold.ToOpenTypeWeight() : System.Windows.FontWeights.Normal.ToOpenTypeWeight()) });
+                        if (!string.IsNullOrEmpty(config.AppNameFontStyle)) strokeLayout.SetFontStyle(appNameStart, appNameLen, config.AppNameFontStyle == "Italic" ? Windows.UI.Text.FontStyle.Italic : Windows.UI.Text.FontStyle.Normal);
+                        if (!string.IsNullOrEmpty(config.AppNameFontFamilyName)) strokeLayout.SetFontFamily(appNameStart, appNameLen, config.AppNameFontFamilyName + ", Segoe UI Emoji");
+                        if (config.AppNameLetterSpacing > 0) strokeLayout.SetCharacterSpacing(appNameStart, appNameLen, 0, (float)config.AppNameLetterSpacing, 0);
+                    }
+                    if (contentLen > 0)
+                    {
+                        if (config.ContentFontSize > 0) strokeLayout.SetFontSize(contentStart, contentLen, (float)config.ContentFontSize);
+                        if (!string.IsNullOrEmpty(config.ContentFontFamilyName)) strokeLayout.SetFontFamily(contentStart, contentLen, config.ContentFontFamilyName + ", Segoe UI Emoji");
+                        if (config.ContentLetterSpacing > 0) strokeLayout.SetCharacterSpacing(contentStart, contentLen, 0, (float)config.ContentLetterSpacing, 0);
+                        if (!string.IsNullOrEmpty(config.ContentFontWeight)) strokeLayout.SetFontWeight(contentStart, contentLen, new Windows.UI.Text.FontWeight { Weight = (ushort)(config.ContentFontWeight == "Bold" ? System.Windows.FontWeights.Bold.ToOpenTypeWeight() : System.Windows.FontWeights.Normal.ToOpenTypeWeight()) });
+                        if (!string.IsNullOrEmpty(config.ContentFontStyle)) strokeLayout.SetFontStyle(contentStart, contentLen, config.ContentFontStyle == "Italic" ? Windows.UI.Text.FontStyle.Italic : Windows.UI.Text.FontStyle.Normal);
+                    }
+                    if (config.LetterSpacing > 0 && textWithoutEllipsis.Length > 0)
+                    {
+                        strokeLayout.SetCharacterSpacing(0, textWithoutEllipsis.Length, 0, (float)config.LetterSpacing, 0);
+                    }
+                    _cachedStrokeGeometry = Microsoft.Graphics.Canvas.Geometry.CanvasGeometry.CreateText(strokeLayout);
+                    strokeLayout.Dispose();
+                }
+                else
+                {
+                    _cachedStrokeGeometry = Microsoft.Graphics.Canvas.Geometry.CanvasGeometry.CreateText(_textLayout);
+                }
+            }
 
             // ===== 角色伴随挂件处理 =====
             _showCharacterWidget = config.ShowCharacterWidget;
@@ -579,9 +617,100 @@ namespace NotiFlow.Models
 
                     // 创建一个圆角矩形的 Geometry 用来裁剪背景图，防止图片超出背景区域
                     using (var geometry = Microsoft.Graphics.Canvas.Geometry.CanvasGeometry.CreateRoundedRectangle(session.Device, drawX, drawY, (float)_bgWidth, (float)_bgHeight, _cornerRadius, _cornerRadius))
-                    using (session.CreateLayer(1.0f, geometry))
                     {
-                        session.DrawImage(_cachedBgImage, new Windows.Foundation.Rect(destX, destY, imgW, imgH), _cachedBgImage.Bounds, (float)_bgImageOpacity, Microsoft.Graphics.Canvas.CanvasImageInterpolation.Linear);
+                        var destRect = new Windows.Foundation.Rect(destX, destY, imgW, imgH);
+                        if (_bgEdgeBlur > 0)
+                        {
+                            float vBlur = (float)Math.Min(6.0, imgH * 0.15);
+                            float ry = vBlur > 0 ? (float)Math.Min(0.2, vBlur / imgH) : 0.0f;
+
+                            bool isRightAnchor = _bgAnchor == ImageAnchor.TopRight || _bgAnchor == ImageAnchor.MiddleRight || _bgAnchor == ImageAnchor.BottomRight;
+                            bool isLeftAnchor = _bgAnchor == ImageAnchor.TopLeft || _bgAnchor == ImageAnchor.MiddleLeft || _bgAnchor == ImageAnchor.BottomLeft;
+
+                            Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop[] hStops;
+                            if (isRightAnchor)
+                            {
+                                float rx = (float)Math.Clamp(_bgEdgeBlur / imgW, 0.01, 1.0);
+                                hStops = new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop[]
+                                {
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = 0.0f, Color = Windows.UI.Color.FromArgb(0, 255, 255, 255) },
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = rx * 0.25f, Color = Windows.UI.Color.FromArgb(38, 255, 255, 255) },
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = rx * 0.50f, Color = Windows.UI.Color.FromArgb(128, 255, 255, 255) },
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = rx * 0.75f, Color = Windows.UI.Color.FromArgb(217, 255, 255, 255) },
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = rx, Color = Windows.UI.Color.FromArgb(255, 255, 255, 255) },
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = 1.0f, Color = Windows.UI.Color.FromArgb(255, 255, 255, 255) }
+                                };
+                            }
+                            else if (isLeftAnchor)
+                            {
+                                float rx = (float)Math.Clamp(_bgEdgeBlur / imgW, 0.01, 1.0);
+                                hStops = new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop[]
+                                {
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = 0.0f, Color = Windows.UI.Color.FromArgb(255, 255, 255, 255) },
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = 1.0f - rx, Color = Windows.UI.Color.FromArgb(255, 255, 255, 255) },
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = 1.0f - rx * 0.75f, Color = Windows.UI.Color.FromArgb(217, 255, 255, 255) },
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = 1.0f - rx * 0.50f, Color = Windows.UI.Color.FromArgb(128, 255, 255, 255) },
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = 1.0f - rx * 0.25f, Color = Windows.UI.Color.FromArgb(38, 255, 255, 255) },
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = 1.0f, Color = Windows.UI.Color.FromArgb(0, 255, 255, 255) }
+                                };
+                            }
+                            else
+                            {
+                                float rx = (float)Math.Clamp(_bgEdgeBlur / imgW, 0.01, 0.5);
+                                hStops = new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop[]
+                                {
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = 0.0f, Color = Windows.UI.Color.FromArgb(0, 255, 255, 255) },
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = rx * 0.25f, Color = Windows.UI.Color.FromArgb(38, 255, 255, 255) },
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = rx * 0.50f, Color = Windows.UI.Color.FromArgb(128, 255, 255, 255) },
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = rx * 0.75f, Color = Windows.UI.Color.FromArgb(217, 255, 255, 255) },
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = rx, Color = Windows.UI.Color.FromArgb(255, 255, 255, 255) },
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = 1.0f - rx, Color = Windows.UI.Color.FromArgb(255, 255, 255, 255) },
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = 1.0f - rx * 0.75f, Color = Windows.UI.Color.FromArgb(217, 255, 255, 255) },
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = 1.0f - rx * 0.50f, Color = Windows.UI.Color.FromArgb(128, 255, 255, 255) },
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = 1.0f - rx * 0.25f, Color = Windows.UI.Color.FromArgb(38, 255, 255, 255) },
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = 1.0f, Color = Windows.UI.Color.FromArgb(0, 255, 255, 255) }
+                                };
+                            }
+
+                            var hMaskBrush = new Microsoft.Graphics.Canvas.Brushes.CanvasLinearGradientBrush(
+                                session.Device,
+                                hStops)
+                            {
+                                StartPoint = new Vector2((float)destX, (float)destY),
+                                EndPoint = new Vector2((float)(destX + imgW), (float)destY),
+                                Opacity = (float)_bgImageOpacity
+                            };
+
+                            var vMaskBrush = new Microsoft.Graphics.Canvas.Brushes.CanvasLinearGradientBrush(
+                                session.Device,
+                                new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop[]
+                                {
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = 0.0f, Color = Windows.UI.Color.FromArgb(0, 255, 255, 255) },
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = ry, Color = Windows.UI.Color.FromArgb(255, 255, 255, 255) },
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = 1.0f - ry, Color = Windows.UI.Color.FromArgb(255, 255, 255, 255) },
+                                    new Microsoft.Graphics.Canvas.Brushes.CanvasGradientStop { Position = 1.0f, Color = Windows.UI.Color.FromArgb(0, 255, 255, 255) }
+                                })
+                            {
+                                StartPoint = new Vector2((float)destX, (float)destY),
+                                EndPoint = new Vector2((float)destX, (float)(destY + imgH))
+                            };
+
+                            using (session.CreateLayer(hMaskBrush, geometry))
+                            using (session.CreateLayer(vMaskBrush, geometry))
+                            {
+                                session.DrawImage(_cachedBgImage, destRect, _cachedBgImage.Bounds, 1.0f, Microsoft.Graphics.Canvas.CanvasImageInterpolation.Linear);
+                            }
+                            
+                            hMaskBrush.Dispose();
+                            vMaskBrush.Dispose();
+                        }
+                        else
+                        {
+                            using (session.CreateLayer(1.0f, geometry))
+                            {
+                                session.DrawImage(_cachedBgImage, destRect, _cachedBgImage.Bounds, (float)_bgImageOpacity, Microsoft.Graphics.Canvas.CanvasImageInterpolation.Linear);
+                            }
+                        }
                     }
                 }
             }
@@ -619,12 +748,16 @@ namespace NotiFlow.Models
                 session.DrawTextLayout(_textLayout, contentX + 1.5f, textY + 1.5f, shadowColor);
             }
 
-            if (_showTextStroke && _textStrokeThickness > 0)
+            if (_showTextStroke && _textStrokeThickness > 0 && _cachedStrokeGeometry != null)
             {
-                using (var geom = Microsoft.Graphics.Canvas.Geometry.CanvasGeometry.CreateText(_textLayout))
+                var strokeStyle = new Microsoft.Graphics.Canvas.Geometry.CanvasStrokeStyle
                 {
-                    session.DrawGeometry(geom, contentX, textY, _textStrokeColor, (float)_textStrokeThickness);
-                }
+                    LineJoin = Microsoft.Graphics.Canvas.Geometry.CanvasLineJoin.Round,
+                    StartCap = Microsoft.Graphics.Canvas.Geometry.CanvasCapStyle.Round,
+                    EndCap = Microsoft.Graphics.Canvas.Geometry.CanvasCapStyle.Round
+                };
+
+                session.DrawGeometry(_cachedStrokeGeometry, contentX, textY, _textStrokeColor, (float)(_textStrokeThickness * 2.0), strokeStyle);
             }
 
             session.DrawTextLayout(_textLayout, contentX, textY, _textColor);
@@ -658,6 +791,9 @@ namespace NotiFlow.Models
 
         public void Dispose()
         {
+            _cachedStrokeGeometry?.Dispose();
+            _cachedStrokeGeometry = null;
+
             _textLayout?.Dispose();
             _textLayout = null;
 

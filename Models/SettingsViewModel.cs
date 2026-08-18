@@ -321,6 +321,8 @@ namespace NotiFlow.Models
             BackgroundImageOffsetY = config.BackgroundImageOffsetY;
             BackgroundImageScale = config.BackgroundImageScale;
             BackgroundImageOpacity = config.BackgroundImageOpacity;
+            BackgroundImageEdgeBlur = config.BackgroundImageEdgeBlur;
+            BackgroundImageKeepBaseColor = config.BackgroundImageKeepBaseColor;
 
             ScrollSpeedCharsPerSec = config.ScrollSpeedCharsPerSec;
             TrackStrategy = config.TrackStrategy;
@@ -849,6 +851,35 @@ namespace NotiFlow.Models
         {
             get => BackgroundImageOpacity * 100;
             set => BackgroundImageOpacity = value / 100.0;
+        }
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(BackgroundImageEdgeBlurDisplay))]
+        private double _backgroundImageEdgeBlur;
+        partial void OnBackgroundImageEdgeBlurChanged(double value)
+        {
+            if (_isSyncing) return;
+            if (value < 0 || value > 500) 
+            { 
+                var oldVal = IsEditingGlobal ? BarrageSettings.BackgroundImageEdgeBlur : GetTargetConfig(true).BackgroundImageEdgeBlur;
+                System.Windows.Application.Current.Dispatcher.BeginInvoke(new System.Action(() => BackgroundImageEdgeBlur = oldVal));
+                return; 
+            }
+            if (IsEditingGlobal) BarrageSettings.BackgroundImageEdgeBlur = value;
+            else GetTargetConfig(true).BackgroundImageEdgeBlur = value;
+            TriggerSaveAndPreview();
+            OnPropertyChanged(nameof(BackgroundImageEdgeBlurDisplay));
+        }
+        public string BackgroundImageEdgeBlurDisplay => $"{BackgroundImageEdgeBlur:0}px";
+
+        [ObservableProperty]
+        private bool _backgroundImageKeepBaseColor = true;
+        partial void OnBackgroundImageKeepBaseColorChanged(bool value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.BackgroundImageKeepBaseColor = value;
+            else GetTargetConfig(true).BackgroundImageKeepBaseColor = value;
+            TriggerSaveAndPreview();
         }
 
         [ObservableProperty]

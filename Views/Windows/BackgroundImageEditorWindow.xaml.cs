@@ -14,8 +14,10 @@ namespace NotiFlow.Views.Windows
         private string _loadedImagePath = "";
         private ImageAnchor _currentAnchor = ImageAnchor.MiddleLeft;
         private double _imageScale = 1.0;
+        private double _opacity = 1.0;
         private double _offsetX = 0;
         private double _offsetY = 0;
+        private double _edgeBlur = 0;
         
         private double _maxCanvasWidth = 800;
         private double _canvasHeight = 60;
@@ -42,19 +44,27 @@ namespace NotiFlow.Views.Windows
             _offsetX = BarrageSettings.BackgroundImageOffsetX;
             _offsetY = BarrageSettings.BackgroundImageOffsetY;
             _imageScale = BarrageSettings.BackgroundImageScale > 0 ? BarrageSettings.BackgroundImageScale : 1.0;
+            _opacity = BarrageSettings.BackgroundImageOpacity;
+            _edgeBlur = BarrageSettings.BackgroundImageEdgeBlur;
             
             _canvasHeight = Math.Max(BarrageSettings.FontSize, BarrageSettings.FontSize * 1.25) + 12; // roughly matches padV*2
             _maxCanvasWidth = BarrageSettings.MaxTextLength * BarrageSettings.FontSize * 0.8; 
             if (_maxCanvasWidth < 200) _maxCanvasWidth = 200;
             
             ScaleText.Text = $"{(_imageScale * 100):F0}%";
+            OpacityText.Text = $"{(_opacity * 100):F0}%";
+            EdgeBlurText.Text = $"{_edgeBlur:F0}px";
             
             _isUpdatingFromCode = true;
             OffsetXBox.Text = _offsetX.ToString("F0");
             OffsetYBox.Text = _offsetY.ToString("F0");
             ScaleSlider.Value = _imageScale * 100;
+            OpacitySlider.Value = _opacity * 100;
+            EdgeBlurSlider.Value = _edgeBlur;
             KeepBaseColorCheckBox.IsChecked = BarrageSettings.BackgroundImageKeepBaseColor;
+            if (ImageThumb != null) ImageThumb.Opacity = _opacity;
             UpdateCanvasBackground();
+            UpdateImageMask();
             _isUpdatingFromCode = false;
         }
 
@@ -156,6 +166,16 @@ namespace NotiFlow.Views.Windows
                 UpdateImagePosition();
                 CalculateOffsetsFromPosition();
             }
+        }
+
+        private void OpacitySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_isUpdatingFromCode) return;
+            if (OpacityText == null || ImageThumb == null) return;
+            
+            _opacity = e.NewValue / 100.0;
+            OpacityText.Text = $"{e.NewValue:F0}%";
+            ImageThumb.Opacity = _opacity;
         }
 
         private void KeepBaseColor_Changed(object sender, RoutedEventArgs e)
@@ -309,6 +329,7 @@ namespace NotiFlow.Views.Windows
             
             // Re-calculate the position based on the NEW anchor so the image jumps to it
             UpdateImagePosition();
+            UpdateImageMask();
         }
 
         private void UpdateAnchorUI()
@@ -333,6 +354,93 @@ namespace NotiFlow.Views.Windows
             if (double.TryParse(OffsetYBox.Text, out double oy)) _offsetY = oy;
             
             UpdateImagePosition();
+        }
+
+        private void EdgeBlurSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_isUpdatingFromCode) return;
+            if (EdgeBlurText == null) return;
+
+            _edgeBlur = e.NewValue;
+            EdgeBlurText.Text = $"{_edgeBlur:F0}px";
+            UpdateImageMask();
+        }
+
+        private void UpdateImageMask()
+        {
+            if (ImageThumb == null || ImageThumb.Template == null) return;
+            var imageEl = ImageThumb.Template.FindName("BackgroundImageElement", ImageThumb) as Image;
+            if (imageEl == null) return;
+
+            if (_edgeBlur <= 0)
+            {
+                imageEl.OpacityMask = null;
+                ImageThumb.OpacityMask = null;
+                return;
+            }
+
+            double w = ImageThumb.Width;
+            double h = ImageThumb.Height;
+            if (w <= 0 || h <= 0) return;
+
+            // 垂直方向仅做轻微的平滑边缘防锯齿（最大 6px），避免上下画面被吞噬
+            double vBlur = Math.Min(6.0, h * 0.15);
+            double ry = vBlur > 0 ? Math.Min(0.2, vBlur / h) : 0.0;
+
+            var vStops = new System.Windows.Media.GradientStopCollection
+            {
+                new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(0, 255, 255, 255), 0.0),
+                new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(255, 255, 255, 255), ry),
+                new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(255, 255, 255, 255), 1.0 - ry),
+                new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(0, 255, 255, 255), 1.0)
+            };
+
+            // 水平方向：朝向感知的超长平滑过渡（拉长到数百像素）
+            var hStops = new System.Windows.Media.GradientStopCollection();
+
+            bool isRightAnchor = _currentAnchor == ImageAnchor.TopRight || _currentAnchor == ImageAnchor.MiddleRight || _currentAnchor == ImageAnchor.BottomRight;
+            bool isLeftAnchor = _currentAnchor == ImageAnchor.TopLeft || _currentAnchor == ImageAnchor.MiddleLeft || _currentAnchor == ImageAnchor.BottomLeft;
+
+            if (isRightAnchor)
+            {
+                // 图片在右侧，朝向内部的【左边缘】展开长距离平滑过渡；右边缘贴紧弹幕边界保持 100% 不透明
+                double rx = Math.Clamp(_edgeBlur / w, 0.01, 1.0);
+                hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(0, 255, 255, 255), 0.0));
+                hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(38, 255, 255, 255), rx * 0.25));
+                hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(128, 255, 255, 255), rx * 0.50));
+                hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(217, 255, 255, 255), rx * 0.75));
+                hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(255, 255, 255, 255), rx));
+                hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(255, 255, 255, 255), 1.0));
+            }
+            else if (isLeftAnchor)
+            {
+                // 图片在左侧，朝向内部的【右边缘】展开长距离平滑过渡；左边缘贴紧弹幕边界保持 100% 不透明
+                double rx = Math.Clamp(_edgeBlur / w, 0.01, 1.0);
+                hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(255, 255, 255, 255), 0.0));
+                hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(255, 255, 255, 255), 1.0 - rx));
+                hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(217, 255, 255, 255), 1.0 - rx * 0.75));
+                hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(128, 255, 255, 255), 1.0 - rx * 0.50));
+                hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(38, 255, 255, 255), 1.0 - rx * 0.25));
+                hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(0, 255, 255, 255), 1.0));
+            }
+            else
+            {
+                // 图片居中，左右双侧对称平滑展开过渡
+                double rx = Math.Clamp(_edgeBlur / w, 0.01, 0.5);
+                hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(0, 255, 255, 255), 0.0));
+                hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(38, 255, 255, 255), rx * 0.25));
+                hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(128, 255, 255, 255), rx * 0.50));
+                hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(217, 255, 255, 255), rx * 0.75));
+                hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(255, 255, 255, 255), rx));
+                hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(255, 255, 255, 255), 1.0 - rx));
+                hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(217, 255, 255, 255), 1.0 - rx * 0.75));
+                hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(128, 255, 255, 255), 1.0 - rx * 0.50));
+                hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(38, 255, 255, 255), 1.0 - rx * 0.25));
+                hStops.Add(new System.Windows.Media.GradientStop(System.Windows.Media.Color.FromArgb(0, 255, 255, 255), 1.0));
+            }
+
+            ImageThumb.OpacityMask = new System.Windows.Media.LinearGradientBrush(hStops, new Point(0, 0), new Point(1, 0));
+            imageEl.OpacityMask = new System.Windows.Media.LinearGradientBrush(vStops, new Point(0, 0), new Point(0, 1));
         }
 
         private void Save_Click(object sender, RoutedEventArgs e)
@@ -363,6 +471,8 @@ namespace NotiFlow.Views.Windows
                 BarrageSettings.BackgroundImageOffsetX = _offsetX;
                 BarrageSettings.BackgroundImageOffsetY = _offsetY;
                 BarrageSettings.BackgroundImageScale = _imageScale;
+                BarrageSettings.BackgroundImageOpacity = _opacity;
+                BarrageSettings.BackgroundImageEdgeBlur = _edgeBlur;
                 BarrageSettings.BackgroundImageKeepBaseColor = KeepBaseColorCheckBox.IsChecked ?? true;
                 BarrageSettings.ShowBackgroundImage = true;
                 

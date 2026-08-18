@@ -1217,19 +1217,9 @@
                             <ui:ToggleSwitch IsChecked="{Binding ShowBackgroundImage, Mode=TwoWay}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                         </Grid>
                         
-                        <Button Content="打开画板设置背景图..." HorizontalAlignment="Stretch" Margin="0,0,0,22" 
-                                Click="OpenBackgroundImageEditor_Click" 
-                                Visibility="{Binding ShowBackgroundImage, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                        
                         <StackPanel Style="{StaticResource SmoothExpanderStyle}" Tag="{Binding ShowBackgroundImage}">
-                            <Grid Margin="0,0,0,8">
-                                <ui:TextBlock Text="图片不透明度"/>
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                <TextBox Text="{Binding BackgroundImageOpacityPercentage, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.#}}" Style="{StaticResource EditableValueTextBoxStyle}" />
-                                <ui:TextBlock Text="%" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,1,0,0"/>
-                            </StackPanel>
-                            </Grid>
-                            <Slider Minimum="0" Maximum="100" Value="{Binding BackgroundImageOpacityPercentage, Mode=TwoWay}" IsSnapToTickEnabled="True" TickFrequency="1" Margin="0,0,0,22" />
+                            <Button Content="打开画板设置背景图..." HorizontalAlignment="Stretch" Margin="0,0,0,22" 
+                                    Click="OpenBackgroundImageEditor_Click" />
                         </StackPanel>
 
                         <!-- 弹幕挂件设置 -->
