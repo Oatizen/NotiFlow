@@ -564,7 +564,109 @@
                 </StackPanel>
             </Border>
         </Popup>
-    </Page.Resources>
+
+        <Popup x:Key="CharacterWidgetFlyout" Placement="Bottom" StaysOpen="True" AllowsTransparency="True">
+            <Border Width="300" Background="{DynamicResource ApplicationBackgroundBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16" TextElement.FontSize="14" TextElement.FontStyle="Normal" TextElement.FontWeight="Normal" TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                <Border.RenderTransform>
+                    <TranslateTransform Y="0"/>
+                </Border.RenderTransform>
+                <StackPanel Width="268">
+                    <Grid Height="32" Margin="0,0,0,12">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
+                            <ui:SymbolIcon Symbol="Sticker24" FontSize="18" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <ui:TextBlock Text="弹幕挂件设置" FontTypography="BodyStrong" FontSize="15" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,12">
+                        <StackPanel VerticalAlignment="Center">
+                            <ui:TextBlock Text="显示弹幕挂件"/>
+                            <ui:TextBlock Text="在弹幕外附带挂件装饰" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <ui:ToggleSwitch IsChecked="{Binding ShowCharacterWidget, Mode=TwoWay}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <StackPanel Style="{StaticResource SmoothExpanderStyle}" Tag="{Binding ShowCharacterWidget}">
+                        <ui:TextBlock Text="选择伴随角色" Margin="0,0,0,8" FontWeight="SemiBold"/>
+                        <ItemsControl ItemsSource="{Binding CharacterPresets}" Margin="0,0,0,4">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Padding="0" Margin="0,0,12,8" Background="Transparent" BorderThickness="0"
+                                            Command="{Binding DataContext.SelectCharacterPresetCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                            CommandParameter="{Binding Id}"
+                                            Cursor="Hand">
+                                        <Border Width="80" Height="80" CornerRadius="8" Padding="6" Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}"/>
+                                                    <Setter Property="BorderThickness" Value="1"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                            <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}"/>
+                                                            <Setter Property="BorderThickness" Value="2"/>
+                                                            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="*"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+
+                                                <Image Grid.Row="0" Source="{Binding ImagePath}" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="44" MaxHeight="44"
+                                                       RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True">
+                                                    <Image.Style>
+                                                        <Style TargetType="Image">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                            <Style.Triggers>
+                                                                <MultiDataTrigger>
+                                                                    <MultiDataTrigger.Conditions>
+                                                                        <Condition Binding="{Binding IsCustom}" Value="True"/>
+                                                                        <Condition Binding="{Binding ImagePath}" Value=""/>
+                                                                    </MultiDataTrigger.Conditions>
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                </MultiDataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Image.Style>
+                                                    </Image>
+
+                                                    <ui:SymbolIcon Grid.Row="0" Symbol="Add24" FontSize="26" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <ui:SymbolIcon.Style>
+                                                            <Style TargetType="ui:SymbolIcon">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <MultiDataTrigger>
+                                                                        <MultiDataTrigger.Conditions>
+                                                                            <Condition Binding="{Binding IsCustom}" Value="True"/>
+                                                                            <Condition Binding="{Binding ImagePath}" Value=""/>
+                                                                        </MultiDataTrigger.Conditions>
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                    </MultiDataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </ui:SymbolIcon.Style>
+                                                    </ui:SymbolIcon>
+
+                                                    <TextBlock Grid.Row="1" Text="{Binding Name}" FontSize="11" TextAlignment="Center" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0"/>
+                                                </Grid>
+                                            </Border>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Popup>
+        </Page.Resources>
 
     <ScrollViewer x:Name="MainScrollViewer" VerticalScrollBarVisibility="Auto" CanContentScroll="False" Background="Transparent" >
         <StackPanel Margin="24,12,24,24" Background="Transparent">
@@ -1128,6 +1230,96 @@
                             </StackPanel>
                             </Grid>
                             <Slider Minimum="0" Maximum="100" Value="{Binding BackgroundImageOpacityPercentage, Mode=TwoWay}" IsSnapToTickEnabled="True" TickFrequency="1" Margin="0,0,0,22" />
+                        </StackPanel>
+
+                        <!-- 弹幕挂件设置 -->
+                        <Grid Margin="0,0,0,16">
+                            <StackPanel>
+                                <ui:TextBlock Text="显示弹幕挂件"/>
+                                <ui:TextBlock Text="在弹幕外附带挂件装饰" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                            </StackPanel>
+                            <ui:ToggleSwitch IsChecked="{Binding ShowCharacterWidget, Mode=TwoWay}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <StackPanel Style="{StaticResource SmoothExpanderStyle}" Tag="{Binding ShowCharacterWidget}">
+                            <!-- 预设选择器横向卡片列表 (左边自定义上传，右边预设) -->
+                            <ItemsControl ItemsSource="{Binding CharacterPresets}" Margin="0,0,0,16">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Padding="0" Margin="0,0,12,8" Background="Transparent" BorderThickness="0"
+                                                Command="{Binding DataContext.SelectCharacterPresetCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                                CommandParameter="{Binding Id}"
+                                                Cursor="Hand">
+                                            <Border Width="80" Height="80" CornerRadius="8" Padding="6" Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}"/>
+                                                        <Setter Property="BorderThickness" Value="1"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}"/>
+                                                                <Setter Property="BorderThickness" Value="2"/>
+                                                                <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <Grid>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="*"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
+
+                                                    <!-- 预设或自定义图片 (启用高质量抗锯齿渲染) -->
+                                                    <Image Grid.Row="0" Source="{Binding ImagePath}" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="44" MaxHeight="44"
+                                                           RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True">
+                                                        <Image.Style>
+                                                            <Style TargetType="Image">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                <Style.Triggers>
+                                                                    <MultiDataTrigger>
+                                                                        <MultiDataTrigger.Conditions>
+                                                                            <Condition Binding="{Binding IsCustom}" Value="True"/>
+                                                                            <Condition Binding="{Binding ImagePath}" Value=""/>
+                                                                        </MultiDataTrigger.Conditions>
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    </MultiDataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Image.Style>
+                                                    </Image>
+
+                                                    <!-- 自定义上传加号图标 -->
+                                                    <ui:SymbolIcon Grid.Row="0" Symbol="Add24" FontSize="26" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <ui:SymbolIcon.Style>
+                                                            <Style TargetType="ui:SymbolIcon">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <MultiDataTrigger>
+                                                                        <MultiDataTrigger.Conditions>
+                                                                            <Condition Binding="{Binding IsCustom}" Value="True"/>
+                                                                            <Condition Binding="{Binding ImagePath}" Value=""/>
+                                                                        </MultiDataTrigger.Conditions>
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                    </MultiDataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </ui:SymbolIcon.Style>
+                                                    </ui:SymbolIcon>
+
+                                                    <!-- 下方名称 -->
+                                                    <TextBlock Grid.Row="1" Text="{Binding Name}" FontSize="11" TextAlignment="Center" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0"/>
+                                                </Grid>
+                                            </Border>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
                         <Grid Margin="0,0,0,16">
                             <StackPanel>

@@ -43,7 +43,7 @@
 
   <ItemGroup>
     <Resource Include="NotiFlow Icon.png" />
-    <Content Include="Images\*.png">
+    <Content Include="Images\**\*.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

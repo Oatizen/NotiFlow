@@ -73,6 +73,15 @@ namespace NotiFlow
         public bool BackgroundImageKeepBaseColor { get; set; } = true;
         public double BackgroundImageOpacity { get; set; } = 1.0;
         
+        // 角色伴随挂件配置
+        public bool ShowCharacterWidget { get; set; } = false;
+        public string CharacterWidgetPath { get; set; } = "";
+        public string CharacterWidgetPresetId { get; set; } = "none"; // none, preset_1, custom
+        public double CharacterWidgetScale { get; set; } = 1.0;
+        public double CharacterWidgetOffsetX { get; set; } = 0;
+        public double CharacterWidgetOffsetY { get; set; } = 0;
+        public double CharacterWidgetOpacity { get; set; } = 1.0;
+        
         public int MaxTextLength { get; set; } = 50;
         public bool HighlightEllipsis { get; set; } = true;
 
@@ -178,6 +187,15 @@ namespace NotiFlow
         public static double BackgroundImageScale { get; set; } = 1.0;
         public static bool BackgroundImageKeepBaseColor { get; set; } = true;
         public static double BackgroundImageOpacity { get; set; } = 1.0;
+
+        // ====== 角色伴随挂件配置 ======
+        public static bool ShowCharacterWidget { get; set; } = false;
+        public static string CharacterWidgetPath { get; set; } = "";
+        public static string CharacterWidgetPresetId { get; set; } = "none";
+        public static double CharacterWidgetScale { get; set; } = 1.0;
+        public static double CharacterWidgetOffsetX { get; set; } = 0;
+        public static double CharacterWidgetOffsetY { get; set; } = 0;
+        public static double CharacterWidgetOpacity { get; set; } = 1.0;
 
         // ====== 截断与速度设定 ======
         public static int MaxTextLength { get; set; } = 50;
@@ -296,6 +314,13 @@ namespace NotiFlow
                 BackgroundImageScale = BackgroundImageScale,
                 BackgroundImageKeepBaseColor = BackgroundImageKeepBaseColor,
                 BackgroundImageOpacity = BackgroundImageOpacity,
+                ShowCharacterWidget = ShowCharacterWidget,
+                CharacterWidgetPath = CharacterWidgetPath,
+                CharacterWidgetPresetId = CharacterWidgetPresetId,
+                CharacterWidgetScale = CharacterWidgetScale,
+                CharacterWidgetOffsetX = CharacterWidgetOffsetX,
+                CharacterWidgetOffsetY = CharacterWidgetOffsetY,
+                CharacterWidgetOpacity = CharacterWidgetOpacity,
                 MaxTextLength = MaxTextLength,
                 HighlightEllipsis = HighlightEllipsis,
 
@@ -452,6 +477,14 @@ namespace NotiFlow
                 BackgroundImageKeepBaseColor = dto.BackgroundImageKeepBaseColor;
                 BackgroundImageOpacity = Math.Clamp(dto.BackgroundImageOpacity, 0.0, 1.0);
 
+                ShowCharacterWidget = dto.ShowCharacterWidget;
+                CharacterWidgetPath = dto.CharacterWidgetPath ?? "";
+                CharacterWidgetPresetId = dto.CharacterWidgetPresetId ?? "none";
+                CharacterWidgetScale = Math.Clamp(dto.CharacterWidgetScale <= 0 ? 1.0 : dto.CharacterWidgetScale, 0.2, 3.0);
+                CharacterWidgetOffsetX = dto.CharacterWidgetOffsetX;
+                CharacterWidgetOffsetY = dto.CharacterWidgetOffsetY;
+                CharacterWidgetOpacity = Math.Clamp(dto.CharacterWidgetOpacity <= 0 ? 1.0 : dto.CharacterWidgetOpacity, 0.0, 1.0);
+
                 MaxTextLength = Math.Clamp(dto.MaxTextLength, 10, 500);
                 ScrollSpeedCharsPerSec = Math.Clamp(dto.ScrollSpeedCharsPerSec, 5.0, 100.0);
                 TrackStrategy = (dto.TrackStrategy == "TopFirst" || dto.TrackStrategy == "BottomFirst") ? dto.TrackStrategy : "UpperCenter";
@@ -540,6 +573,14 @@ namespace NotiFlow
             BackgroundImageScale = 1.0;
             BackgroundImageKeepBaseColor = true;
             BackgroundImageOpacity = 1.0;
+
+            ShowCharacterWidget = false;
+            CharacterWidgetPath = "";
+            CharacterWidgetPresetId = "none";
+            CharacterWidgetScale = 1.0;
+            CharacterWidgetOffsetX = -15;
+            CharacterWidgetOffsetY = -20;
+            CharacterWidgetOpacity = 1.0;
 
             MaxTextLength = 40;
             HighlightEllipsis = true;

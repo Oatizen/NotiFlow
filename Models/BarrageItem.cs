@@ -106,6 +106,23 @@ namespace NotiFlow.Models
         private Windows.UI.Color _textStrokeColor;
         private double _textStrokeThickness;
 
+        // 角色伴随挂件缓存与渲染参数
+        private static string _cachedCharacterWidgetPath = "";
+        private static CanvasBitmap? _cachedCharacterWidgetImage = null;
+        private static readonly object _characterWidgetLock = new object();
+
+        private bool _showCharacterWidget;
+        private double _characterWidgetScale;
+        private double _characterWidgetOffsetX;
+        private double _characterWidgetOffsetY;
+        private double _characterWidgetOpacity;
+        private double _characterWidgetWidth;
+        private double _characterWidgetHeight;
+        private double _characterWidgetRelX;
+        private double _characterWidgetRelY;
+        private double _characterTopOverflow;
+        private double _characterRightOverflow;
+
         public void Reset()
         {
             IsAlive = true;
@@ -122,6 +139,11 @@ namespace NotiFlow.Models
             MonitorSequenceIndex = 0;
             TargetMonitorsSequence = null;
             SourceNotification = null;
+
+            _characterTopOverflow = 0;
+            _characterRightOverflow = 0;
+            _characterWidgetWidth = 0;
+            _characterWidgetHeight = 0;
 
             _textLayout?.Dispose();
             _textLayout = null;
@@ -320,8 +342,6 @@ namespace NotiFlow.Models
             _bgWidth = _contentWidth + _padH * 2;
             _bgHeight = _contentHeight + _padV * 2;
 
-            this.PhysicalWidth = config.ShowBackground ? _bgWidth : _contentWidth;
-
             _showBackground = config.ShowBackground;
             _cornerRadius = (float)config.BackgroundCornerRadius;
             _isUnderlined = config.IsUnderlined;
@@ -336,6 +356,79 @@ namespace NotiFlow.Models
             _showTextStroke = config.ShowTextStroke;
             _textStrokeColor = ParseColorExact(config.TextStrokeColorHex, Windows.UI.Color.FromArgb((byte)(255 * config.TextOpacity), 0, 0, 0), config.TextOpacity);
             _textStrokeThickness = config.TextStrokeThickness;
+
+            // ===== 角色伴随挂件处理 =====
+            _showCharacterWidget = config.ShowCharacterWidget;
+            _characterWidgetScale = config.CharacterWidgetScale <= 0 ? 1.0 : config.CharacterWidgetScale;
+            _characterWidgetOffsetX = config.CharacterWidgetOffsetX;
+            _characterWidgetOffsetY = config.CharacterWidgetOffsetY;
+            _characterWidgetOpacity = config.CharacterWidgetOpacity;
+            _characterTopOverflow = 0;
+            _characterRightOverflow = 0;
+            _characterWidgetWidth = 0;
+            _characterWidgetHeight = 0;
+
+            if (_showCharacterWidget)
+            {
+                string targetPath = config.CharacterWidgetPath;
+                if (string.IsNullOrEmpty(targetPath) || config.CharacterWidgetPresetId == "preset_1")
+                {
+                    string presetInApp = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Images", "Characters", "Preset1_Pajing.png");
+                    if (System.IO.File.Exists(presetInApp))
+                    {
+                        targetPath = presetInApp;
+                    }
+                    else if (System.IO.File.Exists(@"E:\PhotoShop成品\组件1.png"))
+                    {
+                        targetPath = @"E:\PhotoShop成品\组件1.png";
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(targetPath) && System.IO.File.Exists(targetPath))
+                {
+                    lock (_characterWidgetLock)
+                    {
+                        if (_cachedCharacterWidgetPath != targetPath)
+                        {
+                            _cachedCharacterWidgetImage?.Dispose();
+                            _cachedCharacterWidgetImage = null;
+                            try
+                            {
+                                _cachedCharacterWidgetImage = CanvasBitmap.LoadAsync(device, targetPath).GetAwaiter().GetResult();
+                                _cachedCharacterWidgetPath = targetPath;
+                            }
+                            catch { }
+                        }
+                    }
+                }
+
+                if (_cachedCharacterWidgetImage != null)
+                {
+                    double rawW = _cachedCharacterWidgetImage.Size.Width;
+                    double rawH = _cachedCharacterWidgetImage.Size.Height;
+                    if (rawW > 0 && rawH > 0)
+                    {
+                        // 挂件基准高度按字号成比例自适应放大 (例如 24px 字号对应约 67px 挂件高度，清晰显眼)
+                        _characterWidgetHeight = globalFontSize * 2.8 * _characterWidgetScale;
+                        _characterWidgetWidth = _characterWidgetHeight * (rawW / rawH);
+
+                        // 靠右上角放置：挂件下边缘紧贴弹幕背景上边缘
+                        _characterWidgetRelX = _bgWidth - _characterWidgetWidth * 0.95 + _characterWidgetOffsetX;
+                        _characterWidgetRelY = -_characterWidgetHeight + _characterWidgetOffsetY;
+
+                        if (_characterWidgetRelY < 0)
+                        {
+                            _characterTopOverflow = -_characterWidgetRelY;
+                        }
+                        if (_characterWidgetRelX + _characterWidgetWidth > _bgWidth)
+                        {
+                            _characterRightOverflow = (_characterWidgetRelX + _characterWidgetWidth) - _bgWidth;
+                        }
+                    }
+                }
+            }
+
+            this.PhysicalWidth = (config.ShowBackground ? _bgWidth : _contentWidth) + _characterRightOverflow;
 
             if (_showBgImage && !string.IsNullOrEmpty(config.BackgroundImagePath))
             {
@@ -361,7 +454,7 @@ namespace NotiFlow.Models
         {
             // ===== 创建 CompositionDrawingSurface 并在其上绘制弹幕内容 =====
             const int spriteMargin = 2;
-            double visibleHeight = _showBackground ? _bgHeight : _contentHeight;
+            double visibleHeight = (_showBackground ? _bgHeight : _contentHeight) + _characterTopOverflow;
             int surfaceWidth = (int)Math.Ceiling(PhysicalWidth) + spriteMargin * 2;
             int surfaceHeight = (int)Math.Ceiling(visibleHeight) + spriteMargin * 2;
 
@@ -387,10 +480,10 @@ namespace NotiFlow.Models
                 session.FillRectangle(0, 0, surfaceWidth, surfaceHeight, Windows.UI.Color.FromArgb(0, 0, 0, 0));
                 session.Blend = previousBlend;
 
-                // 临时设置绘制坐标为精灵图原点
+                // 临时设置绘制坐标为精灵图原点（Y 坐标向下平移 _characterTopOverflow，为探出的挂件留出顶部空间）
                 double savedX = CurrentX, savedY = CurrentY;
                 CurrentX = spriteMargin;
-                CurrentY = spriteMargin;
+                CurrentY = spriteMargin + _characterTopOverflow;
 
                 Draw(session);
 
@@ -408,8 +501,6 @@ namespace NotiFlow.Models
             var root = compositor.CreateContainerVisual();
             root.Size = contentVisual.Size;
 
-
-
             root.Children.InsertAtTop(contentVisual);
             Visual = root;
         }
@@ -421,6 +512,19 @@ namespace NotiFlow.Models
             float drawX = (float)CurrentX;
             float drawY = (float)CurrentY;
 
+            // ===== 图层 1 (最底层)：绘制右上角角色伴随挂件 =====
+            if (_showCharacterWidget && _cachedCharacterWidgetImage != null && _characterWidgetHeight > 0)
+            {
+                float charX = drawX + (float)_characterWidgetRelX;
+                float charY = drawY + (float)_characterWidgetRelY;
+                session.DrawImage(_cachedCharacterWidgetImage,
+                    new Windows.Foundation.Rect(charX, charY, (float)_characterWidgetWidth, (float)_characterWidgetHeight),
+                    _cachedCharacterWidgetImage.Bounds,
+                    (float)_characterWidgetOpacity,
+                    Microsoft.Graphics.Canvas.CanvasImageInterpolation.HighQualityCubic);
+            }
+
+            // ===== 图层 2 (中层)：绘制弹幕胶囊背景（自然遮挡角色挂件下半部分） =====
             if (_showBackground)
             {
                 if (!_showBgImage || _bgKeepBaseColor)

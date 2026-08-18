@@ -36,7 +36,8 @@ namespace NotiFlow.Views.Pages
             "AppIconFlyout",
             "AppNameFlyout",
             "ContentFlyout",
-            "EllipsisFlyout"
+            "EllipsisFlyout",
+            "CharacterWidgetFlyout"
         };
 
         private readonly System.Collections.Generic.HashSet<System.Windows.Controls.Primitives.Popup> _closingFlyouts = new();
@@ -478,12 +479,80 @@ private void SpawnPreviewBarrage()
             border.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
             double itemWidth = border.DesiredSize.Width > 0 ? border.DesiredSize.Width : 400;
 
+            var wrapperCanvas = new Canvas();
+            wrapperCanvas.Children.Add(border);
+
+            if (config.ShowCharacterWidget)
+            {
+                string charPath = config.CharacterWidgetPath;
+                if (string.IsNullOrEmpty(charPath) || config.CharacterWidgetPresetId == "preset_1")
+                {
+                    string presetInApp = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Images", "Characters", "Preset1_Pajing.png");
+                    if (System.IO.File.Exists(presetInApp)) charPath = presetInApp;
+                    else if (System.IO.File.Exists(@"E:\PhotoShop成品\组件1.png")) charPath = @"E:\PhotoShop成品\组件1.png";
+                }
+
+                if (!string.IsNullOrEmpty(charPath) && System.IO.File.Exists(charPath))
+                {
+                    try
+                    {
+                        var charBmp = new System.Windows.Media.Imaging.BitmapImage();
+                        charBmp.BeginInit();
+                        charBmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                        using (var stream = new System.IO.FileStream(charPath, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite))
+                        {
+                            charBmp.StreamSource = stream;
+                            charBmp.EndInit();
+                        }
+                        charBmp.Freeze();
+
+                        double charScale = config.CharacterWidgetScale <= 0 ? 1.0 : config.CharacterWidgetScale;
+                        double charH = config.FontSize * 2.8 * charScale;
+                        double charW = charH * (charBmp.PixelWidth / (double)charBmp.PixelHeight);
+
+                        var charImg = new Image
+                        {
+                            Source = charBmp,
+                            Width = charW,
+                            Height = charH,
+                            Stretch = Stretch.Uniform,
+                            Opacity = config.CharacterWidgetOpacity <= 0 ? 1.0 : config.CharacterWidgetOpacity,
+                            SnapsToDevicePixels = true
+                        };
+                        RenderOptions.SetBitmapScalingMode(charImg, BitmapScalingMode.HighQuality);
+
+                        double relX = itemWidth - charW * 0.95 + config.CharacterWidgetOffsetX;
+                        double relY = -charH + config.CharacterWidgetOffsetY;
+
+                        Canvas.SetLeft(charImg, relX);
+                        Canvas.SetTop(charImg, relY);
+
+                        if (isPaused)
+                        {
+                            charImg.Cursor = Cursors.Hand;
+                            charImg.MouseLeftButtonUp += (s, e) =>
+                            {
+                                OpenFlyout("CharacterWidgetFlyout", charImg);
+                                e.Handled = true;
+                            };
+                        }
+
+                        // 先插入底层挂件，弹幕胶囊自然在上方遮挡角色下半部
+                        wrapperCanvas.Children.Insert(0, charImg);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine("Character preview failed: " + ex.Message);
+                    }
+                }
+            }
+
             if (isPaused)
             {
-                Canvas.SetLeft(border, (PreviewBorder.ActualWidth - itemWidth) / 2.0);
-                Canvas.SetTop(border, Math.Max(0, (PreviewBorder.ActualHeight - border.DesiredSize.Height) / 2.0));
-                PreviewCanvas.Children.Add(border);
-                border.UpdateLayout();
+                Canvas.SetLeft(wrapperCanvas, (PreviewBorder.ActualWidth - itemWidth) / 2.0);
+                Canvas.SetTop(wrapperCanvas, Math.Max(0, (PreviewBorder.ActualHeight - border.DesiredSize.Height) / 2.0));
+                PreviewCanvas.Children.Add(wrapperCanvas);
+                wrapperCanvas.UpdateLayout();
 
                 // 重新附着弹窗（此时所有视觉子元素均已完成布局测量，TranslatePoint 坐标绝对精确）
                 if (((System.Windows.Controls.Primitives.Popup)this.Resources["AppIconFlyout"])?.IsOpen == true && config.ShowAppIcon) 
@@ -508,21 +577,39 @@ private void SpawnPreviewBarrage()
                 { 
                     OpenFlyout("EllipsisFlyout", (UIElement)stack.Children[ellipsisIndex], true); 
                 }
+
+                if (((System.Windows.Controls.Primitives.Popup)this.Resources["CharacterWidgetFlyout"])?.IsOpen == true && config.ShowCharacterWidget)
+                {
+                    Image? charElement = null;
+                    foreach (UIElement child in wrapperCanvas.Children)
+                    {
+                        if (child is Image img)
+                        {
+                            charElement = img;
+                            break;
+                        }
+                    }
+
+                    if (charElement != null)
+                    {
+                        OpenFlyout("CharacterWidgetFlyout", charElement, true);
+                    }
+                }
             }
             else
             {
-                Canvas.SetLeft(border, PreviewBorder.ActualWidth);
-                Canvas.SetTop(border, Math.Max(0, (PreviewBorder.ActualHeight - border.DesiredSize.Height) / 2.0));
-                PreviewCanvas.Children.Add(border);
+                Canvas.SetLeft(wrapperCanvas, PreviewBorder.ActualWidth);
+                Canvas.SetTop(wrapperCanvas, Math.Max(0, (PreviewBorder.ActualHeight - border.DesiredSize.Height) / 2.0));
+                PreviewCanvas.Children.Add(wrapperCanvas);
 
                 var animation = new System.Windows.Media.Animation.DoubleAnimation
                 {
                     From = PreviewBorder.ActualWidth,
-                    To = -itemWidth,
+                    To = -itemWidth - 100,
                     Duration = TimeSpan.FromSeconds(Math.Max(3, (PreviewBorder.ActualWidth + itemWidth) / (config.ScrollSpeedCharsPerSec * config.FontSize))),
                     RepeatBehavior = System.Windows.Media.Animation.RepeatBehavior.Forever
                 };
-                border.BeginAnimation(Canvas.LeftProperty, animation);
+                wrapperCanvas.BeginAnimation(Canvas.LeftProperty, animation);
             }
         }
 
@@ -579,6 +666,28 @@ private void SpawnPreviewBarrage()
             editor.ShowDialog();
             
             // 刷新预览图以应用背景图设置
+            if (PreviewBorder.ActualWidth > 0)
+            {
+                SpawnPreviewBarrage();
+            }
+        }
+
+        private void OpenCharacterWidgetEditor_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            var editor = new Windows.CharacterWidgetEditorWindow();
+            editor.ShowDialog();
+
+            // 刷新 ViewModel 和预览图以应用角色挂件排版设置
+            if (DataContext is SettingsViewModel vm)
+            {
+                vm.CharacterWidgetPath = BarrageSettings.CharacterWidgetPath;
+                vm.CharacterWidgetScale = BarrageSettings.CharacterWidgetScale;
+                vm.CharacterWidgetOffsetX = BarrageSettings.CharacterWidgetOffsetX;
+                vm.CharacterWidgetOffsetY = BarrageSettings.CharacterWidgetOffsetY;
+                vm.ShowCharacterWidget = BarrageSettings.ShowCharacterWidget;
+                vm.InitializeCharacterPresets();
+            }
+
             if (PreviewBorder.ActualWidth > 0)
             {
                 SpawnPreviewBarrage();

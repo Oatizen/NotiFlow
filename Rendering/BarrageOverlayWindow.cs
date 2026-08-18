@@ -204,8 +204,22 @@ namespace NotiFlow.Rendering
 
         private void InitializeTracks()
         {
-            double usableHeight = _height - TopMargin - (BarrageSettings.FontSize + 16);
-            _trackCount = Math.Max(1, (int)(usableHeight / (BarrageSettings.FontSize + 16)));
+            double widgetOverflow = 0;
+            if (BarrageSettings.ShowCharacterWidget)
+            {
+                double charHeight = BarrageSettings.FontSize * 2.8 * (BarrageSettings.CharacterWidgetScale <= 0 ? 1.0 : BarrageSettings.CharacterWidgetScale);
+                double relY = -charHeight + BarrageSettings.CharacterWidgetOffsetY;
+                if (relY < 0)
+                {
+                    widgetOverflow = -relY;
+                }
+            }
+
+            double trackHeight = (BarrageSettings.FontSize + 16) + widgetOverflow;
+            double topMargin = TopMargin + widgetOverflow;
+
+            double usableHeight = _height - topMargin - trackHeight;
+            _trackCount = Math.Max(1, (int)(usableHeight / Math.Max(10, trackHeight)));
             _trackOccupied = new bool[_trackCount];
         }
 
@@ -382,7 +396,20 @@ namespace NotiFlow.Rendering
             var config = BarrageSettings.GetResolvedConfig(message.Aumid, currentForegroundExe);
 
             double fontSize = config.FontSize > 0 ? config.FontSize : 36;
-            double topPosition = TopMargin + track * (BarrageSettings.FontSize + 16);
+            
+            double widgetOverflow = 0;
+            if (config.ShowCharacterWidget)
+            {
+                double charHeight = fontSize * 2.8 * (config.CharacterWidgetScale <= 0 ? 1.0 : config.CharacterWidgetScale);
+                double relY = -charHeight + config.CharacterWidgetOffsetY;
+                if (relY < 0)
+                {
+                    widgetOverflow = -relY;
+                }
+            }
+
+            double trackHeight = (BarrageSettings.FontSize + 16) + widgetOverflow;
+            double topPosition = TopMargin + widgetOverflow + track * trackHeight;
             double speedPixelsPerSec = config.ScrollSpeedCharsPerSec * fontSize;
             if (speedPixelsPerSec < 10) speedPixelsPerSec = 10;
 

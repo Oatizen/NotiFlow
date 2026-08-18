@@ -222,6 +222,7 @@ namespace NotiFlow.Models
             _hotKeyText = GetHotKeyString(BarrageSettings.HotKeyModifier, BarrageSettings.HotKey);
             _multiMonitorMode = BarrageSettings.MultiMonitorMode;
 
+            InitializeCharacterPresets();
             LoadMonitors();
             Services.ScreenService.DisplaySettingsChanged += () =>
             {
@@ -361,6 +362,17 @@ namespace NotiFlow.Models
             // --- AppIcon Local Config ---
             AppIconScale = config.AppIconScale > 0 ? config.AppIconScale : 1.0;
 
+            // --- 角色伴随挂件配置 ---
+            ShowCharacterWidget = config.ShowCharacterWidget;
+            CharacterWidgetPresetId = config.CharacterWidgetPresetId ?? (config.ShowCharacterWidget ? "preset_1" : "none");
+            CharacterWidgetPath = config.CharacterWidgetPath;
+            CharacterWidgetScale = config.CharacterWidgetScale <= 0 ? 1.0 : config.CharacterWidgetScale;
+            CharacterWidgetScalePercentage = CharacterWidgetScale * 100.0;
+            CharacterWidgetOffsetX = config.CharacterWidgetOffsetX;
+            CharacterWidgetOffsetY = config.CharacterWidgetOffsetY;
+            CharacterWidgetOpacityPercentage = (config.CharacterWidgetOpacity <= 0 ? 1.0 : config.CharacterWidgetOpacity) * 100.0;
+            UpdateCharacterPresetSelection();
+
             OnPropertyChanged(nameof(FontSizeDisplay));
             OnPropertyChanged(nameof(LetterSpacingDisplay));
             OnPropertyChanged(nameof(MaxTextLengthDisplay));
@@ -377,6 +389,10 @@ namespace NotiFlow.Models
             OnPropertyChanged(nameof(BackgroundImageOffsetYDisplay));
             OnPropertyChanged(nameof(BackgroundImageScaleDisplay));
             OnPropertyChanged(nameof(BackgroundImageOpacityDisplay));
+            OnPropertyChanged(nameof(CharacterWidgetScaleDisplay));
+            OnPropertyChanged(nameof(CharacterWidgetOpacityDisplay));
+            OnPropertyChanged(nameof(CharacterWidgetOffsetXDisplay));
+            OnPropertyChanged(nameof(CharacterWidgetOffsetYDisplay));
             OnPropertyChanged(nameof(SpeedDisplay));
 
             OnPropertyChanged(nameof(IsTrackUpperCenter));
@@ -1560,6 +1576,219 @@ namespace NotiFlow.Models
         {
             BarrageSettings.Monitors = MonitorList.ToList();
             TriggerSaveAndPreview();
+        }
+
+        // ====== 角色伴随挂件设置支持 ======
+        public ObservableCollection<CharacterPresetItemDto> CharacterPresets { get; } = new();
+
+        public void InitializeCharacterPresets()
+        {
+            CharacterPresets.Clear();
+
+            // 1. 自定义上传（左边第 1 位）
+            CharacterPresets.Add(new CharacterPresetItemDto
+            {
+                Id = "custom",
+                Name = "自定义上传",
+                ImagePath = CharacterWidgetPresetId == "custom" ? CharacterWidgetPath : "",
+                IsSelected = CharacterWidgetPresetId == "custom"
+            });
+
+            // 2. 预设角色图片（右边第 2 位）
+            string preset1Path = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Images", "Characters", "Preset1_Pajing.png");
+            if (!System.IO.File.Exists(preset1Path) && System.IO.File.Exists(@"E:\PhotoShop成品\组件1.png"))
+            {
+                preset1Path = @"E:\PhotoShop成品\组件1.png";
+            }
+
+            CharacterPresets.Add(new CharacterPresetItemDto
+            {
+                Id = "preset_1",
+                Name = "预设",
+                ImagePath = preset1Path,
+                IsSelected = CharacterWidgetPresetId == "preset_1" || (string.IsNullOrEmpty(CharacterWidgetPresetId) && !string.IsNullOrEmpty(preset1Path))
+            });
+        }
+
+        private void UpdateCharacterPresetSelection()
+        {
+            foreach (var p in CharacterPresets)
+            {
+                p.IsSelected = (p.Id == CharacterWidgetPresetId);
+                if (p.Id == "custom" && !string.IsNullOrEmpty(CharacterWidgetPath))
+                {
+                    p.ImagePath = CharacterWidgetPath;
+                }
+            }
+        }
+
+        [ObservableProperty]
+        private bool _showCharacterWidget;
+        partial void OnShowCharacterWidgetChanged(bool value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.ShowCharacterWidget = value;
+            else GetTargetConfig(true).ShowCharacterWidget = value;
+            UpdateCharacterPresetSelection();
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        private string _characterWidgetPresetId = "none";
+        partial void OnCharacterWidgetPresetIdChanged(string value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.CharacterWidgetPresetId = value;
+            else GetTargetConfig(true).CharacterWidgetPresetId = value;
+            UpdateCharacterPresetSelection();
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        private string _characterWidgetPath = "";
+        partial void OnCharacterWidgetPathChanged(string value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.CharacterWidgetPath = value;
+            else GetTargetConfig(true).CharacterWidgetPath = value;
+            UpdateCharacterPresetSelection();
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        private double _characterWidgetScale = 1.0;
+        partial void OnCharacterWidgetScaleChanged(double value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.CharacterWidgetScale = value;
+            else GetTargetConfig(true).CharacterWidgetScale = value;
+            _characterWidgetScalePercentage = value * 100.0;
+            OnPropertyChanged(nameof(CharacterWidgetScalePercentage));
+            OnPropertyChanged(nameof(CharacterWidgetScaleDisplay));
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        private double _characterWidgetScalePercentage = 100.0;
+        partial void OnCharacterWidgetScalePercentageChanged(double value)
+        {
+            if (_isSyncing) return;
+            _characterWidgetScale = value / 100.0;
+            if (IsEditingGlobal) BarrageSettings.CharacterWidgetScale = _characterWidgetScale;
+            else GetTargetConfig(true).CharacterWidgetScale = _characterWidgetScale;
+            OnPropertyChanged(nameof(CharacterWidgetScale));
+            OnPropertyChanged(nameof(CharacterWidgetScaleDisplay));
+            TriggerSaveAndPreview();
+        }
+        public string CharacterWidgetScaleDisplay => $"{CharacterWidgetScalePercentage:0}%";
+
+        [ObservableProperty]
+        private double _characterWidgetOffsetX = -15.0;
+        partial void OnCharacterWidgetOffsetXChanged(double value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.CharacterWidgetOffsetX = value;
+            else GetTargetConfig(true).CharacterWidgetOffsetX = value;
+            OnPropertyChanged(nameof(CharacterWidgetOffsetXDisplay));
+            TriggerSaveAndPreview();
+        }
+        public string CharacterWidgetOffsetXDisplay => $"{CharacterWidgetOffsetX:0}px";
+
+        [ObservableProperty]
+        private double _characterWidgetOffsetY = -20.0;
+        partial void OnCharacterWidgetOffsetYChanged(double value)
+        {
+            if (_isSyncing) return;
+            if (IsEditingGlobal) BarrageSettings.CharacterWidgetOffsetY = value;
+            else GetTargetConfig(true).CharacterWidgetOffsetY = value;
+            OnPropertyChanged(nameof(CharacterWidgetOffsetYDisplay));
+            TriggerSaveAndPreview();
+        }
+        public string CharacterWidgetOffsetYDisplay => $"{CharacterWidgetOffsetY:0}px";
+
+        [ObservableProperty]
+        private double _characterWidgetOpacityPercentage = 100.0;
+        partial void OnCharacterWidgetOpacityPercentageChanged(double value)
+        {
+            if (_isSyncing) return;
+            double opacity = value / 100.0;
+            if (IsEditingGlobal) BarrageSettings.CharacterWidgetOpacity = opacity;
+            else GetTargetConfig(true).CharacterWidgetOpacity = opacity;
+            OnPropertyChanged(nameof(CharacterWidgetOpacityDisplay));
+            TriggerSaveAndPreview();
+        }
+        public string CharacterWidgetOpacityDisplay => $"{CharacterWidgetOpacityPercentage:0}%";
+
+        [RelayCommand]
+        private void SelectCharacterPreset(string presetId)
+        {
+            if (presetId == "custom")
+            {
+                CharacterWidgetPresetId = "custom";
+                Application.Current?.Dispatcher?.Invoke(() =>
+                {
+                    var editor = new NotiFlow.Views.Windows.CharacterWidgetEditorWindow();
+                    editor.ShowDialog();
+
+                    CharacterWidgetPath = BarrageSettings.CharacterWidgetPath;
+                    CharacterWidgetScale = BarrageSettings.CharacterWidgetScale;
+                    CharacterWidgetOffsetX = BarrageSettings.CharacterWidgetOffsetX;
+                    CharacterWidgetOffsetY = BarrageSettings.CharacterWidgetOffsetY;
+                    ShowCharacterWidget = BarrageSettings.ShowCharacterWidget;
+                    CharacterWidgetPresetId = "custom";
+                    InitializeCharacterPresets();
+                    TriggerSaveAndPreview();
+                });
+            }
+            else if (presetId == "preset_1")
+            {
+                CharacterWidgetPresetId = "preset_1";
+                string preset1Path = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Images", "Characters", "Preset1_Pajing.png");
+                if (!System.IO.File.Exists(preset1Path) && System.IO.File.Exists(@"E:\PhotoShop成品\组件1.png"))
+                {
+                    preset1Path = @"E:\PhotoShop成品\组件1.png";
+                }
+                CharacterWidgetPath = preset1Path;
+                CharacterWidgetScale = 1.0;
+                CharacterWidgetOffsetX = 0;
+                CharacterWidgetOffsetY = 0;
+                if (IsEditingGlobal)
+                {
+                    BarrageSettings.CharacterWidgetPath = CharacterWidgetPath;
+                    BarrageSettings.CharacterWidgetPresetId = "preset_1";
+                    BarrageSettings.CharacterWidgetScale = 1.0;
+                    BarrageSettings.CharacterWidgetOffsetX = 0;
+                    BarrageSettings.CharacterWidgetOffsetY = 0;
+                }
+                InitializeCharacterPresets();
+                TriggerSaveAndPreview();
+            }
+        }
+
+        [RelayCommand]
+        private void BrowseCustomCharacterImage()
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "选择角色挂件图片",
+                Filter = "图片文件 (*.png;*.jpg;*.jpeg;*.webp)|*.png;*.jpg;*.jpeg;*.webp|所有文件 (*.*)|*.*"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                CharacterWidgetPath = dialog.FileName;
+                ShowCharacterWidget = true;
+                CharacterWidgetPresetId = "custom";
+            }
+        }
+
+        [RelayCommand]
+        private void ResetCharacterWidgetTransform()
+        {
+            CharacterWidgetScalePercentage = 100;
+            CharacterWidgetOffsetX = -15;
+            CharacterWidgetOffsetY = -20;
+            CharacterWidgetOpacityPercentage = 100;
         }
     }
 }
