@@ -29,11 +29,11 @@ https://github.com/user-attachments/assets/d6c6ac91-e404-48e4-8109-85fa61497eff
 
 - 🖱️ **鼠标穿透**：弹幕处于置顶状态，但鼠标点击会直接穿透到下层游戏/网页，避免干扰操作。
 - ⚡ **硬件性能0负担**：接入 `Windows.UI.Composition API`，弹幕由GPU直接渲染，最大化保留设备性能，不干扰工作娱乐。
-- 🎨 **丰富的自定义选项**：共16种弹幕字体、字号、文字颜色、透明度、弹幕速度乃至弹幕最大长度，都可自定义
-- 🎯 **作用域设置**：在哪些界面上方显示弹幕，显示哪些应用的通知，NotiFlow都可实现，黑/白名单模式，设置更自由。
+- 🎨 **丰富的自定义选项**：共19种自定义选项，字体、字号、文字颜色、透明度、弹幕速度乃至弹幕最大长度，弹幕的每一部分皆可单独自定义样式，更可上传图片作为弹幕背景、挂件，自定义独属于你的弹幕样式。
+- 🎯 **作用域设置**：在哪些界面上方显示弹幕，显示哪些应用的通知，各自情景显示的弹幕是何种样式，NotiFlow都可自定义，设置更自由。
 - 🛡️ **防截图保护**：采用 `DisplayAffinity` 技术，只需开启设置开关，使用系统截图或 OBS 等软件录屏时，弹幕会在捕捉画面中自动隐藏，保护隐私。
-- ⌨️ **快捷开关弹幕显示**：可自定义快捷键，随时开关弹幕显示
-- ⚙️ **开机自启**：可自定义是否开机自启，无需每次手动启动
+- ⌨️ **多显示器支持**：支持多显示器设置，可自由选择NotiFlow在哪些显示器工作，更可实现弹幕跨显示器流转。
+- ⚙️ **开机自启**：可自定义是否开机自启，无需每次手动启动。
 
 ---
 
@@ -43,16 +43,24 @@ https://github.com/user-attachments/assets/d6c6ac91-e404-48e4-8109-85fa61497eff
   <img src="assets/readme/ppt-theme/header-install.png" alt="如何安装 Install" width="100%">
 </div>
 
-### 方式一：【首选推荐】微软商店版本（静默自动更新）
+### 方式一：【首选推荐】微软商店版本
 通过微软商店安装是获取 NotiFlow 最简单、最安全的方式。
 - **🌐 网页版商店**：点击进入 [NotiFlow 微软商店页面](https://apps.microsoft.com/detail/9PGZ5PVTMG0P?hl=zh-cn&gl=CN&ocid=pdpshare)，点击“在Microsoft Store中查看”或是“下载”。
 - **🚀 一键引导安装**：前往 Releases 页面（[GitHub](https://github.com/Oatizen/NotiFlow/releases) 或 [Gitee](https://gitee.com/Oatizen/NotiFlow/releases)）下载并运行 `NotiFlow_Store_Installer.exe`，将自动唤起微软商店安装最新版本。
 - **🔍 手动搜索**：打开系统自带的 Microsoft Store，搜索 `NotiFlow` 进入商店页面，点击安装。
 
-### 方式二：免安装便携版（绿色免安装）
-1. 前往 Releases 页面（[GitHub](https://github.com/Oatizen/NotiFlow/releases) 或 [Gitee](https://gitee.com/Oatizen/NotiFlow/releases)）下载最新版本附件中的 `NotiFlow.zip`。
-2. 解压后直接双击运行 `NotiFlow.exe`（内置所需环境，开箱即用）。
+### 方式二：免安装绿色版
+1. 前往 Releases 页面（[GitHub](https://github.com/Oatizen/NotiFlow/releases) 或 [Gitee](https://gitee.com/Oatizen/NotiFlow/releases)）下载最新版本附件中的 `NotiFlow-vX.X.X-Standalone.exe`。
+2. 下载完毕后直接双击运行 `NotiFlow-vX.X.X-Standalone.exe`（内置所需环境，开箱即用）。
 3. 在桌面右下角系统托盘中找到 NotiFlow 图标，左键单击或通过右键菜单进入“设置”界面。
+
+### 方式三：便携版
+便携版安装包更小但不含应用运行所必需的运行环境，你需要先在设备上安装`.NET 桌面运行时`才能够使用NotiFlow。
+1. 前往[.NET 运行时官网](https://dotnet.microsoft.com/download/dotnet/8.0)中点击最新版本的`.NET 桌面运行时 8.0.X`下方`安装程序`中的`x64`（注：不是`ASP.NET Core 运行时`、`.NET 运行时`、`SDK`或是`x86,x64,winget指令`版的`.NET桌面运行时`）。
+2. 下载完毕后打开`windowsdesktop-runtime-8.0.X-win-x64.exe`,点击`安装`并等待安装完成。
+3. 前往 Releases 页面（[GitHub](https://github.com/Oatizen/NotiFlow/releases) 或 [Gitee](https://gitee.com/Oatizen/NotiFlow/releases)）下载最新版本附件中的 `NotiFlow-vX.X.X-Portable.exe`。
+4. 下载完毕后直接双击运行 `NotiFlow-vX.X.X-Portable.exe`，若无法运行，请检查是否已正确下载`.NET 桌面运行时`）
+5. 在桌面右下角系统托盘中找到 NotiFlow 图标，左键单击或通过右键菜单进入“设置”界面。
 
 *注：弹幕不支持在以全屏模式运行的程序上方显示，请尝试使用无边框窗口模式*
 - ❓为什么不会显示我的微信通知？
