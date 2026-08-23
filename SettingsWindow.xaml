@@ -72,6 +72,11 @@
                     Content="作用域"
                     Icon="{ui:SymbolIcon Target24}"
                     TargetPageType="{x:Type pages:ScopePage}" />
+                <!-- 连接页 -->
+                <ui:NavigationViewItem
+                    Content="连接"
+                    Icon="{ui:SymbolIcon Link24}"
+                    TargetPageType="{x:Type pages:ConnectPage}" />
             </ui:NavigationView.MenuItems>
 
             <ui:NavigationView.FooterMenuItems>

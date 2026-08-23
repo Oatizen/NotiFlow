@@ -1,0 +1,187 @@
+<ui:FluentWindow x:Class="NotiFlow.Views.Windows.EmailAccountDialog"
+                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                  Title="绑定邮箱账号"
+                  Width="500"
+                  Height="520"
+                  ResizeMode="NoResize"
+                  WindowStartupLocation="CenterOwner"
+                  ExtendsContentIntoTitleBar="True"
+                  WindowBackdropType="Mica"
+                  Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 标题栏 -->
+        <ui:TitleBar Grid.Row="0" Title="绑定邮箱账号" ShowMinimize="False" ShowMaximize="False"/>
+
+        <!-- 表单内容区 -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="28,12,28,16">
+
+                <!-- 品牌服务商信息卡片 -->
+                <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="10"
+                        Padding="16,12"
+                        Margin="0,0,0,16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Image x:Name="ProviderLogoImage" 
+                               Grid.Column="0" 
+                               Width="100" 
+                               Height="42" 
+                               Stretch="Uniform"
+                               Margin="0,0,14,0"/>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock x:Name="ProviderNameText" 
+                                       Text="QQ 邮箱" 
+                                       FontSize="16" 
+                                       FontWeight="Bold"/>
+                            <TextBlock x:Name="ServerInfoText" 
+                                       Text="IMAP: imap.qq.com (SSL: 993)" 
+                                       FontSize="12" 
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" 
+                                       Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- 邮箱地址输入 -->
+                <StackPanel Margin="0,0,0,14">
+                    <TextBlock Text="邮箱地址 *" 
+                               FontSize="13" 
+                               FontWeight="SemiBold" 
+                               Margin="0,0,0,6"/>
+                    <ui:TextBox x:Name="EmailAddressBox" 
+                                PlaceholderText="例如: yourname@domain.com"
+                                Height="34"
+                                TextChanged="Field_TextChanged"/>
+                </StackPanel>
+
+                <!-- 授权码 / 密码输入 -->
+                <StackPanel Margin="0,0,0,14">
+                    <TextBlock Text="IMAP 授权码 / 客户端密码 *" 
+                               FontSize="13" 
+                               FontWeight="SemiBold" 
+                               Margin="0,0,0,6"/>
+                    <Grid>
+                        <ui:PasswordBox x:Name="AuthCodeBox" 
+                                        PlaceholderText="输入 16 位邮箱授权码"
+                                        Height="34"
+                                        PasswordChanged="Field_TextChanged"/>
+                    </Grid>
+                </StackPanel>
+
+                <!-- 备注名称 -->
+                <StackPanel Margin="0,0,0,14">
+                    <TextBlock Text="自定义备注名称" 
+                               FontSize="13" 
+                               FontWeight="SemiBold" 
+                               Margin="0,0,0,6"/>
+                    <ui:TextBox x:Name="DisplayNameBox" 
+                                PlaceholderText="例如: 工作邮箱、个人备用"
+                                Height="34"/>
+                </StackPanel>
+
+                <!-- 自定义服务器高级设置（仅在自定义模式时显示） -->
+                <StackPanel x:Name="CustomServerPanel" Visibility="Collapsed" Margin="0,0,0,14">
+                    <TextBlock Text="IMAP 服务器地址与端口 *" 
+                               FontSize="13" 
+                               FontWeight="SemiBold" 
+                               Margin="0,0,0,6"/>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="90"/>
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBox x:Name="ServerHostBox" 
+                                    Grid.Column="0" 
+                                    PlaceholderText="imap.example.com"
+                                    Height="34"/>
+                        <ui:TextBox x:Name="ServerPortBox" 
+                                    Grid.Column="2" 
+                                    Text="993"
+                                    Height="34"/>
+                    </Grid>
+                    <CheckBox x:Name="UseSslCheckBox" 
+                              Content="使用 SSL/TLS 加密连接" 
+                              IsChecked="True"/>
+                </StackPanel>
+
+                <!-- 官方指引提示信息卡片 -->
+                <Border Background="#F0F7FF"
+                        BorderBrush="#B9DAFB"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="14,10"
+                        Margin="0,4,0,0">
+                    <StackPanel>
+                        <TextBlock Text="💡 授权码获取指引" 
+                                   FontSize="12" 
+                                   FontWeight="Bold" 
+                                   Foreground="#005FB8" 
+                                   Margin="0,0,0,4"/>
+                        <TextBlock x:Name="HelpGuideText" 
+                                   Text="请前往邮箱网页端 -> 设置 -> 账户 -> 开启 POP3/IMAP 服务获取授权码" 
+                                   FontSize="11.5" 
+                                   Foreground="#204060" 
+                                   TextWrapping="Wrap"
+                                   LineHeight="16"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 错误状态信息提示 -->
+                <TextBlock x:Name="StatusMessageText" 
+                           FontSize="12" 
+                           Foreground="#D83B01" 
+                           TextWrapping="Wrap" 
+                           Margin="0,10,0,0" 
+                           Visibility="Collapsed"/>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- 底部操作按钮 -->
+        <Border Grid.Row="2"
+                Padding="24,14"
+                BorderThickness="0,1,0,0"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+            <Grid>
+                <!-- 删除此账号按钮（编辑模式可见） -->
+                <ui:Button x:Name="DeleteAccountButton"
+                           Content="删除账号"
+                           Appearance="Danger"
+                           HorizontalAlignment="Left"
+                           Padding="16,6"
+                           Visibility="Collapsed"
+                           Click="DeleteAccount_Click"/>
+
+                <!-- 右侧确定与取消 -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <ui:Button x:Name="CancelButton"
+                               Content="取消"
+                               Margin="0,0,10,0"
+                               Padding="20,6"
+                               Click="CancelButton_Click"/>
+                    <ui:Button x:Name="SaveButton"
+                               Content="测试并保存"
+                               Appearance="Primary"
+                               Padding="20,6"
+                               Click="SaveButton_Click"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</ui:FluentWindow>

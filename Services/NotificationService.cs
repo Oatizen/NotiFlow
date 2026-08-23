@@ -89,6 +89,19 @@ namespace NotiFlow.Services
                     var currentNotifications = await _listener!.GetNotificationsAsync(NotificationKinds.Toast);
                     var currentIds = new HashSet<uint>();
 
+                    if (!BarrageSettings.EnableWindowsNotifications)
+                    {
+                        // 当关闭获取 Windows 系统通知时，持续同步已知 ID 并清理失效 ID，
+                        // 避免在用户重新开启开关时，把关闭期间产生的历史堆积通知误当做“新通知”发射弹幕
+                        foreach (var n in currentNotifications)
+                        {
+                            currentIds.Add(n.Id);
+                            _knownNotificationIds.Add(n.Id);
+                        }
+                        _knownNotificationIds.IntersectWith(currentIds);
+                        continue;
+                    }
+
                     foreach (var n in currentNotifications)
                     {
                         currentIds.Add(n.Id);

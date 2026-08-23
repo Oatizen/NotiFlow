@@ -17,6 +17,8 @@ namespace NotiFlow
         private SettingsWindow? _settingsWindow;
         private ForegroundMonitorService? _foregroundMonitorService;
         public ForegroundMonitorService? ForegroundMonitor => _foregroundMonitorService;
+        private EmailNotificationService? _emailNotificationService;
+        public EmailNotificationService? EmailNotificationService => _emailNotificationService;
 
         public App()
         {
@@ -105,6 +107,10 @@ namespace NotiFlow
             // 【关键修复】初始化 Windows 原生通知监听核心服务
             new NotificationService();
             _ = NotificationService.Instance!.InitializeAsync();
+
+            // 初始化多邮箱 IMAP 监听核心服务
+            _emailNotificationService = new EmailNotificationService();
+            _ = _emailNotificationService.InitializeAsync();
 
             // 初始化多显示器弹幕渲染管理中心
             _barrageManager = new Rendering.BarrageManager();
@@ -338,6 +344,7 @@ namespace NotiFlow
         protected override void OnExit(ExitEventArgs e)
         {
             CleanUpLockFile();
+            _emailNotificationService?.Dispose();
             _foregroundMonitorService?.Dispose();
             _trayIconService?.Dispose();
             _barrageManager?.Dispose();

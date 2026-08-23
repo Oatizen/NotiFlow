@@ -1,0 +1,817 @@
+<Page x:Class="NotiFlow.Views.Pages.ConnectPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:viewmodels="clr-namespace:NotiFlow.Models"
+      Title="连接"
+      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+      Background="Transparent"
+      TextOptions.TextFormattingMode="Display"
+      TextOptions.TextRenderingMode="ClearType"
+      UseLayoutRounding="True"
+      SnapsToDevicePixels="True"
+      PreviewMouseLeftButtonDown="Page_PreviewMouseLeftButtonDown">
+
+    <Page.DataContext>
+        <viewmodels:SettingsViewModel />
+    </Page.DataContext>
+
+    <Page.Resources>
+        <!-- 基础折叠卡片交互样式：轻量上浮与柔和投影 -->
+        <Style x:Key="ConnectCardStyle" TargetType="Border">
+            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}"/>
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <TranslateTransform Y="0"/>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="12" ShadowDepth="3" Direction="270" Opacity="0.14" Color="#000000"/>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Trigger.EnterActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                                                 To="-3" Duration="0:0:0.16">
+                                    <DoubleAnimation.EasingFunction>
+                                        <CubicEase EasingMode="EaseOut"/>
+                                    </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.BlurRadius)"
+                                                 To="20" Duration="0:0:0.16"/>
+                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.ShadowDepth)"
+                                                 To="5" Duration="0:0:0.16"/>
+                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.Opacity)"
+                                                 To="0.24" Duration="0:0:0.16"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.EnterActions>
+                    <Trigger.ExitActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                                                 To="0" Duration="0:0:0.2">
+                                    <DoubleAnimation.EasingFunction>
+                                        <CubicEase EasingMode="EaseOut"/>
+                                    </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.BlurRadius)"
+                                                 To="12" Duration="0:0:0.2"/>
+                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.ShadowDepth)"
+                                                 To="3" Duration="0:0:0.2"/>
+                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.Opacity)"
+                                                 To="0.14" Duration="0:0:0.2"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.ExitActions>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- 邮箱列表网格卡片样式（图2 纯白极简圆角卡片 + 悬停高亮与微浮） -->
+        <Style x:Key="EmailGridCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Height" Value="48"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="4" ShadowDepth="1" Direction="270" Opacity="0.06" Color="#000000"/>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}"/>
+                    <Setter Property="BorderThickness" Value="1.5"/>
+                    <Setter Property="Background" Value="#F8FAFC"/>
+                    <Setter Property="Effect">
+                        <Setter.Value>
+                            <DropShadowEffect BlurRadius="8" ShadowDepth="2" Direction="270" Opacity="0.12" Color="#0078D4"/>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Page.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Background="Transparent">
+        <StackPanel Margin="28,24,28,32" HorizontalAlignment="Stretch" VerticalAlignment="Top" Background="Transparent">
+
+            <!-- 顶部大标题 -->
+            <Grid Margin="0,0,0,24">
+                <ui:TextBlock Text="连接" 
+                              FontTypography="TitleLarge" 
+                              FontSize="30"
+                              FontWeight="Bold"/>
+            </Grid>
+
+            <!-- 2 列自适应响应式网格 -->
+            <Grid HorizontalAlignment="Stretch" VerticalAlignment="Top">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" MinWidth="280"/>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="*" MinWidth="280"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- 1. Windows 通知卡片容器（支持变高展开/收发动效与悬停微浮） -->
+                <Border x:Name="WindowsCardBorder"
+                        Grid.Column="0"
+                        Height="136"
+                        VerticalAlignment="Top"
+                        CornerRadius="14"
+                        ClipToBounds="False"
+                        BorderThickness="1"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                        Style="{StaticResource ConnectCardStyle}">
+                    <Grid>
+                        <!-- ==================== A. 折叠状态视图（蓝色渐变 + 右上角水印） ==================== -->
+                        <Border x:Name="WindowsCollapsedView"
+                                CornerRadius="13"
+                                ClipToBounds="True"
+                                Cursor="Hand"
+                                MouseLeftButtonUp="WindowsCard_Expand_Click">
+                            <Border.Background>
+                                <!-- 更明亮通透的 Windows 蓝色渐变 -->
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#0091FF" Offset="0.0"/>
+                                    <GradientStop Color="#0078D4" Offset="0.55"/>
+                                    <GradientStop Color="#0067B8" Offset="1.0"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+
+                            <Grid>
+                                <!-- 右上角 Windows 水印图标：自然裁切溢出 -->
+                                <Viewbox Width="105" Height="105" 
+                                         HorizontalAlignment="Right" 
+                                         VerticalAlignment="Top" 
+                                         Margin="0,-22,-22,0" 
+                                         Opacity="0.25" 
+                                         IsHitTestVisible="False">
+                                    <Canvas Width="100" Height="100">
+                                        <Path Fill="White" 
+                                              Data="M 6,6 L 46,6 L 46,46 L 6,46 Z 
+                                                    M 54,6 L 94,6 L 94,46 L 54,46 Z 
+                                                    M 6,54 L 46,54 L 46,94 L 6,94 Z 
+                                                    M 54,54 L 94,54 L 94,94 L 54,94 Z"/>
+                                    </Canvas>
+                                </Viewbox>
+
+                                <!-- 左侧文本 -->
+                                <StackPanel VerticalAlignment="Center" Margin="24,0,90,0">
+                                    <TextBlock Text="Windows通知" 
+                                               FontSize="24" 
+                                               FontWeight="Bold" 
+                                               Foreground="White"/>
+                                    <TextBlock Text="拦截Windows通知中心中的通知" 
+                                               FontSize="12" 
+                                               Foreground="#E8F4FF" 
+                                               TextWrapping="Wrap" 
+                                               Margin="0,8,0,0"
+                                               Opacity="0.95"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- ==================== B. 展开状态视图（白色卡片 + 居中 Windows 11 徽标 + 操作按钮） ==================== -->
+                        <Border x:Name="WindowsExpandedView"
+                                CornerRadius="13"
+                                ClipToBounds="True"
+                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                Visibility="Collapsed"
+                                Opacity="0">
+                            <Grid Margin="20,16,20,18">
+                                <!-- 右上角关闭按钮 -->
+                                <Button HorizontalAlignment="Right" 
+                                        VerticalAlignment="Top"
+                                        Width="28" 
+                                        Height="28"
+                                        Padding="0"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Cursor="Hand"
+                                        Click="WindowsCard_Collapse_Click">
+                                    <ui:SymbolIcon Symbol="Dismiss20" FontSize="14" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                </Button>
+
+                                <!-- 居中内容区域 -->
+                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <!-- Windows 11 官方四方格徽标 -->
+                                    <Grid Width="46" Height="46" HorizontalAlignment="Center" Margin="0,4,0,12">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="4"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="4"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Row="0" Grid.Column="0" Background="#0078D4" CornerRadius="1"/>
+                                        <Border Grid.Row="0" Grid.Column="2" Background="#0078D4" CornerRadius="1"/>
+                                        <Border Grid.Row="2" Grid.Column="0" Background="#0078D4" CornerRadius="1"/>
+                                        <Border Grid.Row="2" Grid.Column="2" Background="#0078D4" CornerRadius="1"/>
+                                    </Grid>
+
+                                    <!-- 标题与说明 -->
+                                    <TextBlock Text="Windows通知" 
+                                               FontSize="18" 
+                                               FontWeight="Bold" 
+                                               HorizontalAlignment="Center"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                                    <TextBlock Text="拦截Windows通知中心中的通知" 
+                                               FontSize="12" 
+                                               HorizontalAlignment="Center"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" 
+                                               Margin="0,4,0,16"/>
+
+                                    <!-- 底部交互操作按钮组 -->
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <!-- 开关状态按钮 -->
+                                        <ui:Button Width="104" 
+                                                   Height="32" 
+                                                   Margin="0,0,12,0" 
+                                                   FontSize="13"
+                                                   FontWeight="Normal"
+                                                   Cursor="Hand"
+                                                   Click="ToggleWindowsNotifications_Click">
+                                            <ui:Button.Style>
+                                                <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                                    <Setter Property="Appearance" Value="Secondary"/>
+                                                    <Setter Property="Content" Value="已禁用"/>
+                                                    <Setter Property="FontSize" Value="13"/>
+                                                    <Setter Property="FontWeight" Value="Normal"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding EnableWindowsNotifications}" Value="True">
+                                                            <Setter Property="Appearance" Value="Primary"/>
+                                                            <Setter Property="Content" Value="已启用"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ui:Button.Style>
+                                        </ui:Button>
+
+                                        <!-- 前往作用域设置按钮 -->
+                                        <ui:Button Content="前往作用域设置" 
+                                                   Appearance="Secondary"
+                                                   Height="32" 
+                                                   Padding="14,0" 
+                                                   FontSize="13"
+                                                   FontWeight="Normal"
+                                                   Cursor="Hand"
+                                                   Click="GoToScopeSettings_Click"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <!-- 2. 邮箱卡片容器（支持变高展开/收发动效与悬停微浮） -->
+                <Border x:Name="EmailCardBorder"
+                        Grid.Column="2"
+                        Height="136"
+                        VerticalAlignment="Top"
+                        CornerRadius="14"
+                        ClipToBounds="False"
+                        BorderThickness="1"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                        Style="{StaticResource ConnectCardStyle}">
+                    <Grid>
+                        <!-- ==================== A. 折叠状态视图（亮橙渐变 + 右上角水印） ==================== -->
+                        <Border x:Name="EmailCollapsedView"
+                                CornerRadius="13"
+                                ClipToBounds="True"
+                                Cursor="Hand"
+                                MouseLeftButtonUp="EmailCard_Collapsed_Click">
+                            <Border.Background>
+                                <!-- 更明亮清爽的亮橙渐变 -->
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#FFA000" Offset="0.0"/>
+                                    <GradientStop Color="#FF8500" Offset="0.5"/>
+                                    <GradientStop Color="#F56A00" Offset="1.0"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+
+                            <Grid>
+                                <!-- 右上角 信封 水印图标：自然裁切溢出 -->
+                                <Viewbox Width="105" Height="105" 
+                                         HorizontalAlignment="Right" 
+                                         VerticalAlignment="Top" 
+                                         Margin="0,-20,-20,0" 
+                                         Opacity="0.25" 
+                                         IsHitTestVisible="False">
+                                    <Canvas Width="100" Height="100">
+                                        <Path Stroke="White" 
+                                              StrokeThickness="7" 
+                                              StrokeLineJoin="Round"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"
+                                              Fill="Transparent" 
+                                              Data="M 8,20 L 92,20 C 97,20 100,23 100,28 L 100,82 C 100,87 97,90 92,90 L 8,90 C 3,90 0,87 0,82 L 0,28 C 0,23 3,20 8,20 Z 
+                                                    M 2,26 L 50,60 L 98,26"/>
+                                    </Canvas>
+                                </Viewbox>
+
+                                <!-- 左侧文本 -->
+                                <StackPanel VerticalAlignment="Center" Margin="24,0,90,0">
+                                    <TextBlock Text="邮箱" 
+                                               FontSize="24" 
+                                               FontWeight="Bold" 
+                                               Foreground="White"/>
+                                    <TextBlock x:Name="EmailCollapsedSubtitle"
+                                               Text="绑定你的邮箱以接收邮件" 
+                                               FontSize="12" 
+                                               Foreground="#FFF6E8" 
+                                               TextWrapping="Wrap" 
+                                               Margin="0,8,0,0"
+                                               Opacity="0.95"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- ==================== B. 展开状态视图 1（选择你的邮箱 3D 轮播面板） ==================== -->
+                        <Border x:Name="EmailExpandedView"
+                                CornerRadius="13"
+                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                Padding="16,12,16,12"
+                                Visibility="Collapsed"
+                                Opacity="0">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <!-- 顶部标题与关闭按钮 -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 轮播卡片选择区 -->
+                                    <RowDefinition Height="*"/>
+                                    <!-- 分割线 -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 底部状态与操作按钮 -->
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- 1. 顶部标题栏 -->
+                                <Grid Grid.Row="0">
+                                    <!-- 左上角切换至列表视图按钮 -->
+                                    <ui:Button Appearance="Transparent"
+                                               Padding="6"
+                                               HorizontalAlignment="Left"
+                                               VerticalAlignment="Center"
+                                               ToolTip="全部邮箱服务列表"
+                                               Cursor="Hand"
+                                               Click="EmailCard_ShowList_Click">
+                                        <ui:SymbolIcon Symbol="Apps24" FontSize="16" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                    </ui:Button>
+
+                                    <!-- 中间标题 -->
+                                    <TextBlock Text="选择你的邮箱" 
+                                               FontSize="16" 
+                                               FontWeight="Bold" 
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+
+                                    <!-- 右上角关闭按钮 -->
+                                    <ui:Button Appearance="Transparent"
+                                               Padding="6"
+                                               HorizontalAlignment="Right"
+                                               VerticalAlignment="Center"
+                                               Cursor="Hand"
+                                               Click="EmailCard_Close_Click">
+                                        <ui:SymbolIcon Symbol="Dismiss20" FontSize="14" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                    </ui:Button>
+                                </Grid>
+
+                                <!-- 2. 中间卡片 3D CoverFlow 轮播区 (Spacedesk 风格 3D 扇形空间连续轮播) -->
+                                <Grid Grid.Row="1" Margin="0,4,0,6" VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- 左翻页按钮 -->
+                                    <ui:Button Grid.Column="0"
+                                               Width="28" 
+                                               Height="28" 
+                                               Padding="0" 
+                                               CornerRadius="14"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,4,0"
+                                               Cursor="Hand"
+                                               Click="PrevProvider_Click">
+                                        <ui:SymbolIcon Symbol="ChevronLeft20" FontSize="14"/>
+                                    </ui:Button>
+
+                                    <!-- 3D 扇形展示舞台 Canvas (全白底色融合 + 空间倾斜叠层 + 支持鼠标水平拖拽滑动) -->
+                                    <Canvas x:Name="CoverflowCanvas"
+                                            Grid.Column="1" 
+                                            Width="250" 
+                                            Height="84" 
+                                            Background="Transparent"
+                                            HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center" 
+                                            ClipToBounds="False"
+                                            Cursor="Hand"
+                                            PreviewMouseLeftButtonDown="Coverflow_PreviewMouseLeftButtonDown"
+                                            PreviewMouseMove="Coverflow_PreviewMouseMove"
+                                            PreviewMouseLeftButtonUp="Coverflow_PreviewMouseLeftButtonUp"/>
+
+                                    <!-- 右翻页按钮 -->
+                                    <ui:Button Grid.Column="2"
+                                               Width="28" 
+                                               Height="28" 
+                                               Padding="0" 
+                                               CornerRadius="14"
+                                               VerticalAlignment="Center"
+                                               Margin="4,0,0,0"
+                                               Cursor="Hand"
+                                               Click="NextProvider_Click">
+                                        <ui:SymbolIcon Symbol="ChevronRight20" FontSize="14"/>
+                                    </ui:Button>
+                                </Grid>
+
+                                <!-- 3. 分割线 -->
+                                <Rectangle Grid.Row="2" 
+                                           Height="1" 
+                                           Fill="{DynamicResource CardStrokeColorDefaultBrush}" 
+                                           Margin="10,0,10,8"/>
+
+                                <!-- 4. 底部绑定状态与操作按钮 -->
+                                <StackPanel Grid.Row="3" HorizontalAlignment="Center" Margin="0,0,0,2">
+                                    <TextBlock x:Name="EmailStatusText" 
+                                               Text="暂未绑定" 
+                                               FontSize="12" 
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" 
+                                               HorizontalAlignment="Center"
+                                               Margin="0,0,0,6"/>
+
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <ui:Button x:Name="EmailActionButton"
+                                                   Content="开始绑定"
+                                                   Appearance="Primary"
+                                                   Width="100"
+                                                   Height="30"
+                                                   FontSize="13"
+                                                   FontWeight="Normal"
+                                                   Padding="0"
+                                                   Cursor="Hand"
+                                                   Click="EmailActionButton_Click"/>
+                                        <ui:Button x:Name="GoToEmailBarrageSettingsButton"
+                                                   Content="前往弹幕设置"
+                                                   Appearance="Secondary"
+                                                   Width="108"
+                                                   Height="30"
+                                                   FontSize="13"
+                                                   FontWeight="Normal"
+                                                   Padding="0"
+                                                   Margin="10,0,0,0"
+                                                   Cursor="Hand"
+                                                   Visibility="Collapsed"
+                                                   Click="GoToEmailBarrageSettings_Click"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                            </Grid>
+                        </Border>
+
+                        <!-- ==================== C. 展开状态视图 2（全部邮箱服务 列表网格面板 - 图2） ==================== -->
+                        <Border x:Name="EmailListView"
+                                CornerRadius="13"
+                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                Padding="16,14,16,16"
+                                ClipToBounds="True"
+                                Visibility="Collapsed"
+                                Opacity="0">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <!-- 顶部标题与返回/关闭按钮 -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 邮箱服务卡片网格列表 -->
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- 1. 顶部标题栏 -->
+                                <Grid Grid.Row="0" Margin="0,0,0,10">
+                                    <!-- 左上角返回 3D 轮播按钮 -->
+                                    <ui:Button Appearance="Transparent"
+                                               Padding="6"
+                                               HorizontalAlignment="Left"
+                                               VerticalAlignment="Center"
+                                               ToolTip="返回"
+                                               Cursor="Hand"
+                                               Click="EmailListView_Back_Click">
+                                        <ui:SymbolIcon Symbol="ArrowLeft24" FontSize="16" Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                                    </ui:Button>
+
+                                    <TextBlock Text="邮箱服务" 
+                                               FontSize="16" 
+                                               FontWeight="Bold" 
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+
+                                    <!-- 右上角关闭按钮 -->
+                                    <ui:Button Appearance="Transparent"
+                                               Padding="6"
+                                               HorizontalAlignment="Right"
+                                               VerticalAlignment="Center"
+                                               Cursor="Hand"
+                                               Click="EmailCard_Close_Click">
+                                        <ui:SymbolIcon Symbol="Dismiss20" FontSize="14" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                    </ui:Button>
+                                </Grid>
+
+                                <!-- 2. 列表内容区（图2 风格两列卡片网格，自适应高度呈现无需滚动条） -->
+                                <StackPanel Grid.Row="1">
+                                    <!-- 常用邮箱 -->
+                                    <TextBlock Text="常用邮箱" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="4,0,0,6"/>
+                                    <UniformGrid Columns="2" Margin="0,0,0,10">
+                                        <!-- QQ 邮箱 -->
+                                        <Border x:Name="EmailCard_QQ" Style="{StaticResource EmailGridCardStyle}" Tag="QQ" MouseLeftButtonUp="EmailProviderCard_Click">
+                                            <Image Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                        </Border>
+                                        <!-- 163 网易邮箱 -->
+                                        <Border x:Name="EmailCard_NetEase163" Style="{StaticResource EmailGridCardStyle}" Tag="NetEase163" MouseLeftButtonUp="EmailProviderCard_Click">
+                                            <Image Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                        </Border>
+                                        <!-- 126 网易邮箱 -->
+                                        <Border x:Name="EmailCard_NetEase126" Style="{StaticResource EmailGridCardStyle}" Tag="NetEase126" MouseLeftButtonUp="EmailProviderCard_Click">
+                                            <Image Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                        </Border>
+                                        <!-- Gmail -->
+                                        <Border x:Name="EmailCard_Gmail" Style="{StaticResource EmailGridCardStyle}" Tag="Gmail" MouseLeftButtonUp="EmailProviderCard_Click">
+                                            <Image Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                        </Border>
+                                        <!-- 新浪邮箱 -->
+                                        <Border x:Name="EmailCard_Sina" Style="{StaticResource EmailGridCardStyle}" Tag="Sina" MouseLeftButtonUp="EmailProviderCard_Click">
+                                            <Image Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                        </Border>
+                                        <!-- 139 邮箱 -->
+                                        <Border x:Name="EmailCard_Mobile139" Style="{StaticResource EmailGridCardStyle}" Tag="Mobile139" MouseLeftButtonUp="EmailProviderCard_Click">
+                                            <Image Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                        </Border>
+                                    </UniformGrid>
+
+                                    <!-- Microsoft -->
+                                    <TextBlock Text="Microsoft" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="4,0,0,6"/>
+                                    <UniformGrid Columns="2" Margin="0,0,0,10">
+                                        <!-- Office 365 -->
+                                        <Border x:Name="EmailCard_Office365" Style="{StaticResource EmailGridCardStyle}" Tag="Office365" MouseLeftButtonUp="EmailProviderCard_Click">
+                                            <Image Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                        </Border>
+                                        <!-- Outlook -->
+                                        <Border x:Name="EmailCard_Outlook" Style="{StaticResource EmailGridCardStyle}" Tag="Outlook" MouseLeftButtonUp="EmailProviderCard_Click">
+                                            <Image Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                        </Border>
+                                        <!-- Exchange -->
+                                        <Border x:Name="EmailCard_Exchange" Style="{StaticResource EmailGridCardStyle}" Tag="Exchange" MouseLeftButtonUp="EmailProviderCard_Click">
+                                            <Image Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                        </Border>
+                                    </UniformGrid>
+
+                                    <!-- 其他服务 -->
+                                    <TextBlock Text="其他服务" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="4,0,0,6"/>
+                                    <UniformGrid Columns="2" Margin="0,0,0,0">
+                                        <!-- IMAP -->
+                                        <Border x:Name="EmailCard_Custom" Style="{StaticResource EmailGridCardStyle}" Tag="Custom" MouseLeftButtonUp="EmailProviderCard_Click">
+                                            <Image Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                        </Border>
+                                    </UniformGrid>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- ==================== C. 展开状态视图 2（绑定邮箱账号 表单面板 - 图1） ==================== -->
+                        <Border x:Name="EmailBindingFormView"
+                                CornerRadius="13"
+                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                Padding="18,14,18,14"
+                                Visibility="Collapsed"
+                                Opacity="0">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <!-- 顶部标题与关闭按钮 -->
+                                    <RowDefinition Height="Auto"/>
+                                    <!-- 表单内容区 -->
+                                    <RowDefinition Height="*"/>
+                                    <!-- 底部操作按钮 -->
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- 1. 顶部标题栏 -->
+                                <Grid Grid.Row="0" Margin="0,0,0,10">
+                                    <TextBlock x:Name="BindingFormTitleText"
+                                               Text="绑定邮箱账号" 
+                                               FontSize="15" 
+                                               FontWeight="SemiBold" 
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+
+                                    <!-- 右上角关闭按钮：返回 3D 选择视图 -->
+                                    <ui:Button Appearance="Transparent"
+                                               Padding="6"
+                                               HorizontalAlignment="Right"
+                                               VerticalAlignment="Center"
+                                               Cursor="Hand"
+                                               Click="BindingForm_Close_Click">
+                                        <ui:SymbolIcon Symbol="Dismiss20" FontSize="14" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                    </ui:Button>
+                                </Grid>
+
+                                <!-- 2. 表单核心字段 -->
+                                <StackPanel Grid.Row="1">
+                                    <!-- 品牌服务商信息小卡片 -->
+                                    <Border Background="#F9F9F9"
+                                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="10"
+                                            Padding="14,8"
+                                            Margin="0,0,0,10">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Image x:Name="BindingProviderLogoImage" 
+                                                   Grid.Column="0" 
+                                                   Width="85" 
+                                                   Height="36" 
+                                                   Stretch="Uniform"
+                                                   RenderOptions.BitmapScalingMode="HighQuality"
+                                                   Margin="0,0,12,0"/>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock x:Name="BindingProviderNameText" 
+                                                           Text="QQ 邮箱" 
+                                                           FontSize="15" 
+                                                           FontWeight="Bold"/>
+                                                <TextBlock x:Name="BindingServerInfoText" 
+                                                           Text="IMAP: imap.qq.com (SSL: 993)" 
+                                                           FontSize="11.5" 
+                                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" 
+                                                           Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 邮箱地址输入 -->
+                                    <StackPanel Margin="0,0,0,8">
+                                        <TextBlock Text="邮箱地址 *" 
+                                                   FontSize="12" 
+                                                   FontWeight="SemiBold" 
+                                                   Margin="0,0,0,4"/>
+                                        <ui:TextBox x:Name="BindingEmailAddressBox" 
+                                                    PlaceholderText="例如: yourname@domain.com"
+                                                    Height="36"
+                                                    Padding="10,6"
+                                                    VerticalContentAlignment="Center"
+                                                    FontSize="13"
+                                                    TextChanged="BindingField_TextChanged"/>
+                                    </StackPanel>
+
+                                    <!-- 授权码 / 密码输入 -->
+                                    <StackPanel Margin="0,0,0,8">
+                                        <TextBlock Text="IMAP 授权码 / 客户端密码 *" 
+                                                   FontSize="12" 
+                                                   FontWeight="SemiBold" 
+                                                   Margin="0,0,0,4"/>
+                                        <ui:PasswordBox x:Name="BindingAuthCodeBox" 
+                                                        PlaceholderText="输入 16 位邮箱授权码"
+                                                        Height="36"
+                                                        Padding="10,6"
+                                                        VerticalContentAlignment="Center"
+                                                        FontSize="13"
+                                                        PasswordChanged="BindingField_TextChanged"/>
+                                    </StackPanel>
+
+                                    <!-- 自定义备注名称 -->
+                                    <StackPanel Margin="0,0,0,8">
+                                        <TextBlock Text="自定义备注名称" 
+                                                   FontSize="12" 
+                                                   FontWeight="SemiBold" 
+                                                   Margin="0,0,0,4"/>
+                                        <ui:TextBox x:Name="BindingDisplayNameBox" 
+                                                    PlaceholderText="QQ 邮箱"
+                                                    Height="36"
+                                                    Padding="10,6"
+                                                    VerticalContentAlignment="Center"
+                                                    FontSize="13"/>
+                                    </StackPanel>
+
+                                    <!-- 自定义服务器高级设置（仅在自定义模式时显示） -->
+                                    <StackPanel x:Name="BindingCustomServerPanel" Visibility="Collapsed" Margin="0,0,0,8">
+                                        <TextBlock Text="IMAP 服务器地址与端口 *" 
+                                                   FontSize="12" 
+                                                   FontWeight="SemiBold" 
+                                                   Margin="0,0,0,4"/>
+                                        <Grid Margin="0,0,0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="8"/>
+                                                <ColumnDefinition Width="80"/>
+                                            </Grid.ColumnDefinitions>
+                                            <ui:TextBox x:Name="BindingServerHostBox" 
+                                                        Grid.Column="0" 
+                                                        PlaceholderText="imap.example.com"
+                                                        Height="36"
+                                                        Padding="10,6"
+                                                        VerticalContentAlignment="Center"
+                                                        FontSize="13"/>
+                                            <ui:TextBox x:Name="BindingServerPortBox" 
+                                                        Grid.Column="2" 
+                                                        Text="993"
+                                                        Height="36"
+                                                        Padding="8,6"
+                                                        VerticalContentAlignment="Center"
+                                                        FontSize="13"/>
+                                        </Grid>
+                                        <CheckBox x:Name="BindingUseSslCheckBox" 
+                                                  Content="使用 SSL/TLS 加密连接" 
+                                                  IsChecked="True"/>
+                                    </StackPanel>
+
+                                    <!-- 官方指引提示信息卡片 -->
+                                    <Border Background="#F0F7FF"
+                                            BorderBrush="#B9DAFB"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Padding="12,8"
+                                            Margin="0,2,0,0">
+                                        <StackPanel>
+                                            <TextBlock Text="💡 授权码获取指引" 
+                                                       FontSize="11.5" 
+                                                       FontWeight="Bold" 
+                                                       Foreground="#005FB8" 
+                                                       Margin="0,0,0,2"/>
+                                            <TextBlock x:Name="BindingHelpGuideText" 
+                                                       Text="请前往 QQ 邮箱网页端 -> 设置 -> 账户 -> 开启 POP3/IMAP 服务，发送短信获取 16 位授权码" 
+                                                       FontSize="11" 
+                                                       Foreground="#204060" 
+                                                       TextWrapping="Wrap"
+                                                       LineHeight="15"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- 错误状态信息提示 -->
+                                    <TextBlock x:Name="BindingStatusMessageText" 
+                                               FontSize="11.5" 
+                                               Foreground="#D83B01" 
+                                               TextWrapping="Wrap" 
+                                               Margin="0,6,0,0" 
+                                               Visibility="Collapsed"/>
+                                </StackPanel>
+
+                                <!-- 3. 底部操作按钮 -->
+                                <Border Grid.Row="2"
+                                        Margin="0,10,0,0"
+                                        Padding="0,10,0,0"
+                                        BorderThickness="0,1,0,0"
+                                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+                                    <Grid>
+                                        <!-- 删除此账号按钮（编辑模式可见） -->
+                                        <ui:Button x:Name="BindingDeleteAccountButton"
+                                                   Content="删除账号"
+                                                   Appearance="Danger"
+                                                   Foreground="White"
+                                                   HorizontalAlignment="Left"
+                                                   Padding="14,5"
+                                                   FontSize="12.5"
+                                                   Visibility="Collapsed"
+                                                   Click="BindingDelete_Click"/>
+
+                                        <!-- 右侧取消与测试保存 -->
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                            <ui:Button Content="取消"
+                                                       Margin="0,0,8,0"
+                                                       Padding="18,5"
+                                                       FontSize="12.5"
+                                                       Click="BindingCancel_Click"/>
+                                            <ui:Button x:Name="BindingSaveButton"
+                                                       Content="测试并保存"
+                                                       Appearance="Primary"
+                                                       Padding="18,5"
+                                                       FontSize="12.5"
+                                                       Click="BindingSave_Click"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Border>
+
+            </Grid>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>

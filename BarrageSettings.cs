@@ -102,6 +102,7 @@ namespace NotiFlow
         public string Theme { get; set; } = "System"; // 主题配置：System / Light / Dark
         
         // 行为与系统互操作配置
+        public bool EnableWindowsNotifications { get; set; } = true; // 拦截并获取 Windows 系统通知中心消息
         public bool AllowCapture { get; set; } = true;         // 允许截图工具截取弹幕
         public bool MinimizeToTray { get; set; } = true;       // 最小化到系统托盘
         public bool CloseToTray { get; set; } = true;          // 关闭主窗口到托盘
@@ -119,6 +120,10 @@ namespace NotiFlow
         // 多显示器配置
         public string MultiMonitorMode { get; set; } = "Simultaneous"; // Simultaneous / Sequential
         public List<Models.MonitorSettingItemDto> Monitors { get; set; } = new();
+
+        // 邮件监听配置
+        public List<Models.EmailAccountConfigDto> EmailAccounts { get; set; } = new();
+        public Models.EmailDisplaySettingsDto EmailDisplaySettings { get; set; } = new();
 
         // 安全模式（防崩溃循环）配置
         public int DeviceCrashCount { get; set; } = 0;
@@ -220,6 +225,7 @@ namespace NotiFlow
         public static string Theme { get; set; } = "System";
 
         // ====== 行为与系统互操作 ======
+        public static bool EnableWindowsNotifications { get; set; } = true;
         public static bool AllowCapture { get; set; } = true;
         public static bool MinimizeToTray { get; set; } = true;
         public static bool CloseToTray { get; set; } = true;
@@ -249,6 +255,10 @@ namespace NotiFlow
         // ====== 多显示器配置 ======
         public static string MultiMonitorMode { get; set; } = "Simultaneous"; // Simultaneous / Sequential
         public static List<Models.MonitorSettingItemDto> Monitors { get; set; } = new();
+
+        // ====== 邮件监听配置 ======
+        public static List<Models.EmailAccountConfigDto> EmailAccounts { get; set; } = new();
+        public static Models.EmailDisplaySettingsDto EmailDisplaySettings { get; set; } = new();
 
         // ====== 安全模式（防崩溃循环）配置 ======
         public static int DeviceCrashCount { get; set; } = 0;
@@ -336,6 +346,7 @@ namespace NotiFlow
                 AutoCheckUpdate = AutoCheckUpdate,
                 UpdateSource = UpdateSource,
                 Theme = Theme,
+                EnableWindowsNotifications = EnableWindowsNotifications,
                 AllowCapture = AllowCapture,
                 MinimizeToTray = MinimizeToTray,
                 CloseToTray = CloseToTray,
@@ -350,6 +361,8 @@ namespace NotiFlow
                 RecentScenesCache = RecentScenesCache,
                 MultiMonitorMode = MultiMonitorMode,
                 Monitors = Monitors,
+                EmailAccounts = EmailAccounts.ToList(),
+                EmailDisplaySettings = EmailDisplaySettings,
                 DeviceCrashCount = DeviceCrashCount,
                 SoftwareCrashCount = SoftwareCrashCount
             };
@@ -503,6 +516,7 @@ namespace NotiFlow
                 UpdateSource = dto.UpdateSource ?? "Auto";
                 SkippedVersion = dto.SkippedVersion ?? "";
                 Theme = dto.Theme ?? "System";
+                EnableWindowsNotifications = dto.EnableWindowsNotifications;
                 AllowCapture = dto.AllowCapture;
                 MinimizeToTray = dto.MinimizeToTray;
                 CloseToTray = dto.CloseToTray;
@@ -520,6 +534,8 @@ namespace NotiFlow
 
                 MultiMonitorMode = (dto.MultiMonitorMode == "Sequential") ? "Sequential" : "Simultaneous";
                 Monitors = Services.ScreenService.GetMergedMonitors(dto.Monitors);
+                EmailAccounts = dto.EmailAccounts ?? new();
+                EmailDisplaySettings = dto.EmailDisplaySettings ?? new();
 
                 DeviceCrashCount = dto.DeviceCrashCount;
                 SoftwareCrashCount = dto.SoftwareCrashCount;
@@ -598,6 +614,7 @@ namespace NotiFlow
             UpdateSource = "Auto";
             SkippedVersion = "";
             Theme = "System";
+            EnableWindowsNotifications = true;
             AllowCapture = true;
             MinimizeToTray = true;
             CloseToTray = true;
@@ -610,6 +627,8 @@ namespace NotiFlow
             SourceWhitelist = new();
             RecentSourcesCache = new();
             RecentScenesCache = new();
+            EmailAccounts = new();
+            EmailDisplaySettings = new();
             DeviceCrashCount = 0;
             SoftwareCrashCount = 0;
             IsSafeMode = false;

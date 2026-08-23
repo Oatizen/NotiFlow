@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using NotiFlow.Models;
@@ -294,47 +295,199 @@ namespace NotiFlow.Views.Pages
             var vm = DataContext as SettingsViewModel;
             var config = vm?.GetCurrentConfig() ?? BarrageSettings.GetGlobalConfigDto();
             bool isPaused = PausePreviewButton.IsChecked == true;
+            bool isEmail = vm?.IsEmailNotification == true;
             
             var stack = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal };
             
-            if (config.ShowAppIcon)
+            if (isEmail)
             {
-                double iconSize = config.FontSize * 1.25 * (config.AppIconScale > 0 ? config.AppIconScale : 1.0);
-                var iconBorder = new System.Windows.Controls.Border { Width = iconSize, Height = iconSize, Background = System.Windows.Media.Brushes.Gray, Margin = new System.Windows.Thickness(0,0,10,0), CornerRadius = new System.Windows.CornerRadius(4) };
-                if (isPaused) {
-                    iconBorder.Cursor = System.Windows.Input.Cursors.Hand;
-                    iconBorder.MouseLeftButtonUp += (s, e) => {
-                        OpenFlyout("AppIconFlyout", iconBorder);
-                        e.Handled = true;
+                // ====== 邮件弹幕预览格式：[邮件图标] [收件邮箱名称] [收件邮箱地址] [发件邮箱名称] [发件邮箱地址] [邮件主题] ======
+                if (vm?.ShowEmailIcon == true)
+                {
+                    double iconSize = config.FontSize * 1.25 * (config.AppIconScale > 0 ? config.AppIconScale : 1.0);
+                    var iconBorder = new System.Windows.Controls.Border
+                    {
+                        Width = iconSize,
+                        Height = iconSize,
+                        Background = Brushes.Transparent,
+                        Margin = new Thickness(0, 0, 10, 0),
+                        CornerRadius = new CornerRadius(4),
+                        ClipToBounds = true
                     };
-                }
-                stack.Children.Add(iconBorder);
-            }
 
-            if (config.ShowAppName)
-            {
-                var tbApp = new NotiFlow.Views.Controls.OutlinedTextBlock { Text = "应用名称：", VerticalAlignment = VerticalAlignment.Center };
-                ApplyConfigToTextBlock(tbApp, config, true, false);
-                if (isPaused) {
-                    tbApp.Cursor = Cursors.Hand;
-                    tbApp.MouseLeftButtonUp += (s, e) => {
-                        OpenFlyout("AppNameFlyout", tbApp);
+                    var iconSource = NotiFlow.Services.EmailMessageFormatter.GetUnifiedEmailIcon();
+                    if (iconSource != null)
+                    {
+                        var img = new Image { Source = iconSource, Stretch = Stretch.Uniform };
+                        RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
+                        iconBorder.Child = img;
+                    }
+
+                    if (isPaused)
+                    {
+                        iconBorder.Cursor = Cursors.Hand;
+                        iconBorder.MouseLeftButtonUp += (s, e) =>
+                        {
+                            OpenFlyout("AppIconFlyout", iconBorder);
+                            e.Handled = true;
+                        };
+                    }
+
+                    stack.Children.Add(iconBorder);
+                }
+
+                string receiverName = vm?.SelectedEmailScope?.DisplayName ?? "QQ 邮箱";
+                string receiverAddress = vm?.SelectedEmailScope?.EmailAddress ?? "2251493718@qq.com";
+                if (receiverName == "全局") receiverName = "QQ 邮箱";
+                if (receiverAddress == "所有邮箱通用样式") receiverAddress = "2251493718@qq.com";
+
+                var enabledPrefixes = new System.Collections.Generic.List<(NotiFlow.Views.Controls.OutlinedTextBlock Block, string BaseText, string FlyoutTitle, string FlyoutType)>();
+
+                if (vm?.ShowReceiverName == true)
+                {
+                    var tb = new NotiFlow.Views.Controls.OutlinedTextBlock { VerticalAlignment = VerticalAlignment.Center };
+                    enabledPrefixes.Add((tb, "收件邮箱名称", "收件邮箱名称设置", "ReceiverName"));
+                }
+
+                if (vm?.ShowReceiverAddress == true)
+                {
+                    var tb = new NotiFlow.Views.Controls.OutlinedTextBlock { VerticalAlignment = VerticalAlignment.Center };
+                    enabledPrefixes.Add((tb, "收件邮箱地址", "收件邮箱地址设置", "ReceiverAddress"));
+                }
+
+                if (vm?.ShowSenderName == true)
+                {
+                    var tb = new NotiFlow.Views.Controls.OutlinedTextBlock { VerticalAlignment = VerticalAlignment.Center };
+                    enabledPrefixes.Add((tb, "发件邮箱名称", "发件邮箱名称设置", "SenderName"));
+                }
+
+                if (vm?.ShowSenderAddress == true)
+                {
+                    var tb = new NotiFlow.Views.Controls.OutlinedTextBlock { VerticalAlignment = VerticalAlignment.Center };
+                    enabledPrefixes.Add((tb, "发件邮箱地址", "发件邮箱地址设置", "SenderAddress"));
+                }
+
+                for (int i = 0; i < enabledPrefixes.Count; i++)
+                {
+                    var item = enabledPrefixes[i];
+                    bool isLast = (i == enabledPrefixes.Count - 1);
+                    item.Block.Text = isLast ? (item.BaseText + "：") : (item.BaseText + " ");
+
+                    ApplyConfigToTextBlock(item.Block, config, true, false);
+                    if (isPaused)
+                    {
+                        item.Block.Cursor = Cursors.Hand;
+                        string ft = item.FlyoutTitle;
+                        string ftype = item.FlyoutType;
+                        item.Block.MouseLeftButtonUp += (s, e) =>
+                        {
+                            if (vm != null)
+                            {
+                                vm.AppNameFlyoutTitle = ft;
+                                vm.ActiveFlyoutType = ftype;
+                            }
+                            OpenFlyout("AppNameFlyout", item.Block);
+                            e.Handled = true;
+                        };
+                    }
+                    stack.Children.Add(item.Block);
+                }
+
+                var tbEmailSubject = new NotiFlow.Views.Controls.OutlinedTextBlock { Text = "邮件主题", VerticalAlignment = VerticalAlignment.Center };
+                ApplyConfigToTextBlock(tbEmailSubject, config, false, false);
+                if (isPaused)
+                {
+                    tbEmailSubject.Cursor = Cursors.Hand;
+                    tbEmailSubject.MouseLeftButtonUp += (s, e) =>
+                    {
+                        if (vm != null)
+                        {
+                            vm.ContentFlyoutTitle = "邮件主题设置";
+                        }
+                        OpenFlyout("ContentFlyout", tbEmailSubject);
                         e.Handled = true;
                     };
                 }
-                stack.Children.Add(tbApp);
+                stack.Children.Add(tbEmailSubject);
             }
-            
-            var tbContent = new NotiFlow.Views.Controls.OutlinedTextBlock { Text = "这是一条测试弹幕", VerticalAlignment = VerticalAlignment.Center };
-            ApplyConfigToTextBlock(tbContent, config, false, false);
-            if (isPaused) {
-                tbContent.Cursor = Cursors.Hand;
-                tbContent.MouseLeftButtonUp += (s, e) => {
-                    OpenFlyout("ContentFlyout", tbContent);
-                    e.Handled = true;
-                };
+            else
+            {
+                // ====== 原生 Windows 通知弹幕预览 ======
+                if (config.ShowAppIcon)
+                {
+                    double iconSize = config.FontSize * 1.25 * (config.AppIconScale > 0 ? config.AppIconScale : 1.0);
+                    var iconBorder = new System.Windows.Controls.Border 
+                    { 
+                        Width = iconSize, 
+                        Height = iconSize, 
+                        Background = Brushes.Transparent, 
+                        Margin = new System.Windows.Thickness(0, 0, 10, 0), 
+                        CornerRadius = new System.Windows.CornerRadius(4),
+                        ClipToBounds = true
+                    };
+
+                    var appIconSource = GetNotiFlowAppIcon();
+                    if (appIconSource != null)
+                    {
+                        var img = new Image { Source = appIconSource, Stretch = Stretch.Uniform };
+                        RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
+                        iconBorder.Child = img;
+                    }
+                    else
+                    {
+                        iconBorder.Background = Brushes.Gray;
+                    }
+
+                    if (isPaused)
+                    {
+                        iconBorder.Cursor = System.Windows.Input.Cursors.Hand;
+                        iconBorder.MouseLeftButtonUp += (s, e) =>
+                        {
+                            OpenFlyout("AppIconFlyout", iconBorder);
+                            e.Handled = true;
+                        };
+                    }
+                    stack.Children.Add(iconBorder);
+                }
+
+                if (config.ShowAppName)
+                {
+                    var tbApp = new NotiFlow.Views.Controls.OutlinedTextBlock { Text = "应用名称：", VerticalAlignment = VerticalAlignment.Center };
+                    ApplyConfigToTextBlock(tbApp, config, true, false);
+                    if (isPaused)
+                    {
+                        tbApp.Cursor = Cursors.Hand;
+                        tbApp.MouseLeftButtonUp += (s, e) =>
+                        {
+                            if (vm != null)
+                            {
+                                vm.AppNameFlyoutTitle = "应用名称设置";
+                                vm.ActiveFlyoutType = "AppName";
+                            }
+                            OpenFlyout("AppNameFlyout", tbApp);
+                            e.Handled = true;
+                        };
+                    }
+                    stack.Children.Add(tbApp);
+                }
+
+                var tbContent = new NotiFlow.Views.Controls.OutlinedTextBlock { Text = "这是一条测试弹幕", VerticalAlignment = VerticalAlignment.Center };
+                ApplyConfigToTextBlock(tbContent, config, false, false);
+                if (isPaused)
+                {
+                    tbContent.Cursor = Cursors.Hand;
+                    tbContent.MouseLeftButtonUp += (s, e) =>
+                    {
+                        if (vm != null)
+                        {
+                            vm.ContentFlyoutTitle = "内容设置";
+                        }
+                        OpenFlyout("ContentFlyout", tbContent);
+                        e.Handled = true;
+                    };
+                }
+                stack.Children.Add(tbContent);
             }
-            stack.Children.Add(tbContent);
             
             var tbEllipsis = new NotiFlow.Views.Controls.OutlinedTextBlock { Text = "......", VerticalAlignment = VerticalAlignment.Center };
             ApplyConfigToTextBlock(tbEllipsis, config, false, true);
@@ -346,7 +499,6 @@ namespace NotiFlow.Views.Pages
                 };
             }
             stack.Children.Add(tbEllipsis);
-            
             
             UIElement textElement = stack;
 
@@ -600,7 +752,7 @@ namespace NotiFlow.Views.Pages
 
             if (isPaused)
             {
-                Canvas.SetLeft(wrapperCanvas, (PreviewBorder.ActualWidth - itemWidth) / 2.0);
+                Canvas.SetLeft(wrapperCanvas, Math.Max(24.0, (PreviewBorder.ActualWidth - itemWidth) / 2.0));
                 Canvas.SetTop(wrapperCanvas, Math.Max(0, (PreviewBorder.ActualHeight - border.DesiredSize.Height) / 2.0));
                 PreviewCanvas.Children.Add(wrapperCanvas);
                 wrapperCanvas.UpdateLayout();
@@ -788,6 +940,32 @@ namespace NotiFlow.Views.Pages
             }
         }
     
+        private void MainScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            if (Math.Abs(e.VerticalChange) > 1.0 || Math.Abs(e.HorizontalChange) > 1.0)
+            {
+                // 页面滚动时立即收起所有打开的菜单，符合现代 Fluent/WinUI 标准交互并避免离屏重绘卡顿
+                CloseAllFlyoutsInstant();
+            }
+        }
+
+        private void CloseAllFlyoutsInstant()
+        {
+            foreach (var key in FlyoutKeys)
+            {
+                if (this.Resources[key] is System.Windows.Controls.Primitives.Popup flyout && flyout.IsOpen)
+                {
+                    if (flyout.Child is FrameworkElement child)
+                    {
+                        child.BeginAnimation(UIElement.OpacityProperty, null);
+                        child.Opacity = 0.0;
+                    }
+                    flyout.IsOpen = false;
+                    _closingFlyouts.Remove(flyout);
+                }
+            }
+        }
+
         /// <summary>
         /// 播放弹窗唤出动画：从下方偏移 16px 向上滑出并渐显。
         /// </summary>
@@ -814,7 +992,7 @@ namespace NotiFlow.Views.Pages
             {
                 From = 16.0,
                 To = 0.0,
-                Duration = TimeSpan.FromMilliseconds(220),
+                Duration = TimeSpan.FromMilliseconds(200),
                 EasingFunction = easing
             };
 
@@ -822,7 +1000,7 @@ namespace NotiFlow.Views.Pages
             {
                 From = 0.0,
                 To = 1.0,
-                Duration = TimeSpan.FromMilliseconds(200),
+                Duration = TimeSpan.FromMilliseconds(180),
                 EasingFunction = easing
             };
 
@@ -852,22 +1030,22 @@ namespace NotiFlow.Views.Pages
                 return;
             }
 
+            // 设置本地值为 0，这样即便动画结束解除绑定，也不会瞬间弹回 1.0 产生闪烁
+            child.Opacity = 0.0;
+
             var fadeOutAnimation = new DoubleAnimation
             {
-                From = child.Opacity,
+                From = 1.0,
                 To = 0.0,
-                Duration = TimeSpan.FromMilliseconds(150),
+                Duration = TimeSpan.FromMilliseconds(120),
                 EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
             };
 
             fadeOutAnimation.Completed += (s, e) =>
             {
                 flyout.IsOpen = false;
-                child.Opacity = 1.0;
-                if (child.RenderTransform is TranslateTransform tt)
-                {
-                    tt.Y = 0.0;
-                }
+                child.BeginAnimation(UIElement.OpacityProperty, null);
+                child.Opacity = 0.0;
                 _closingFlyouts.Remove(flyout);
                 onCompleted?.Invoke();
             };
@@ -932,6 +1110,20 @@ namespace NotiFlow.Views.Pages
                     flyout.VerticalOffset = p.Y + 4;
                 } 
                 catch {}
+
+                // 在打开前预置透明度为 0，防止原生窗口创建第一帧出现满透明度闪烁
+                if (flyout.Child is FrameworkElement child)
+                {
+                    if (child.RenderTransform is not TranslateTransform tt)
+                    {
+                        tt = new TranslateTransform();
+                        child.RenderTransform = tt;
+                    }
+                    child.BeginAnimation(UIElement.OpacityProperty, null);
+                    tt.BeginAnimation(TranslateTransform.YProperty, null);
+                    child.Opacity = 0.0;
+                    tt.Y = 16.0;
+                }
 
                 flyout.IsOpen = true;
                 AnimateFlyoutOpen(flyout);
@@ -1011,6 +1203,42 @@ namespace NotiFlow.Views.Pages
                 {
                     vm.ReorderMonitors(oldIndex, newIndex);
                 }
+            }
+        }
+
+        private static BitmapSource? _notiFlowAppIcon;
+
+        /// <summary>
+        /// 获取 NotiFlow 应用原生高清图标。
+        /// </summary>
+        private static BitmapSource? GetNotiFlowAppIcon()
+        {
+            if (_notiFlowAppIcon != null) return _notiFlowAppIcon;
+
+            try
+            {
+                string iconPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "NotiFlow Icon.png");
+                if (System.IO.File.Exists(iconPath))
+                {
+                    var bmp = new BitmapImage();
+                    bmp.BeginInit();
+                    bmp.UriSource = new Uri(iconPath, UriKind.Absolute);
+                    bmp.CacheOption = BitmapCacheOption.OnLoad;
+                    bmp.EndInit();
+                    bmp.Freeze();
+                    _notiFlowAppIcon = bmp;
+                    return _notiFlowAppIcon;
+                }
+
+                var uri = new Uri("pack://application:,,,/NotiFlow;component/NotiFlow Icon.png", UriKind.Absolute);
+                var bmpResource = new BitmapImage(uri);
+                bmpResource.Freeze();
+                _notiFlowAppIcon = bmpResource;
+                return _notiFlowAppIcon;
+            }
+            catch
+            {
+                return null;
             }
         }
     }

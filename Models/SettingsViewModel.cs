@@ -49,6 +49,19 @@ namespace NotiFlow.Models
         private bool _hasOverride;
     }
 
+    /// <summary>
+    /// 邮箱作用域选择项模型。
+    /// </summary>
+    public class EmailScopeItem
+    {
+        public string Id { get; set; } = "";
+        public string DisplayName { get; set; } = "";
+        public string EmailAddress { get; set; } = "";
+        public bool IsGlobal { get; set; }
+        public bool HasOverride { get; set; }
+        public EmailAccountConfigDto? Account { get; set; }
+    }
+
     public partial class SettingsViewModel : ObservableObject
     {
         private readonly DispatcherTimer _debounceTimer;
@@ -56,6 +69,112 @@ namespace NotiFlow.Models
 
         public ObservableCollection<ScopeSelectionItem> ConfigScopes { get; } = new();
         public ObservableCollection<ScopeSelectionItem> FilteredScopes { get; } = new();
+        public ObservableCollection<EmailScopeItem> EmailScopes { get; } = new();
+
+        [ObservableProperty]
+        private string _notificationCategory = "Windows"; // "Windows" 或 "Email"
+
+        public bool IsWindowsNotification => NotificationCategory == "Windows";
+        public bool IsEmailNotification => NotificationCategory == "Email";
+
+        [ObservableProperty]
+        private string _appNameFlyoutTitle = "应用名称设置";
+
+        [ObservableProperty]
+        private string _contentFlyoutTitle = "内容设置";
+
+        [ObservableProperty]
+        private string _activeFlyoutType = "AppName";
+
+        public bool IsReceiverNameActive => IsEmailNotification && ActiveFlyoutType == "ReceiverName";
+        public bool IsReceiverAddressActive => IsEmailNotification && ActiveFlyoutType == "ReceiverAddress";
+        public bool IsSenderNameActive => IsEmailNotification && (ActiveFlyoutType == "SenderName" || (ActiveFlyoutType != "ReceiverName" && ActiveFlyoutType != "ReceiverAddress" && ActiveFlyoutType != "SenderAddress"));
+        public bool IsSenderAddressActive => IsEmailNotification && ActiveFlyoutType == "SenderAddress";
+
+        partial void OnActiveFlyoutTypeChanged(string value)
+        {
+            OnPropertyChanged(nameof(IsReceiverNameActive));
+            OnPropertyChanged(nameof(IsReceiverAddressActive));
+            OnPropertyChanged(nameof(IsSenderNameActive));
+            OnPropertyChanged(nameof(IsSenderAddressActive));
+        }
+
+        [RelayCommand]
+        private void SetNotificationCategory(string category)
+        {
+            NotificationCategory = category;
+            OnPropertyChanged(nameof(IsWindowsNotification));
+            OnPropertyChanged(nameof(IsEmailNotification));
+            if (category == "Email")
+            {
+                ReloadEmailScopes();
+            }
+            else
+            {
+                ReloadScopes();
+            }
+            LoadConfigToUI();
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        private EmailScopeItem? _selectedEmailScope;
+
+        public bool HasEmailScopeOverride => SelectedEmailScope != null && !SelectedEmailScope.IsGlobal && SelectedEmailScope.HasOverride;
+
+        partial void OnSelectedEmailScopeChanged(EmailScopeItem? value)
+        {
+            OnPropertyChanged(nameof(HasEmailScopeOverride));
+            if (value == null) return;
+            LoadConfigToUI();
+            TriggerSaveAndPreview();
+        }
+
+        [RelayCommand]
+        private void ClearEmailScopeOverride()
+        {
+            if (SelectedEmailScope != null && !SelectedEmailScope.IsGlobal && SelectedEmailScope.Account != null)
+            {
+                SelectedEmailScope.Account.StyleOverride = null;
+                SelectedEmailScope.HasOverride = false;
+                OnPropertyChanged(nameof(HasEmailScopeOverride));
+                LoadConfigToUI();
+                TriggerSaveAndPreview();
+            }
+        }
+
+        public void ReloadEmailScopes()
+        {
+            EmailScopes.Clear();
+            var globalEmailScope = new EmailScopeItem
+            {
+                Id = "Global",
+                DisplayName = "全局",
+                EmailAddress = "所有邮箱通用样式",
+                IsGlobal = true,
+                HasOverride = false
+            };
+            EmailScopes.Add(globalEmailScope);
+
+            foreach (var acc in BarrageSettings.EmailAccounts)
+            {
+                EmailScopes.Add(new EmailScopeItem
+                {
+                    Id = acc.Id,
+                    DisplayName = !string.IsNullOrWhiteSpace(acc.DisplayName) ? acc.DisplayName : acc.ProviderType,
+                    EmailAddress = acc.EmailAddress,
+                    IsGlobal = false,
+                    HasOverride = acc.StyleOverride != null,
+                    Account = acc
+                });
+            }
+
+            if (SelectedEmailScope == null || !EmailScopes.Any(s => s.Id == SelectedEmailScope.Id))
+            {
+                SelectedEmailScope = globalEmailScope;
+            }
+            OnPropertyChanged(nameof(HasEmailScopeOverride));
+        }
 
         [ObservableProperty]
         private string _scopeCategory = "Global"; // "Global", "Scene", "Source"
@@ -112,8 +231,27 @@ namespace NotiFlow.Models
             TriggerSaveAndPreview();
         }
 
-        private BarrageConfigDto GetTargetConfig(bool createIfNull)
+        private BarrageConfigDto? GetTargetConfig(bool createIfNull)
         {
+            if (IsEmailNotification)
+            {
+                if (SelectedEmailScope == null || SelectedEmailScope.IsGlobal || SelectedEmailScope.Account == null)
+                {
+                    return null;
+                }
+
+                if (SelectedEmailScope.Account.StyleOverride == null)
+                {
+                    if (createIfNull)
+                    {
+                        SelectedEmailScope.Account.StyleOverride = BarrageSettings.GetGlobalConfigDto();
+                        SelectedEmailScope.HasOverride = true;
+                        OnPropertyChanged(nameof(HasEmailScopeOverride));
+                    }
+                }
+                return SelectedEmailScope.Account.StyleOverride;
+            }
+
             if (SelectedScope == null || SelectedScope.Type == "Global") return null;
             if (SelectedScope.RuleItem.StyleOverride == null)
             {
@@ -168,7 +306,17 @@ namespace NotiFlow.Models
             }
         }
 
-        public bool IsEditingGlobal => SelectedScope == null || SelectedScope.Type == "Global";
+        public bool IsEditingGlobal
+        {
+            get
+            {
+                if (IsEmailNotification)
+                {
+                    return SelectedEmailScope == null || SelectedEmailScope.IsGlobal;
+                }
+                return SelectedScope == null || SelectedScope.Type == "Global";
+            }
+        }
 
         public BarrageConfigDto GetCurrentConfig()
         {
@@ -216,6 +364,7 @@ namespace NotiFlow.Models
             _autoCheckUpdate = BarrageSettings.AutoCheckUpdate;
             _updateSource = BarrageSettings.UpdateSource;
             _allowCapture = BarrageSettings.AllowCapture;
+            _enableWindowsNotifications = BarrageSettings.EnableWindowsNotifications;
             _minimizeToTray = BarrageSettings.MinimizeToTray;
             _closeToTray = BarrageSettings.CloseToTray;
             _runOnStartup = BarrageSettings.RunOnStartup;
@@ -224,6 +373,13 @@ namespace NotiFlow.Models
 
             InitializeCharacterPresets();
             LoadMonitors();
+            LoadEmailAccounts();
+            _showEmailIcon = BarrageSettings.EmailDisplaySettings.ShowEmailIcon;
+            _showReceiverName = BarrageSettings.EmailDisplaySettings.ShowReceiverName;
+            _showReceiverAddress = BarrageSettings.EmailDisplaySettings.ShowReceiverAddress;
+            _showSenderName = BarrageSettings.EmailDisplaySettings.ShowSenderName;
+            _showSenderAddress = BarrageSettings.EmailDisplaySettings.ShowSenderAddress;
+
             Services.ScreenService.DisplaySettingsChanged += () =>
             {
                 Application.Current?.Dispatcher?.Invoke(LoadMonitors);
@@ -1019,6 +1175,14 @@ namespace NotiFlow.Models
         {
             get => UpdateSource == "GitHub";
             set { if (value) UpdateSource = "GitHub"; }
+        }
+
+        [ObservableProperty]
+        private bool _enableWindowsNotifications;
+        partial void OnEnableWindowsNotificationsChanged(bool value)
+        {
+            BarrageSettings.EnableWindowsNotifications = value;
+            TriggerSaveAndPreview();
         }
 
         [ObservableProperty]
@@ -1820,6 +1984,86 @@ namespace NotiFlow.Models
             CharacterWidgetOffsetX = -15;
             CharacterWidgetOffsetY = -20;
             CharacterWidgetOpacityPercentage = 100;
+        }
+
+        // ====== 邮件弹幕设置支持 ======
+        public ObservableCollection<EmailAccountConfigDto> EmailAccountList { get; } = new();
+
+        [ObservableProperty]
+        private bool _showEmailIcon = true;
+        partial void OnShowEmailIconChanged(bool value)
+        {
+            if (_isSyncing) return;
+            BarrageSettings.EmailDisplaySettings.ShowEmailIcon = value;
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        private bool _showReceiverName = true;
+        partial void OnShowReceiverNameChanged(bool value)
+        {
+            if (_isSyncing) return;
+            BarrageSettings.EmailDisplaySettings.ShowReceiverName = value;
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        private bool _showReceiverAddress;
+        partial void OnShowReceiverAddressChanged(bool value)
+        {
+            if (_isSyncing) return;
+            BarrageSettings.EmailDisplaySettings.ShowReceiverAddress = value;
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        private bool _showSenderName = true;
+        partial void OnShowSenderNameChanged(bool value)
+        {
+            if (_isSyncing) return;
+            BarrageSettings.EmailDisplaySettings.ShowSenderName = value;
+            TriggerSaveAndPreview();
+        }
+
+        [ObservableProperty]
+        private bool _showSenderAddress;
+        partial void OnShowSenderAddressChanged(bool value)
+        {
+            if (_isSyncing) return;
+            BarrageSettings.EmailDisplaySettings.ShowSenderAddress = value;
+            TriggerSaveAndPreview();
+        }
+
+        public void LoadEmailAccounts()
+        {
+            EmailAccountList.Clear();
+            foreach (var account in BarrageSettings.EmailAccounts)
+            {
+                EmailAccountList.Add(account);
+            }
+        }
+
+        [RelayCommand]
+        public void ToggleEmailAccount(EmailAccountConfigDto? account)
+        {
+            if (account == null) return;
+            account.IsEnabled = !account.IsEnabled;
+            SaveEmailAccounts();
+        }
+
+        [RelayCommand]
+        public void RemoveEmailAccount(EmailAccountConfigDto? account)
+        {
+            if (account == null) return;
+            EmailAccountList.Remove(account);
+            SaveEmailAccounts();
+        }
+
+        public void SaveEmailAccounts()
+        {
+            BarrageSettings.EmailAccounts = EmailAccountList.ToList();
+            TriggerSaveAndPreview();
+            ((App)Application.Current).EmailNotificationService?.ReloadAccounts();
         }
     }
 }

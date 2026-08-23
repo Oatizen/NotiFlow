@@ -160,9 +160,16 @@
                     </Grid>
                     <Slider Minimum="0.5" Maximum="2.0" Value="{Binding AppIconScale, Mode=TwoWay}" TickFrequency="0.1" IsSnapToTickEnabled="True" Margin="0,0,0,12"/>
                     
-                    <Grid Margin="0,4,0,0">
+                    <!-- Windows 模式开关 -->
+                    <Grid Margin="0,4,0,0" Visibility="{Binding IsWindowsNotification, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <ui:TextBlock Text="显示应用图标" VerticalAlignment="Center"/>
                         <ui:ToggleSwitch IsChecked="{Binding ShowAppIcon, Mode=TwoWay}" HorizontalAlignment="Right"/>
+                    </Grid>
+
+                    <!-- 邮箱模式开关 -->
+                    <Grid Margin="0,4,0,0" Visibility="{Binding IsEmailNotification, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ui:TextBlock Text="显示邮箱图标" VerticalAlignment="Center"/>
+                        <ui:ToggleSwitch IsChecked="{Binding ShowEmailIcon, Mode=TwoWay}" HorizontalAlignment="Right"/>
                     </Grid>
                 </StackPanel>
             </Border>
@@ -183,7 +190,7 @@
                     <Grid Grid.Row="0" Height="32" Margin="0,0,0,12">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
                             <ui:SymbolIcon Symbol="AppGeneric24" FontSize="18" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                            <ui:TextBlock Text="应用名称设置" FontTypography="BodyStrong" FontSize="15" VerticalAlignment="Center"/>
+                            <ui:TextBlock Text="{Binding AppNameFlyoutTitle}" FontTypography="BodyStrong" FontSize="15" VerticalAlignment="Center"/>
                         </StackPanel>
                         <ui:Button Content="恢复为全局设置"
                                    Icon="{ui:SymbolIcon ArrowReset24}"
@@ -332,12 +339,69 @@
                                     <ui:ToggleSwitch IsChecked="{Binding AppNameShowTextStroke, Mode=TwoWay}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                                 </Grid>
                                 
-                                <Grid>
-                                    <StackPanel VerticalAlignment="Center">
+                                <!-- 1. Windows 模式：显示应用名称 -->
+                                <Grid Visibility="{Binding IsWindowsNotification, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">
                                         <ui:TextBlock Text="显示应用名称"/>
-                                        <ui:TextBlock Text="决定是否在通知中显示应用的名称" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0"/>
+                                        <ui:TextBlock Text="弹幕前显示应用名称" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0"/>
                                     </StackPanel>
-                                    <ui:ToggleSwitch IsChecked="{Binding ShowAppName, Mode=TwoWay}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                    <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowAppName, Mode=TwoWay}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <!-- 2. 邮箱模式：收件邮箱名称 -->
+                                <Grid Visibility="{Binding IsReceiverNameActive, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">
+                                        <ui:TextBlock Text="显示收件邮箱名称"/>
+                                        <ui:TextBlock Text="弹幕前显示收件邮箱自定义备注名" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowReceiverName, Mode=TwoWay}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <!-- 3. 邮箱模式：收件邮箱地址 -->
+                                <Grid Visibility="{Binding IsReceiverAddressActive, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">
+                                        <ui:TextBlock Text="显示收件邮箱地址"/>
+                                        <ui:TextBlock Text="弹幕前显示完整收件邮箱地址" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowReceiverAddress, Mode=TwoWay}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <!-- 4. 邮箱模式：发件邮箱名称 -->
+                                <Grid Visibility="{Binding IsSenderNameActive, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">
+                                        <ui:TextBlock Text="显示发件邮箱名称"/>
+                                        <ui:TextBlock Text="弹幕前显示发件人姓名或品牌名" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowSenderName, Mode=TwoWay}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <!-- 5. 邮箱模式：发件邮箱地址 -->
+                                <Grid Visibility="{Binding IsSenderAddressActive, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">
+                                        <ui:TextBlock Text="显示发件邮箱地址"/>
+                                        <ui:TextBlock Text="弹幕前显示发件人原生邮箱地址" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowSenderAddress, Mode=TwoWay}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                                 </Grid>
                             </StackPanel>
                         </Border>
@@ -361,7 +425,7 @@
                     <Grid Grid.Row="0" Height="32" Margin="0,0,0,12">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
                             <ui:SymbolIcon Symbol="TextFont24" FontSize="18" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                            <ui:TextBlock Text="内容设置" FontTypography="BodyStrong" FontSize="15" VerticalAlignment="Center"/>
+                            <ui:TextBlock Text="{Binding ContentFlyoutTitle}" FontTypography="BodyStrong" FontSize="15" VerticalAlignment="Center"/>
                         </StackPanel>
                         <ui:Button Content="恢复为全局设置"
                                    Icon="{ui:SymbolIcon ArrowReset24}"
@@ -668,7 +732,7 @@
             </Popup>
         </Page.Resources>
 
-    <ScrollViewer x:Name="MainScrollViewer" VerticalScrollBarVisibility="Auto" CanContentScroll="False" Background="Transparent" >
+    <ScrollViewer x:Name="MainScrollViewer" VerticalScrollBarVisibility="Auto" CanContentScroll="False" Background="Transparent" ScrollChanged="MainScrollViewer_ScrollChanged">
         <StackPanel Margin="24,12,24,24" Background="Transparent">
 
             <!-- 页面大标题 -->
@@ -685,43 +749,54 @@
                 </StackPanel>
             </Grid>
 
-            <!-- 目标作用域选择器 -->
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,24" VerticalAlignment="Center">
+            <!-- 目标作用域选择器（严格固定 38px 高度并开启像素对齐，彻底杜绝切换分类时的 1 像素抖动） -->
+            <StackPanel Orientation="Horizontal" 
+                        Height="38"
+                        UseLayoutRounding="True"
+                        SnapsToDevicePixels="True"
+                        Margin="0,0,0,24" 
+                        VerticalAlignment="Center">
                 <ui:TextBlock Text="当前设置范围：" FontTypography="BodyStrong" VerticalAlignment="Center" Margin="0,0,16,0"/>
 
-                <!-- 分段控件 -->
-                <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Padding="4">
-                    <StackPanel Orientation="Horizontal">
-                        <ui:Button Content="全局" Command="{Binding SetScopeCategoryCommand}" CommandParameter="Global" Margin="0,0,4,0" Padding="16,6">
+                <!-- 1. 通知大类分段选择器：Windows 通知 VS 邮箱 -->
+                <Border Height="36"
+                        VerticalAlignment="Center"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" 
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" 
+                        BorderThickness="1" 
+                        CornerRadius="6" 
+                        Padding="3" 
+                        Margin="0,0,12,0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <ui:Button Content="Windows通知" 
+                                   Command="{Binding SetNotificationCategoryCommand}" 
+                                   CommandParameter="Windows" 
+                                   Height="28"
+                                   VerticalAlignment="Center"
+                                   Padding="14,0">
                             <ui:Button.Style>
                                 <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
                                     <Setter Property="Appearance" Value="Secondary" />
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding ScopeCategory}" Value="Global">
+                                        <DataTrigger Binding="{Binding NotificationCategory}" Value="Windows">
                                             <Setter Property="Appearance" Value="Primary" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </ui:Button.Style>
                         </ui:Button>
-                        <ui:Button Content="生效场景" Command="{Binding SetScopeCategoryCommand}" CommandParameter="Scene" Margin="0,0,4,0" Padding="16,6">
+                        <ui:Button Content="邮箱" 
+                                   Command="{Binding SetNotificationCategoryCommand}" 
+                                   CommandParameter="Email" 
+                                   Height="28"
+                                   VerticalAlignment="Center"
+                                   Margin="4,0,0,0" 
+                                   Padding="14,0">
                             <ui:Button.Style>
                                 <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
                                     <Setter Property="Appearance" Value="Secondary" />
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding ScopeCategory}" Value="Scene">
-                                            <Setter Property="Appearance" Value="Primary" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </ui:Button.Style>
-                        </ui:Button>
-                        <ui:Button Content="通知来源" Command="{Binding SetScopeCategoryCommand}" CommandParameter="Source" Margin="0,0,0,0" Padding="16,6">
-                            <ui:Button.Style>
-                                <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
-                                    <Setter Property="Appearance" Value="Secondary" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding ScopeCategory}" Value="Source">
+                                        <DataTrigger Binding="{Binding NotificationCategory}" Value="Email">
                                             <Setter Property="Appearance" Value="Primary" />
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -731,35 +806,172 @@
                     </StackPanel>
                 </Border>
 
-                <!-- 目标选择下拉框 -->
-                <ComboBox ItemsSource="{Binding FilteredScopes}" SelectedItem="{Binding SelectedScope, Mode=TwoWay}" Margin="16,0,0,0" Width="200"
-                          Visibility="{Binding ComboBoxVisibility}">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Horizontal">
-                                <Ellipse Width="8" Height="8" Fill="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center">
-                                    <Ellipse.Style>
-                                        <Style TargetType="Ellipse">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding HasOverride}" Value="True">
-                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Ellipse.Style>
-                                </Ellipse>
-                                <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
+                <!-- 2. Windows 通知模式下的子范围分段控件 -->
+                <StackPanel Orientation="Horizontal" 
+                            Height="38"
+                            VerticalAlignment="Center"
+                            Visibility="{Binding IsWindowsNotification, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Border Height="36"
+                            VerticalAlignment="Center"
+                            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" 
+                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" 
+                            BorderThickness="1" 
+                            CornerRadius="6" 
+                            Padding="3">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <ui:Button Content="全局" 
+                                       Command="{Binding SetScopeCategoryCommand}" 
+                                       CommandParameter="Global" 
+                                       Height="28"
+                                       VerticalAlignment="Center"
+                                       Padding="14,0">
+                                <ui:Button.Style>
+                                    <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                        <Setter Property="Appearance" Value="Secondary" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ScopeCategory}" Value="Global">
+                                                <Setter Property="Appearance" Value="Primary" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:Button.Style>
+                            </ui:Button>
+                            <ui:Button Content="生效场景" 
+                                       Command="{Binding SetScopeCategoryCommand}" 
+                                       CommandParameter="Scene" 
+                                       Height="28"
+                                       VerticalAlignment="Center"
+                                       Margin="4,0,0,0" 
+                                       Padding="14,0">
+                                <ui:Button.Style>
+                                    <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                        <Setter Property="Appearance" Value="Secondary" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ScopeCategory}" Value="Scene">
+                                                <Setter Property="Appearance" Value="Primary" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:Button.Style>
+                            </ui:Button>
+                            <ui:Button Content="通知来源" 
+                                       Command="{Binding SetScopeCategoryCommand}" 
+                                       CommandParameter="Source" 
+                                       Height="28"
+                                       VerticalAlignment="Center"
+                                       Margin="4,0,0,0" 
+                                       Padding="14,0">
+                                <ui:Button.Style>
+                                    <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                        <Setter Property="Appearance" Value="Secondary" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ScopeCategory}" Value="Source">
+                                                <Setter Property="Appearance" Value="Primary" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:Button.Style>
+                            </ui:Button>
+                        </StackPanel>
+                    </Border>
 
-                <!-- 清除自定义设置按钮 -->
-                <ui:Button Appearance="Transparent" Margin="8,0,0,0" ToolTip="恢复全局设置" Command="{Binding ClearScopeOverrideCommand}"
-                           Visibility="{Binding ClearButtonVisibility}">
-                    <ui:SymbolIcon Symbol="Delete24" Foreground="{DynamicResource SystemFillColorCriticalBrush}"/>
-                </ui:Button>
+                    <!-- Windows 目标选择下拉框 -->
+                    <ComboBox ItemsSource="{Binding FilteredScopes}" 
+                              SelectedItem="{Binding SelectedScope, Mode=TwoWay}" 
+                              Height="36"
+                              VerticalAlignment="Center"
+                              Margin="12,0,0,0" 
+                              Width="200"
+                              Visibility="{Binding ComboBoxVisibility}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Ellipse Width="8" Height="8" Fill="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasOverride}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <!-- 清除自定义设置按钮 -->
+                    <ui:Button Appearance="Transparent" 
+                               Height="36"
+                               Width="36"
+                               Padding="0"
+                               VerticalAlignment="Center"
+                               Margin="8,0,0,0" 
+                               ToolTip="恢复全局设置" 
+                               Command="{Binding ClearScopeOverrideCommand}"
+                               Visibility="{Binding ClearButtonVisibility}">
+                        <ui:SymbolIcon Symbol="Delete24" Foreground="{DynamicResource SystemFillColorCriticalBrush}"/>
+                    </ui:Button>
+                </StackPanel>
+
+                <!-- 3. 邮箱模式下的选择框（下拉列表，顶部全局，其下列出用户绑定的所有邮箱：左侧备注名，右侧邮箱地址） -->
+                <StackPanel Orientation="Horizontal" 
+                            Height="38"
+                            VerticalAlignment="Center"
+                            Visibility="{Binding IsEmailNotification, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ComboBox ItemsSource="{Binding EmailScopes}" 
+                              SelectedItem="{Binding SelectedEmailScope, Mode=TwoWay}" 
+                              Height="36"
+                              VerticalAlignment="Center"
+                              Width="280">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2,6,2" VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <!-- 覆盖标识圆点 -->
+                                    <Ellipse Grid.Column="0" Width="7" Height="7" Fill="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="0,0,6,0" VerticalAlignment="Center">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasOverride}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <!-- 左侧：自定义备注名称 -->
+                                    <TextBlock Grid.Column="1" Text="{Binding DisplayName}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    <!-- 右侧：邮箱账号地址 -->
+                                    <TextBlock Grid.Column="2" Text="{Binding EmailAddress}" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <!-- 邮箱清除自定义设置按钮 -->
+                    <ui:Button Appearance="Transparent" 
+                               Height="36"
+                               Width="36"
+                               Padding="0"
+                               VerticalAlignment="Center"
+                               Margin="8,0,0,0" 
+                               ToolTip="恢复全局设置" 
+                               Command="{Binding ClearEmailScopeOverrideCommand}"
+                               Visibility="{Binding HasEmailScopeOverride, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ui:SymbolIcon Symbol="Delete24" Foreground="{DynamicResource SystemFillColorCriticalBrush}"/>
+                    </ui:Button>
+                </StackPanel>
+
             </StackPanel>
 
             <!-- 第一区域：弹幕预览区 -->
@@ -1311,21 +1523,67 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </StackPanel>
-                        <Grid Margin="0,0,0,16">
-                            <StackPanel>
-                                <ui:TextBlock Text="显示应用图标"/>
-                                <ui:TextBlock Text="弹幕前显示应用图标" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                            </StackPanel>
-                            <ui:ToggleSwitch HorizontalAlignment="Right" VerticalAlignment="Center" IsChecked="{Binding ShowAppIcon, Mode=TwoWay}"/>
-                        </Grid>
+                        <!-- A. Windows 通知模式开关 -->
+                        <StackPanel Visibility="{Binding IsWindowsNotification, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Grid Margin="0,0,0,16">
+                                <StackPanel>
+                                    <ui:TextBlock Text="显示应用图标"/>
+                                    <ui:TextBlock Text="弹幕前显示应用图标" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                </StackPanel>
+                                <ui:ToggleSwitch HorizontalAlignment="Right" VerticalAlignment="Center" IsChecked="{Binding ShowAppIcon, Mode=TwoWay}"/>
+                            </Grid>
 
-                        <Grid Margin="0,0,0,16">
-                            <StackPanel>
-                                <ui:TextBlock Text="显示应用名称"/>
-                                <ui:TextBlock Text="弹幕前显示应用名称" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                            </StackPanel>
-                            <ui:ToggleSwitch HorizontalAlignment="Right" VerticalAlignment="Center" IsChecked="{Binding ShowAppName, Mode=TwoWay}"/>
-                        </Grid>
+                            <Grid Margin="0,0,0,16">
+                                <StackPanel>
+                                    <ui:TextBlock Text="显示应用名称"/>
+                                    <ui:TextBlock Text="弹幕前显示应用名称" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                </StackPanel>
+                                <ui:ToggleSwitch HorizontalAlignment="Right" VerticalAlignment="Center" IsChecked="{Binding ShowAppName, Mode=TwoWay}"/>
+                            </Grid>
+                        </StackPanel>
+
+                        <!-- B. 邮箱模式开关 -->
+                        <StackPanel Visibility="{Binding IsEmailNotification, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Grid Margin="0,0,0,16">
+                                <StackPanel>
+                                    <ui:TextBlock Text="显示邮件图标"/>
+                                    <ui:TextBlock Text="弹幕前显示邮箱品牌或协议图标" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                </StackPanel>
+                                <ui:ToggleSwitch HorizontalAlignment="Right" VerticalAlignment="Center" IsChecked="{Binding ShowEmailIcon, Mode=TwoWay}"/>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,16">
+                                <StackPanel>
+                                    <ui:TextBlock Text="显示收件邮箱名称"/>
+                                    <ui:TextBlock Text="弹幕前显示收件邮箱自定义备注名" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                </StackPanel>
+                                <ui:ToggleSwitch HorizontalAlignment="Right" VerticalAlignment="Center" IsChecked="{Binding ShowReceiverName, Mode=TwoWay}"/>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,16">
+                                <StackPanel>
+                                    <ui:TextBlock Text="显示收件邮箱地址"/>
+                                    <ui:TextBlock Text="弹幕前显示完整收件邮箱地址" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                </StackPanel>
+                                <ui:ToggleSwitch HorizontalAlignment="Right" VerticalAlignment="Center" IsChecked="{Binding ShowReceiverAddress, Mode=TwoWay}"/>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,16">
+                                <StackPanel>
+                                    <ui:TextBlock Text="显示发件邮箱名称"/>
+                                    <ui:TextBlock Text="弹幕前显示发件人姓名或品牌名" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                </StackPanel>
+                                <ui:ToggleSwitch HorizontalAlignment="Right" VerticalAlignment="Center" IsChecked="{Binding ShowSenderName, Mode=TwoWay}"/>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,16">
+                                <StackPanel>
+                                    <ui:TextBlock Text="显示发件邮箱地址"/>
+                                    <ui:TextBlock Text="弹幕前显示发件人原生邮箱地址" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                </StackPanel>
+                                <ui:ToggleSwitch HorizontalAlignment="Right" VerticalAlignment="Center" IsChecked="{Binding ShowSenderAddress, Mode=TwoWay}"/>
+                            </Grid>
+                        </StackPanel>
 
                         <Grid Margin="0,0,0,0">
                             <StackPanel>
