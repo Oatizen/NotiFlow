@@ -6,10 +6,6 @@
       Title="连接"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       Background="Transparent"
-      TextOptions.TextFormattingMode="Display"
-      TextOptions.TextRenderingMode="ClearType"
-      UseLayoutRounding="True"
-      SnapsToDevicePixels="True"
       PreviewMouseLeftButtonDown="Page_PreviewMouseLeftButtonDown">
 
     <Page.DataContext>
@@ -17,59 +13,15 @@
     </Page.DataContext>
 
     <Page.Resources>
-        <!-- 基础折叠卡片交互样式：轻量上浮与柔和投影 -->
-        <Style x:Key="ConnectCardStyle" TargetType="Border">
-            <Setter Property="CornerRadius" Value="14"/>
+        <!-- 折叠状态横幅悬停微光样式（轻量透明度过渡，无位图栅格化） -->
+        <Style x:Key="CollapsedCardBannerStyle" TargetType="Border">
+            <Setter Property="CornerRadius" Value="13"/>
+            <Setter Property="ClipToBounds" Value="True"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}"/>
-            <Setter Property="RenderTransform">
-                <Setter.Value>
-                    <TranslateTransform Y="0"/>
-                </Setter.Value>
-            </Setter>
-            <Setter Property="Effect">
-                <Setter.Value>
-                    <DropShadowEffect BlurRadius="12" ShadowDepth="3" Direction="270" Opacity="0.14" Color="#000000"/>
-                </Setter.Value>
-            </Setter>
+            <Setter Property="Opacity" Value="1.0"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Trigger.EnterActions>
-                        <BeginStoryboard>
-                            <Storyboard>
-                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
-                                                 To="-3" Duration="0:0:0.16">
-                                    <DoubleAnimation.EasingFunction>
-                                        <CubicEase EasingMode="EaseOut"/>
-                                    </DoubleAnimation.EasingFunction>
-                                </DoubleAnimation>
-                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.BlurRadius)"
-                                                 To="20" Duration="0:0:0.16"/>
-                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.ShadowDepth)"
-                                                 To="5" Duration="0:0:0.16"/>
-                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.Opacity)"
-                                                 To="0.24" Duration="0:0:0.16"/>
-                            </Storyboard>
-                        </BeginStoryboard>
-                    </Trigger.EnterActions>
-                    <Trigger.ExitActions>
-                        <BeginStoryboard>
-                            <Storyboard>
-                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
-                                                 To="0" Duration="0:0:0.2">
-                                    <DoubleAnimation.EasingFunction>
-                                        <CubicEase EasingMode="EaseOut"/>
-                                    </DoubleAnimation.EasingFunction>
-                                </DoubleAnimation>
-                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.BlurRadius)"
-                                                 To="12" Duration="0:0:0.2"/>
-                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.ShadowDepth)"
-                                                 To="3" Duration="0:0:0.2"/>
-                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.Opacity)"
-                                                 To="0.14" Duration="0:0:0.2"/>
-                            </Storyboard>
-                        </BeginStoryboard>
-                    </Trigger.ExitActions>
+                    <Setter Property="Opacity" Value="0.92"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -84,35 +36,22 @@
             <Setter Property="Margin" Value="4"/>
             <Setter Property="Padding" Value="12,6"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Effect">
-                <Setter.Value>
-                    <DropShadowEffect BlurRadius="4" ShadowDepth="1" Direction="270" Opacity="0.06" Color="#000000"/>
-                </Setter.Value>
-            </Setter>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}"/>
                     <Setter Property="BorderThickness" Value="1.5"/>
                     <Setter Property="Background" Value="#F8FAFC"/>
-                    <Setter Property="Effect">
-                        <Setter.Value>
-                            <DropShadowEffect BlurRadius="8" ShadowDepth="2" Direction="270" Opacity="0.12" Color="#0078D4"/>
-                        </Setter.Value>
-                    </Setter>
                 </Trigger>
             </Style.Triggers>
         </Style>
     </Page.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Background="Transparent">
-        <StackPanel Margin="28,24,28,32" HorizontalAlignment="Stretch" VerticalAlignment="Top" Background="Transparent">
+        <StackPanel Margin="24,12,24,24" HorizontalAlignment="Stretch" VerticalAlignment="Top" Background="Transparent">
 
             <!-- 顶部大标题 -->
             <Grid Margin="0,0,0,24">
-                <ui:TextBlock Text="连接" 
-                              FontTypography="TitleLarge" 
-                              FontSize="30"
-                              FontWeight="Bold"/>
+                <ui:TextBlock FontTypography="TitleLarge" Text="连接" FontWeight="Bold"/>
             </Grid>
 
             <!-- 2 列自适应响应式网格 -->
@@ -123,22 +62,24 @@
                     <ColumnDefinition Width="*" MinWidth="280"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- 1. Windows 通知卡片容器（支持变高展开/收发动效与悬停微浮） -->
+                <!-- 1. Windows 通知卡片容器 -->
                 <Border x:Name="WindowsCardBorder"
                         Grid.Column="0"
                         Height="136"
                         VerticalAlignment="Top"
                         CornerRadius="14"
-                        ClipToBounds="False"
                         BorderThickness="1"
                         BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                        Style="{StaticResource ConnectCardStyle}">
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        MouseEnter="WindowsCard_MouseEnter"
+                        MouseLeave="WindowsCard_MouseLeave">
+                    <Border.RenderTransform>
+                        <TranslateTransform x:Name="WindowsCardTranslate" Y="0"/>
+                    </Border.RenderTransform>
                     <Grid>
                         <!-- ==================== A. 折叠状态视图（蓝色渐变 + 右上角水印） ==================== -->
                         <Border x:Name="WindowsCollapsedView"
-                                CornerRadius="13"
-                                ClipToBounds="True"
-                                Cursor="Hand"
+                                Style="{StaticResource CollapsedCardBannerStyle}"
                                 MouseLeftButtonUp="WindowsCard_Expand_Click">
                             <Border.Background>
                                 <!-- 更明亮通透的 Windows 蓝色渐变 -->
@@ -277,22 +218,24 @@
                     </Grid>
                 </Border>
 
-                <!-- 2. 邮箱卡片容器（支持变高展开/收发动效与悬停微浮） -->
+                <!-- 2. 邮箱卡片容器 -->
                 <Border x:Name="EmailCardBorder"
                         Grid.Column="2"
                         Height="136"
                         VerticalAlignment="Top"
                         CornerRadius="14"
-                        ClipToBounds="False"
                         BorderThickness="1"
                         BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                        Style="{StaticResource ConnectCardStyle}">
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        MouseEnter="EmailCard_MouseEnter"
+                        MouseLeave="EmailCard_MouseLeave">
+                    <Border.RenderTransform>
+                        <TranslateTransform x:Name="EmailCardTranslate" Y="0"/>
+                    </Border.RenderTransform>
                     <Grid>
                         <!-- ==================== A. 折叠状态视图（亮橙渐变 + 右上角水印） ==================== -->
                         <Border x:Name="EmailCollapsedView"
-                                CornerRadius="13"
-                                ClipToBounds="True"
-                                Cursor="Hand"
+                                Style="{StaticResource CollapsedCardBannerStyle}"
                                 MouseLeftButtonUp="EmailCard_Collapsed_Click">
                             <Border.Background>
                                 <!-- 更明亮清爽的亮橙渐变 -->
@@ -664,7 +607,7 @@
                                     </Border>
 
                                     <!-- 邮箱地址输入 -->
-                                    <StackPanel Margin="0,0,0,8">
+                                    <StackPanel x:Name="BindingEmailAddressPanel" Margin="0,0,0,8">
                                         <TextBlock Text="邮箱地址 *" 
                                                    FontSize="12" 
                                                    FontWeight="SemiBold" 
@@ -679,7 +622,7 @@
                                     </StackPanel>
 
                                     <!-- 授权码 / 密码输入 -->
-                                    <StackPanel Margin="0,0,0,8">
+                                    <StackPanel x:Name="BindingAuthCodePanel" Margin="0,0,0,8">
                                         <TextBlock Text="IMAP 授权码 / 客户端密码 *" 
                                                    FontSize="12" 
                                                    FontWeight="SemiBold" 

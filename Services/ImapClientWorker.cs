@@ -89,15 +89,31 @@ namespace NotiFlow.Services
 
                     await _client.ConnectAsync(Account.ServerHost, Account.ServerPort, secureSocketOptions, ct);
 
-                    string authCode = Account.AuthCode;
-                    if (string.IsNullOrEmpty(authCode))
+                    if (string.Equals(Account.AuthType, "OAuth2", StringComparison.OrdinalIgnoreCase))
                     {
-                        Debug.WriteLine($"[ImapWorker - {Account.EmailAddress}] 授权码为空，跳过认证");
-                        await Task.Delay(30000, ct);
-                        continue;
-                    }
+                        string? token = await MicrosoftAuthService.GetAccessTokenAsync(Account.OAuthAccountId, Account.EmailAddress);
+                        if (string.IsNullOrEmpty(token))
+                        {
+                            Debug.WriteLine($"[ImapWorker - {Account.EmailAddress}] OAuth2 访问令牌获取失败或已过期，稍后重试");
+                            await Task.Delay(30000, ct);
+                            continue;
+                        }
 
-                    await _client.AuthenticateAsync(Account.EmailAddress, authCode, ct);
+                        var oauth2 = new SaslMechanismOAuth2(Account.EmailAddress, token);
+                        await _client.AuthenticateAsync(oauth2, ct);
+                    }
+                    else
+                    {
+                        string authCode = Account.AuthCode;
+                        if (string.IsNullOrEmpty(authCode))
+                        {
+                            Debug.WriteLine($"[ImapWorker - {Account.EmailAddress}] 授权码为空，跳过认证");
+                            await Task.Delay(30000, ct);
+                            continue;
+                        }
+
+                        await _client.AuthenticateAsync(Account.EmailAddress, authCode, ct);
+                    }
 
                     var inbox = _client.Inbox;
                     await inbox.OpenAsync(FolderAccess.ReadOnly, ct);

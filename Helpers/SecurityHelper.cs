@@ -65,5 +65,49 @@ namespace NotiFlow.Helpers
                 return string.Empty;
             }
         }
+
+        /// <summary>
+        /// 使用 Windows DPAPI 加密字节数组。
+        /// </summary>
+        public static byte[] EncryptBytes(byte[]? plainBytes)
+        {
+            if (plainBytes == null || plainBytes.Length == 0)
+                return Array.Empty<byte>();
+
+            try
+            {
+                return ProtectedData.Protect(
+                    plainBytes,
+                    OptionalEntropy,
+                    DataProtectionScope.CurrentUser);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SecurityHelper] DPAPI 字节加密失败: {ex.Message}");
+                return Array.Empty<byte>();
+            }
+        }
+
+        /// <summary>
+        /// 使用 Windows DPAPI 解密字节数组。
+        /// </summary>
+        public static byte[] DecryptBytes(byte[]? cipherBytes)
+        {
+            if (cipherBytes == null || cipherBytes.Length == 0)
+                return Array.Empty<byte>();
+
+            try
+            {
+                return ProtectedData.Unprotect(
+                    cipherBytes,
+                    OptionalEntropy,
+                    DataProtectionScope.CurrentUser);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SecurityHelper] DPAPI 字节解密失败: {ex.Message}");
+                return Array.Empty<byte>();
+            }
+        }
     }
 }

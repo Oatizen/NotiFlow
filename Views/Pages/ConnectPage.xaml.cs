@@ -14,6 +14,7 @@ using System.Windows.Media.Imaging;
 using MailKit.Net.Imap;
 using MailKit.Security;
 using NotiFlow.Models;
+using NotiFlow.Services;
 
 namespace NotiFlow.Views.Pages
 {
@@ -46,6 +47,7 @@ namespace NotiFlow.Views.Pages
 
         // 当前正在编辑的账号（若为新建则为 null）
         private EmailAccountConfigDto? _currentEditingAccount;
+        private CancellationTokenSource? _authCts;
 
         #region 依赖属性：连续浮点轮播位置（驱动真实 3D CoverFlow 60fps 平滑过渡）
 
@@ -150,8 +152,36 @@ namespace NotiFlow.Views.Pages
 
         #region 1. Windows 通知卡片展开/收发交互（防竞态消失保护）
 
+        private static void AnimateCardY(TranslateTransform? tt, double targetY, double durationMs)
+        {
+            if (tt == null) return;
+            var anim = new DoubleAnimation
+            {
+                To = targetY,
+                Duration = TimeSpan.FromMilliseconds(durationMs),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            tt.BeginAnimation(TranslateTransform.YProperty, anim);
+        }
+
+        private void WindowsCard_MouseEnter(object sender, MouseEventArgs e)
+        {
+            if (!_isWindowsCardExpanded)
+            {
+                AnimateCardY(WindowsCardTranslate, -3.0, 160);
+            }
+        }
+
+        private void WindowsCard_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (!_isWindowsCardExpanded)
+            {
+                AnimateCardY(WindowsCardTranslate, 0.0, 180);
+            }
+        }
+
         /// <summary>
-        /// 点击折叠卡片：触发平滑变高与内容淡入动画展开详情。
+        /// 点击折叠卡片：触发平滑变高与内容淡入动画展开详情，同时将浮起的卡片平滑降落回原位。
         /// </summary>
         private void WindowsCard_Expand_Click(object sender, MouseButtonEventArgs e)
         {
@@ -163,6 +193,9 @@ namespace NotiFlow.Views.Pages
             }
 
             _isWindowsCardExpanded = true;
+
+            // 展开过程中同步逐渐平滑降落回原位（0px），展开后不再浮起
+            AnimateCardY(WindowsCardTranslate, 0.0, 260);
 
             WindowsCardBorder.BeginAnimation(FrameworkElement.HeightProperty, null);
             WindowsCollapsedView.BeginAnimation(UIElement.OpacityProperty, null);
@@ -231,6 +264,8 @@ namespace NotiFlow.Views.Pages
         {
             if (!_isWindowsCardExpanded) return;
             _isWindowsCardExpanded = false;
+
+            AnimateCardY(WindowsCardTranslate, 0.0, 240);
 
             WindowsCardBorder.BeginAnimation(FrameworkElement.HeightProperty, null);
             WindowsCollapsedView.BeginAnimation(UIElement.OpacityProperty, null);
@@ -559,8 +594,24 @@ namespace NotiFlow.Views.Pages
             return Color.FromArgb(a, r, g, b);
         }
 
+        private void EmailCard_MouseEnter(object sender, MouseEventArgs e)
+        {
+            if (_emailCardState == EmailCardState.Collapsed)
+            {
+                AnimateCardY(EmailCardTranslate, -3.0, 160);
+            }
+        }
+
+        private void EmailCard_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (_emailCardState == EmailCardState.Collapsed)
+            {
+                AnimateCardY(EmailCardTranslate, 0.0, 180);
+            }
+        }
+
         /// <summary>
-        /// 点击折叠邮箱卡片：从 136px 变高展开至 260px 进入 3D 轮播选择视图。
+        /// 点击折叠邮箱卡片：从 136px 变高展开至 260px 进入 3D 轮播选择视图，同时将浮起的卡片平滑降落回原位。
         /// </summary>
         private void EmailCard_Collapsed_Click(object sender, MouseButtonEventArgs e)
         {
@@ -574,6 +625,9 @@ namespace NotiFlow.Views.Pages
             _emailCardState = EmailCardState.Selection;
             InitializeCoverflow();
             RenderCoverflow(CarouselPosition);
+
+            // 展开过程中同步逐渐平滑降落回原位（0px），展开后不再浮起
+            AnimateCardY(EmailCardTranslate, 0.0, 260);
 
             EmailCardBorder.BeginAnimation(FrameworkElement.HeightProperty, null);
             EmailCollapsedView.BeginAnimation(UIElement.OpacityProperty, null);
@@ -727,10 +781,14 @@ namespace NotiFlow.Views.Pages
 
         private void SelectProviderFromList(string providerType)
         {
+            _authCts?.Cancel();
+            _authCts = null;
+
             int targetIndex = _presets.FindIndex(p => string.Equals(p.ProviderType, providerType, StringComparison.OrdinalIgnoreCase));
             if (targetIndex >= 0)
             {
-                // 1. 设置当前 3D 轮播位置并立即精准渲染聚焦
+                // 1. 彻底清除旧动画时钟，防止 WPF 动画属性覆盖新设置的目标索引
+                BeginAnimation(CarouselPositionProperty, null);
                 CarouselPosition = targetIndex;
                 RenderCoverflow(targetIndex);
                 UpdateBottomStatus();
@@ -804,9 +862,10 @@ namespace NotiFlow.Views.Pages
         }
 
         /// <summary>
-        /// 点击“开始绑定”或“管理账号”按钮：原地变长（260px -> 475px）展开绑定配置表单。
+        /// <summary>
+        /// 点击“开始绑定”或“管理账号”按钮：若为 OAuth2 未绑定服务商则直接唤起授权，否则展开配置表单。
         /// </summary>
-        private void EmailActionButton_Click(object sender, RoutedEventArgs e)
+        private async void EmailActionButton_Click(object sender, RoutedEventArgs e)
         {
             int total = _presets.Count;
             if (total == 0) return;
@@ -816,6 +875,13 @@ namespace NotiFlow.Views.Pages
 
             var boundAccount = BarrageSettings.EmailAccounts
                 .FirstOrDefault(a => string.Equals(a.ProviderType, preset.ProviderType, StringComparison.OrdinalIgnoreCase));
+
+            // 若为微软 OAuth 2.0 现代认证且尚未绑定，直接唤起微软官方交互授权登录
+            if (string.Equals(preset.AuthType, "OAuth2", StringComparison.OrdinalIgnoreCase) && boundAccount == null)
+            {
+                await HandleMicrosoftOAuthLoginAsync(preset);
+                return;
+            }
 
             _currentEditingAccount = boundAccount;
             _emailCardState = EmailCardState.BindingForm;
@@ -876,6 +942,63 @@ namespace NotiFlow.Views.Pages
         }
 
         /// <summary>
+        /// 执行微软官方交互式 OAuth 2.0 登录并保存账户信息。
+        /// </summary>
+        private async Task HandleMicrosoftOAuthLoginAsync(EmailProviderPreset preset)
+        {
+            _authCts?.Cancel();
+            _authCts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+            var ct = _authCts.Token;
+
+            EmailActionButton.IsEnabled = false;
+            EmailActionButton.Content = "等待登录...";
+
+            try
+            {
+                var authResult = await MicrosoftAuthService.SignInInteractiveAsync(ct);
+                if (authResult != null)
+                {
+                    string email = authResult.Account.Username;
+                    string accountId = authResult.Account.HomeAccountId.Identifier;
+
+                    var newAccount = new EmailAccountConfigDto
+                    {
+                        ProviderType = preset.ProviderType,
+                        DisplayName = string.IsNullOrWhiteSpace(email) ? preset.DisplayName : email,
+                        EmailAddress = email,
+                        ServerHost = preset.DefaultHost,
+                        ServerPort = preset.DefaultPort,
+                        UseSsl = preset.DefaultUseSsl,
+                        AuthType = "OAuth2",
+                        OAuthAccountId = accountId,
+                        IsEnabled = true
+                    };
+
+                    BarrageSettings.EmailAccounts.RemoveAll(a => string.Equals(a.ProviderType, preset.ProviderType, StringComparison.OrdinalIgnoreCase));
+                    BarrageSettings.EmailAccounts.Add(newAccount);
+                    BarrageSettings.ExportConfig();
+                    ((App)Application.Current).EmailNotificationService?.ReloadAccounts();
+
+                    UpdateEmailCollapsedSubtitle();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // 用户切换卡片或主动取消
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"微软登录授权失败: {ex.Message}", "绑定失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            finally
+            {
+                _authCts = null;
+                EmailActionButton.IsEnabled = true;
+                UpdateBottomStatus();
+            }
+        }
+
+        /// <summary>
         /// 填充绑定表单核心字段。
         /// </summary>
         private void PopulateBindingForm(EmailProviderPreset preset, EmailAccountConfigDto? account)
@@ -885,6 +1008,8 @@ namespace NotiFlow.Views.Pages
             BindingHelpGuideText.Text = preset.HelpGuideDescription;
             BindingStatusMessageText.Visibility = Visibility.Collapsed;
 
+            bool isOAuth = string.Equals(preset.AuthType, "OAuth2", StringComparison.OrdinalIgnoreCase);
+
             if (preset.ProviderType == "Custom")
             {
                 BindingCustomServerPanel.Visibility = Visibility.Visible;
@@ -893,10 +1018,28 @@ namespace NotiFlow.Views.Pages
                 BindingServerPortBox.Text = (account?.ServerPort ?? 993).ToString();
                 BindingUseSslCheckBox.IsChecked = account?.UseSsl ?? true;
             }
+            else if (isOAuth)
+            {
+                BindingCustomServerPanel.Visibility = Visibility.Collapsed;
+                BindingServerInfoText.Text = "微软现代身份验证 (OAuth 2.0 / IMAP)";
+            }
             else
             {
                 BindingCustomServerPanel.Visibility = Visibility.Collapsed;
                 BindingServerInfoText.Text = $"IMAP: {preset.DefaultHost} (SSL: {preset.DefaultPort})";
+            }
+
+            if (isOAuth)
+            {
+                BindingAuthCodePanel.Visibility = Visibility.Collapsed;
+                BindingEmailAddressBox.IsReadOnly = true;
+                BindingSaveButton.Content = account != null ? "重新授权登录" : "微软账号登录授权";
+            }
+            else
+            {
+                BindingAuthCodePanel.Visibility = Visibility.Visible;
+                BindingEmailAddressBox.IsReadOnly = false;
+                BindingSaveButton.Content = "测试并保存";
             }
 
             if (account != null)
@@ -991,7 +1134,7 @@ namespace NotiFlow.Views.Pages
         }
 
         /// <summary>
-        /// 点击表单“测试并保存”：异步测试 IMAP 并在验证成功后加密落盘。
+        /// 点击表单“测试并保存”或“微软账号登录授权”：异步测试 IMAP 并在验证成功后落盘。
         /// </summary>
         private async void BindingSave_Click(object sender, RoutedEventArgs e)
         {
@@ -1000,6 +1143,14 @@ namespace NotiFlow.Views.Pages
 
             int activeIndex = (int)(Math.Round(CarouselPosition) % total + total) % total;
             var preset = _presets[activeIndex];
+
+            // 若为微软 OAuth2 模式，直接唤起微软官方交互授权登录
+            if (string.Equals(preset.AuthType, "OAuth2", StringComparison.OrdinalIgnoreCase))
+            {
+                await HandleMicrosoftOAuthLoginAsync(preset);
+                ReturnToSelectionView();
+                return;
+            }
 
             string email = BindingEmailAddressBox.Text.Trim();
             string authCode = BindingAuthCodeBox.Password.Trim();
@@ -1065,6 +1216,7 @@ namespace NotiFlow.Views.Pages
                     targetAccount.ServerHost = host;
                     targetAccount.ServerPort = port;
                     targetAccount.UseSsl = useSsl;
+                    targetAccount.AuthType = "Basic";
                     targetAccount.IsEnabled = true;
                     targetAccount.AuthCode = authCode;
 
@@ -1100,10 +1252,15 @@ namespace NotiFlow.Views.Pages
         /// <summary>
         /// 点击表单“删除账号”按钮。
         /// </summary>
-        private void BindingDelete_Click(object sender, RoutedEventArgs e)
+        private async void BindingDelete_Click(object sender, RoutedEventArgs e)
         {
             if (_currentEditingAccount != null)
             {
+                if (string.Equals(_currentEditingAccount.AuthType, "OAuth2", StringComparison.OrdinalIgnoreCase))
+                {
+                    await MicrosoftAuthService.RemoveAccountAsync(_currentEditingAccount.OAuthAccountId, _currentEditingAccount.EmailAddress);
+                }
+
                 BarrageSettings.EmailAccounts.RemoveAll(a => a.Id == _currentEditingAccount.Id);
                 BarrageSettings.ExportConfig();
                 ((App)Application.Current).EmailNotificationService?.ReloadAccounts();
@@ -1125,6 +1282,8 @@ namespace NotiFlow.Views.Pages
             _emailCardState = EmailCardState.Collapsed;
 
             UpdateEmailCollapsedSubtitle();
+
+            AnimateCardY(EmailCardTranslate, 0.0, 240);
 
             EmailCardBorder.BeginAnimation(FrameworkElement.HeightProperty, null);
             EmailCollapsedView.BeginAnimation(UIElement.OpacityProperty, null);
@@ -1214,11 +1373,15 @@ namespace NotiFlow.Views.Pages
 
         private void PrevProvider_Click(object sender, RoutedEventArgs e)
         {
+            _authCts?.Cancel();
+            _authCts = null;
             AnimateToPosition(CarouselPosition - 1.0);
         }
 
         private void NextProvider_Click(object sender, RoutedEventArgs e)
         {
+            _authCts?.Cancel();
+            _authCts = null;
             AnimateToPosition(CarouselPosition + 1.0);
         }
 
@@ -1255,7 +1418,12 @@ namespace NotiFlow.Views.Pages
                 if (total > 0)
                 {
                     double normalized = (CarouselPosition % total + total) % total;
+                    BeginAnimation(CarouselPositionProperty, null);
                     CarouselPosition = Math.Round(normalized);
+                }
+                else
+                {
+                    BeginAnimation(CarouselPositionProperty, null);
                 }
                 UpdateBottomStatus();
             };
@@ -1276,6 +1444,8 @@ namespace NotiFlow.Views.Pages
 
             var boundAccount = BarrageSettings.EmailAccounts
                 .FirstOrDefault(a => string.Equals(a.ProviderType, currentPreset.ProviderType, StringComparison.OrdinalIgnoreCase));
+
+            EmailActionButton.IsEnabled = true;
 
             if (boundAccount != null)
             {

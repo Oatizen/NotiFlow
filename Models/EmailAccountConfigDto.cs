@@ -45,6 +45,16 @@ namespace NotiFlow.Models
         public bool UseSsl { get; set; } = true;
 
         /// <summary>
+        /// 认证模式（"Basic": 邮箱地址+授权码/密码; "OAuth2": 微软现代身份验证 OAuth 2.0）。
+        /// </summary>
+        public string AuthType { get; set; } = "Basic";
+
+        /// <summary>
+        /// 当使用 OAuth 2.0 时的 MSAL 账户唯一标识符（HomeAccountId）。
+        /// </summary>
+        public string OAuthAccountId { get; set; } = "";
+
+        /// <summary>
         /// 该邮箱是否启用监听。
         /// </summary>
         public bool IsEnabled { get; set; } = true;
