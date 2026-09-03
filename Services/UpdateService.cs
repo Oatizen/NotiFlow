@@ -36,66 +36,77 @@ namespace NotiFlow.Services
         /// <param name="isManualCheck">是否为用户手动点击检查更新，若是则无论如何都给弹窗提示</param>
         public static async Task CheckForUpdatesAsync(bool isManualCheck = false)
         {
-            string source = BarrageSettings.UpdateSource; // "Auto", "GitHub", "Gitee"
-            (bool Success, bool HasUpdate, string Version, string Notes, string Error) result = (false, false, "", "", "");
-
-            if (source == "GitHub" || source == "Auto")
+            try
             {
-                result = await TryCheckSource(GitHubApiUrl, "GitHub");
-            }
+                string source = BarrageSettings.UpdateSource; // "Auto", "GitHub", "Gitee"
+                (bool Success, bool HasUpdate, string Version, string Notes, string Error) result = (false, false, "", "", "");
 
-            if ((!result.Success) && (source == "Gitee" || source == "Auto"))
-            {
-                var giteeResult = await TryCheckSource(GiteeApiUrl, "Gitee");
-                if (source == "Auto")
+                if (source == "GitHub" || source == "Auto")
                 {
-                    if (giteeResult.Success)
+                    result = await TryCheckSource(GitHubApiUrl, "GitHub");
+                }
+
+                if ((!result.Success) && (source == "Gitee" || source == "Auto"))
+                {
+                    var giteeResult = await TryCheckSource(GiteeApiUrl, "Gitee");
+                    if (source == "Auto")
                     {
-                        result = giteeResult;
+                        if (giteeResult.Success)
+                        {
+                            result = giteeResult;
+                        }
+                        else
+                        {
+                            result.Error = result.Error + "\n" + giteeResult.Error;
+                        }
                     }
                     else
                     {
-                        result.Error = result.Error + "\n" + giteeResult.Error;
+                        result = giteeResult;
                     }
                 }
-                else
-                {
-                    result = giteeResult;
-                }
-            }
 
-            if (result.Success && result.HasUpdate)
-            {
-                if (!isManualCheck && !string.IsNullOrEmpty(BarrageSettings.SkippedVersion))
+                if (result.Success && result.HasUpdate)
                 {
-                    if (Version.TryParse(result.Version.TrimStart('v', 'V'), out Version? latestVer) &&
-                        Version.TryParse(BarrageSettings.SkippedVersion.TrimStart('v', 'V'), out Version? skippedVer))
+                    if (!isManualCheck && !string.IsNullOrEmpty(BarrageSettings.SkippedVersion))
                     {
-                        if (latestVer <= skippedVer) return;
+                        if (Version.TryParse(result.Version.TrimStart('v', 'V'), out Version? latestVer) &&
+                            Version.TryParse(BarrageSettings.SkippedVersion.TrimStart('v', 'V'), out Version? skippedVer))
+                        {
+                            if (latestVer <= skippedVer) return;
+                        }
+                        else if (result.Version == BarrageSettings.SkippedVersion)
+                        {
+                            return;
+                        }
                     }
-                    else if (result.Version == BarrageSettings.SkippedVersion)
-                    {
-                        return;
-                    }
-                }
 
 #if STORE
-                var mode = isManualCheck ? Views.Windows.UpdateDialogMode.ManualStoreUpdate : Views.Windows.UpdateDialogMode.AutoStoreUpdate;
-                ShowUpdateDialog($"发现新版本 {result.Version} !", $"更新说明：\n{result.Notes}\n\n是否立即前往 Microsoft Store 下载更新？", mode, result.Version);
+                    var mode = isManualCheck ? Views.Windows.UpdateDialogMode.ManualStoreUpdate : Views.Windows.UpdateDialogMode.AutoStoreUpdate;
+                    ShowUpdateDialog($"发现新版本 {result.Version} !", $"更新说明：\n{result.Notes}\n\n是否立即前往 Microsoft Store 下载更新？", mode, result.Version);
 #else
-                var mode = isManualCheck ? Views.Windows.UpdateDialogMode.ManualUpdate : Views.Windows.UpdateDialogMode.AutoUpdate;
-                ShowUpdateDialog($"发现新版本 {result.Version} !", $"更新说明：\n{result.Notes}\n\n是否立即前往仓库下载更新？", mode, result.Version);
+                    var mode = isManualCheck ? Views.Windows.UpdateDialogMode.ManualUpdate : Views.Windows.UpdateDialogMode.AutoUpdate;
+                    ShowUpdateDialog($"发现新版本 {result.Version} !", $"更新说明：\n{result.Notes}\n\n是否立即前往仓库下载更新？", mode, result.Version);
 #endif
-            }
-            else if (isManualCheck)
-            {
-                if (result.Success && !result.HasUpdate)
-                {
-                    ShowUpdateDialog("已是最新版", $"当前版本 ({result.Version}) 已经是最新版本。");
                 }
-                else if (!result.Success)
+                else if (isManualCheck)
                 {
-                    ShowUpdateDialog("检查失败", $"{result.Error}\n请稍后再试，或直接点击下方按钮前往仓库查看。");
+                    if (result.Success && !result.HasUpdate)
+                    {
+                        ShowUpdateDialog("已是最新版", $"当前版本 ({result.Version}) 已经是最新版本。");
+                    }
+                    else if (!result.Success)
+                    {
+                        ShowUpdateDialog("检查失败", $"{result.Error}\n请稍后再试，或直接点击下方按钮前往仓库查看。");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[UpdateService] 检查更新时发生异常: {ex}");
+                if (isManualCheck)
+                {
+                    ShowUpdateDialog("检查失败", $"检查更新发生异常: {ex.Message}\n请稍后再试。");
                 }
             }
         }
@@ -156,14 +167,29 @@ namespace NotiFlow.Services
         /// </summary>
         private static void ShowUpdateDialog(string title, string content, Views.Windows.UpdateDialogMode mode = Views.Windows.UpdateDialogMode.Info, string targetVersion = "")
         {
-            Application.Current.Dispatcher.Invoke(() =>
+            Application.Current?.Dispatcher?.Invoke(() =>
             {
-                var dialog = new Views.Windows.UpdateDialogWindow(title, content, mode)
+                var mainWin = Application.Current.MainWindow;
+                var dialog = new Views.Windows.UpdateDialogWindow(title, content, mode);
+
+                // 只有当存在有效主窗口、不是当前弹窗本身且处于可见加载状态时才挂载 Owner
+                if (mainWin != null && mainWin != dialog && mainWin.IsLoaded && mainWin.IsVisible)
                 {
-                    Owner = Application.Current.MainWindow
-                };
+                    dialog.Owner = mainWin;
+                }
+                else
+                {
+                    dialog.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                    dialog.Topmost = true; // 确保开机自启后台检查更新弹出时处于最前层，不被其他窗口隐匿
+                }
 
                 dialog.ShowDialog();
+
+                // 如果 WPF 默认将临时弹窗提升为了 MainWindow，且应用本身并未真正展示主设置窗口，则将其还原
+                if (Application.Current != null && Application.Current.MainWindow == dialog)
+                {
+                    Application.Current.MainWindow = (Application.Current as App)?.SettingsWindow;
+                }
 
                 switch (dialog.UserResult)
                 {

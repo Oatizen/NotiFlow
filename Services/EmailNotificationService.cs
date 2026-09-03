@@ -31,7 +31,14 @@ namespace NotiFlow.Services
         /// </summary>
         public async Task InitializeAsync()
         {
-            await Task.Run(() => ReloadAccounts());
+            try
+            {
+                await Task.Run(() => ReloadAccounts());
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[EmailNotificationService] 初始化邮件监听服务失败: {ex.Message}");
+            }
         }
 
         /// <summary>

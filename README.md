@@ -17,7 +17,7 @@
 <br/>
 
 > 打团听到消息提示，不想立即查看但又担心错过重要通知？
-> **NotiFlow** 可以拦截 Windows 原生通知，并将其转化为全透明、鼠标穿透的“弹幕”从屏幕上方飘过。**工作、游戏，消息通知不再是负担。一切尽收眼底。**
+> **NotiFlow** 可以拦截 Windows 原生通知或是邮箱邮件，并将其转化为全透明、鼠标穿透的“弹幕”从屏幕上方飘过。**工作、游戏，消息通知不再是负担。一切尽收眼底。**
 
 https://github.com/user-attachments/assets/d6c6ac91-e404-48e4-8109-85fa61497eff
 
@@ -34,6 +34,7 @@ https://github.com/user-attachments/assets/d6c6ac91-e404-48e4-8109-85fa61497eff
 - 🛡️ **防截图保护**：采用 `DisplayAffinity` 技术，只需开启设置开关，使用系统截图或 OBS 等软件录屏时，弹幕会在捕捉画面中自动隐藏，保护隐私。
 - ⌨️ **多显示器支持**：支持多显示器设置，可自由选择NotiFlow在哪些显示器工作，更可实现弹幕跨显示器流转。
 - ⚙️ **开机自启**：可自定义是否开机自启，无需每次手动启动。
+- 📩 **绑定邮箱**：可接入邮箱以接收邮件并转化为弹幕通知，增加工作效率。
 
 ---
 
@@ -56,8 +57,7 @@ https://github.com/user-attachments/assets/d6c6ac91-e404-48e4-8109-85fa61497eff
 
 ### 方式三：便携版
 便携版安装包更小但不含应用运行所必需的运行环境，你需要先在设备上安装`.NET 桌面运行时`才能够使用NotiFlow。
-1. 前往[.NET 运行时官网](https://dotnet.microsoft.com/download/dotnet/8.0)中点击最新版本的`.NET 桌面运行时 8.0.X`下方`安装程序`中的`x64`。
-（注：不是“ASP.NET Core 运行时”、“.NET 运行时”、“SDK”或是“x86,x64,winget指令”版的“.NET桌面运行时”）
+1. 前往[.NET 运行时官网](https://dotnet.microsoft.com/download/dotnet/8.0)中点击最新版本的`.NET 桌面运行时 8.0.X`下方`安装程序`中的`x64`。（注：不是“ASP.NET Core 运行时”、“.NET 运行时”、“SDK”或是“x86,x64,winget指令”版的“.NET桌面运行时”）
 2. 下载完毕后打开`windowsdesktop-runtime-8.0.X-win-x64.exe`,点击`安装`并等待安装完成。
 3. 前往 Releases 页面（[GitHub](https://github.com/Oatizen/NotiFlow/releases) 或 [Gitee](https://gitee.com/Oatizen/NotiFlow/releases)）下载最新版本附件中的 `NotiFlow-vX.X.X-Portable.exe`。
 4. 下载完毕后直接双击运行 `NotiFlow-vX.X.X-Portable.exe`。（若无法运行，请检查是否已正确下载.NET 桌面运行时）

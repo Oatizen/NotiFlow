@@ -15,6 +15,7 @@ namespace NotiFlow
         public TrayIconService? TrayIconService => _trayIconService;
         private Rendering.BarrageManager? _barrageManager;
         private SettingsWindow? _settingsWindow;
+        public SettingsWindow? SettingsWindow => _settingsWindow;
         private ForegroundMonitorService? _foregroundMonitorService;
         public ForegroundMonitorService? ForegroundMonitor => _foregroundMonitorService;
         private EmailNotificationService? _emailNotificationService;
@@ -106,11 +107,19 @@ namespace NotiFlow
 
             // 【关键修复】初始化 Windows 原生通知监听核心服务
             new NotificationService();
-            _ = NotificationService.Instance!.InitializeAsync();
+            _ = NotificationService.Instance!.InitializeAsync().ContinueWith(t =>
+            {
+                if (t.Exception != null)
+                    System.Diagnostics.Debug.WriteLine($"[NotificationService] 异步初始化异常: {t.Exception}");
+            }, System.Threading.Tasks.TaskContinuationOptions.OnlyOnFaulted);
 
             // 初始化多邮箱 IMAP 监听核心服务
             _emailNotificationService = new EmailNotificationService();
-            _ = _emailNotificationService.InitializeAsync();
+            _ = _emailNotificationService.InitializeAsync().ContinueWith(t =>
+            {
+                if (t.Exception != null)
+                    System.Diagnostics.Debug.WriteLine($"[EmailService] 异步初始化异常: {t.Exception}");
+            }, System.Threading.Tasks.TaskContinuationOptions.OnlyOnFaulted);
 
             // 初始化多显示器弹幕渲染管理中心
             _barrageManager = new Rendering.BarrageManager();
@@ -132,8 +141,12 @@ namespace NotiFlow
 #if !STORE
             if (BarrageSettings.AutoCheckUpdate)
             {
-                // 不要 await 阻塞启动流程，让它在后台静默执行
-                _ = UpdateService.CheckForUpdatesAsync(isManualCheck: false);
+                // 不要 await 阻塞启动流程，让它在后台静默执行，并挂接延续以观察异常
+                _ = UpdateService.CheckForUpdatesAsync(isManualCheck: false).ContinueWith(t =>
+                {
+                    if (t.Exception != null)
+                        System.Diagnostics.Debug.WriteLine($"[UpdateService] 后台检查更新异常: {t.Exception}");
+                }, System.Threading.Tasks.TaskContinuationOptions.OnlyOnFaulted);
             }
 #endif
 
@@ -299,6 +312,7 @@ namespace NotiFlow
             if (_settingsWindow == null || !_settingsWindow.IsLoaded)
             {
                 _settingsWindow = new SettingsWindow();
+                MainWindow = _settingsWindow;
                 _settingsWindow.Show();
             }
             else if (_settingsWindow.IsVisible)

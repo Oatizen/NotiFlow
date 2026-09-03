@@ -39,20 +39,28 @@ namespace NotiFlow.Services
 
         public async Task<bool> InitializeAsync()
         {
-            _listener = UserNotificationListener.Current;
-            UserNotificationListenerAccessStatus accessStatus = await _listener.RequestAccessAsync();
-
-            if (accessStatus != UserNotificationListenerAccessStatus.Allowed)
+            try
             {
+                _listener = UserNotificationListener.Current;
+                UserNotificationListenerAccessStatus accessStatus = await _listener.RequestAccessAsync();
+
+                if (accessStatus != UserNotificationListenerAccessStatus.Allowed)
+                {
+                    return false;
+                }
+
+                // 解决传统的 WinRT 事件订阅 (_listener.NotificationChanged += ...) 在未打包成商店应用的传统 WPF 环境下抛出 0x80070490 的系统级底层缺陷。
+                // 我们直接完全废弃这条由于 COM 桥接不可靠带来的报错捷径，转而使用高性能且极其稳健的后台异步身份ID轮询比对法。
+                _cts = new CancellationTokenSource();
+                _ = StartPollingLoopAsync(_cts.Token);
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[NotificationService] 初始化通知监听失败: {ex.Message}");
                 return false;
             }
-
-            // 解决传统的 WinRT 事件订阅 (_listener.NotificationChanged += ...) 在未打包成商店应用的传统 WPF 环境下抛出 0x80070490 的系统级底层缺陷。
-            // 我们直接完全废弃这条由于 COM 桥接不可靠带来的报错捷径，转而使用高性能且极其稳健的后台异步身份ID轮询比对法。
-            _cts = new CancellationTokenSource();
-            _ = StartPollingLoopAsync(_cts.Token);
-            
-            return true;
         }
 
         private async Task StartPollingLoopAsync(CancellationToken cancellationToken)
